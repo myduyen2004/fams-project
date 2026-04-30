@@ -73,5 +73,22 @@ export const dashboardService = {
 
     markAllNotificationsAsRead: async () => {
         await apiClient.post('/dashboard/notifications/read-all');
+    },
+
+    // Get alerts (paginated)
+    getAlertsPaginated: async (params?: {
+        page?: number;
+        size?: number;
+        search?: string;
+        level?: string;
+        type?: string;
+        startDate?: string;
+        endDate?: string;
+    }): Promise<{ content: Alert[]; totalPages: number; totalElements: number }> => {
+        const response = await apiClient.get<{ content: Alert[]; totalPages: number; totalElements: number }>('/dashboard/alerts/paginated', {
+            params
+        });
+        return response.data;
     }
 };
+

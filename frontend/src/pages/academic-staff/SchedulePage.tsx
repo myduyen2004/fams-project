@@ -4,10 +4,12 @@ import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import axios from 'axios';
 import apiClient from '../../services/api/authService';
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
-import { toast } from 'react-hot-toast';
-import { Calendar, BookOpen, ChevronLeft, ChevronRight, X, MapPin, AlertTriangle, Check, ChevronsUpDown, Eye, EyeOff, Loader2, Play, Users, School, Download, MoreVertical, Home, RefreshCw, Save } from 'lucide-react';
+import toast from "@utils/toast";
+import { BookOpen, ChevronLeft, ChevronRight, X, MapPin, AlertTriangle, Check, ChevronsUpDown, Eye, EyeOff, Loader2, Play, Users, School, Download, MoreVertical, Home, RefreshCw, Save } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Combobox, Transition, Listbox } from '@headlessui/react';
+import { CustomSelect } from '../../components/common/CustomSelect';
+import { CustomDatePicker } from '../../components/common/CustomDatePicker';
 
 interface FilterComboboxProps {
   value: string | null; // Changed to allow null
@@ -31,22 +33,22 @@ const FilterCombobox: React.FC<FilterComboboxProps> = ({ value, onChange, option
       );
 
   return (
-    <div className="relative w-full sm:w-56">
+    <div className="relative w-full">
       <Combobox value={value} onChange={onChange} nullable>
         <div className="relative">
-          <div className="relative w-full cursor-default overflow-hidden rounded-lg bg-white text-left border border-gray-200 focus-within:border-fpt-orange focus-within:ring-1 focus-within:ring-fpt-orange sm:text-sm flex items-center transition-colors">
-            <div className="pl-3 py-2 text-gray-400">
-              <Icon size={16} />
+          <div className="relative w-full cursor-default overflow-hidden rounded-2xl bg-white dark:bg-zinc-900 text-left border-2 border-gray-100 dark:border-zinc-800 focus-within:border-fpt-orange focus-within:ring-4 focus-within:ring-fpt-orange/10 sm:text-sm flex items-center transition-all hover:border-fpt-orange/40 h-[52px]">
+            <div className="pl-4 text-gray-400">
+              <Icon size={18} />
             </div>
             <Combobox.Input
-              className="w-full border-none py-2 pl-2 pr-10 text-sm leading-5 text-gray-900 focus:ring-0 outline-none bg-transparent"
+              className="w-full border-none py-2 pl-3 pr-10 text-sm font-semibold leading-5 text-gray-900 dark:text-white focus:ring-0 outline-none bg-transparent"
               displayValue={(val: string | null) => options.find(o => o.value === val)?.label || ''}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={placeholder}
             />
-            <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2">
+            <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-3">
               <ChevronsUpDown
-                className="h-4 w-4 text-gray-400 hover:text-gray-600"
+                className="h-4 w-4 text-gray-400 hover:text-fpt-orange transition-colors"
                 aria-hidden="true"
               />
             </Combobox.Button>
@@ -58,7 +60,7 @@ const FilterCombobox: React.FC<FilterComboboxProps> = ({ value, onChange, option
             leaveTo="opacity-0"
             afterLeave={() => setQuery('')}
           >
-            <Combobox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50 scroller">
+            <Combobox.Options className="absolute mt-2 max-h-60 w-full overflow-auto rounded-2xl bg-white dark:bg-zinc-900 py-1.5 text-base shadow-xl border-2 border-gray-100 dark:border-zinc-800 focus:outline-none sm:text-sm z-50 scroller animate-in fade-in zoom-in-95 duration-200">
               {filteredOptions.length === 0 && query !== '' ? (
                 <div className="relative cursor-default select-none py-2 px-4 text-gray-700">
                   Không tìm thấy.
@@ -68,7 +70,7 @@ const FilterCombobox: React.FC<FilterComboboxProps> = ({ value, onChange, option
                   <Combobox.Option
                     key={option.value}
                     className={({ active }) =>
-                      `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-fpt-orange text-white' : 'text-gray-900'
+                      `relative cursor-default select-none py-3 pl-10 pr-4 rounded-xl mx-1.5 transition-colors ${active ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange' : 'text-gray-700 dark:text-gray-300'
                       }`
                     }
                     value={option.value}
@@ -833,74 +835,62 @@ export const SchedulePage: React.FC = () => {
     <AcademicStaffLayout pageTitle="Thời khóa biểu">
       <div className="space-y-4">
         {/* Primary Filter Bar */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            {/* Left filters */}
-            <div className="flex flex-wrap items-center gap-4">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6">
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div className="flex flex-wrap items-center gap-6">
               {/* Semester Selector */}
-              <div className="relative flex items-center gap-2 bg-white rounded-lg px-4 border border-gray-200 hover:border-gray-300 transition-colors">
-                <Calendar size={16} className="text-gray-400" />
-                <select
-                  value={selected ?? ''}
-                  onChange={(e) => setSelected(e.target.value)}
-                  className="appearance-none bg-transparent text-sm text-gray-700 outline-none cursor-pointer pr-6 min-w-[100px] border-none focus:outline-none focus:ring-0"
-                >
-                  <option value="">Chọn học kỳ</option>
-                  {semesters.map(s => (
-                    <option key={s.code} value={s.code}>{s.name || s.code}</option>
-                  ))}
-                </select>
-              </div>
+              <CustomSelect
+                label="Học kỳ"
+                value={selected ?? ''}
+                onChange={(value) => setSelected(value)}
+                options={[
+                  { value: '', label: 'Chọn học kỳ' },
+                  ...semesters.map(s => ({ value: s.code, label: s.name || s.code }))
+                ]}
+                className="w-full sm:w-48"
+              />
 
               {/* Date Selector with Arrow Navigation */}
-              <div className="relative flex items-center gap-1 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
-                {/* Previous Day Button */}
+              <div className="flex items-end gap-2">
                 <button
                   onClick={handlePreviousDay}
                   disabled={!selectedDate || (!!semesterStartDate && selectedDate <= semesterStartDate)}
-                  className="p-2 hover:bg-gray-100 rounded-l-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="h-[52px] w-[52px] flex items-center justify-center rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-fpt-orange hover:border-fpt-orange/40 hover:shadow-lg transition-all active:scale-95 shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
                   title="Ngày trước"
                 >
-                  <ChevronLeft size={18} className="text-gray-600" />
+                  <ChevronLeft size={20} />
                 </button>
 
-                {/* Date Display and Input */}
-                <div className="flex items-center gap-2 px-3">
-                  <Calendar size={16} className="text-gray-400" />
-                  <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    min={semesterStartDate || undefined}
-                    max={semesterEndDate || undefined}
-                    className="appearance-none bg-transparent text-sm text-gray-700 outline-none cursor-pointer border-none focus:outline-none focus:ring-0"
-                    placeholder="Chọn ngày"
-                  />
-                </div>
+                <CustomDatePicker
+                  label="Ngày học"
+                  value={selectedDate}
+                  onChange={(value) => setSelectedDate(value)}
+                  min={semesterStartDate || undefined}
+                  max={semesterEndDate || undefined}
+                  className="w-full sm:w-56"
+                />
 
-                {/* Next Day Button */}
                 <button
                   onClick={handleNextDay}
                   disabled={!selectedDate || (!!semesterEndDate && selectedDate >= semesterEndDate)}
-                  className="p-2 hover:bg-gray-100 rounded-r-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="h-[52px] w-[52px] flex items-center justify-center rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-fpt-orange hover:border-fpt-orange/40 hover:shadow-lg transition-all active:scale-95 shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
                   title="Ngày sau"
                 >
-                  <ChevronRight size={18} className="text-gray-600" />
+                  <ChevronRight size={20} />
                 </button>
               </div>
             </div>
 
-            {/* Right controls */}
             <div className="flex items-center gap-4">
               {/* Toggle - Công khai cho sinh viên */}
-              <div className="flex items-center gap-3 px-4 py-2 border border-gray-200 rounded-xl">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-4 px-6 h-[52px] border-2 border-gray-100 dark:border-zinc-800 rounded-2xl bg-gray-50/50 dark:bg-zinc-800/30">
+                <div className="flex items-center gap-3">
                   {showLockedSchedule ? (
-                    <Eye size={16} className="text-green-600" />
+                    <Eye size={18} className="text-green-600" />
                   ) : (
-                    <EyeOff size={16} className="text-gray-400" />
+                    <EyeOff size={18} className="text-gray-400" />
                   )}
-                  <span className="text-sm text-gray-600">Công khai cho SV</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Công khai cho SV</span>
                 </div>
                 <button
                   onClick={handleTogglePublished}
@@ -918,20 +908,20 @@ export const SchedulePage: React.FC = () => {
               <button
                 onClick={handleGenerate}
                 disabled={generating}
-                className="flex items-center gap-2 bg-fpt-orange hover:bg-orange-600 text-white px-5 py-2 rounded-xl font-medium transition-colors shadow-sm disabled:opacity-60"
+                className="flex h-[52px] items-center gap-2 bg-fpt-orange hover:bg-orange-600 text-white px-8 rounded-2xl font-bold transition-all shadow-lg shadow-fpt-orange/20 active:scale-95 disabled:opacity-60 disabled:scale-100"
               >
                 {generating ? (
-                  <Loader2 size={18} className="animate-spin" />
+                  <Loader2 size={20} className="animate-spin" />
                 ) : (
-                  <Play size={18} />
+                  <Play size={20} fill="currentColor" />
                 )}
-                {generating ? 'Đang tạo...' : 'Tạo tự động'}
+                <span>{generating ? 'Đang tạo...' : 'Tạo tự động'}</span>
               </button>
 
               {generating && (
                 <button
                   onClick={handleCancel}
-                  className="px-4 py-2.5 border border-gray-300 rounded-xl text-sm hover:bg-gray-50 transition-colors"
+                  className="flex h-[52px] px-6 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm font-bold hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all text-gray-600"
                 >
                   Hủy
                 </button>
@@ -940,130 +930,153 @@ export const SchedulePage: React.FC = () => {
           </div>
 
           {/* Secondary Filter Row */}
-          <div className="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t border-gray-100">
+          <div className="flex flex-wrap items-end gap-5 mt-6 pt-6 border-t border-gray-100 dark:border-zinc-800">
             {/* Class Filter */}
-            <FilterCombobox
-              value={selectedClass}
-              onChange={(val) => setSelectedClass(val)}
-              options={(() => {
-                const baseOptions = uniqueClasses.map(c => ({ value: c.prefix, label: c.prefix })).filter(o => o.label);
-                if (selectedClass && !baseOptions.some(o => o.value === selectedClass)) {
-                  return [...baseOptions, { value: selectedClass, label: selectedClass }];
-                }
-                return baseOptions;
-              })()}
-              placeholder="Tìm lớp..."
-              icon={School}
-            />
-
-            {/* Teacher Filter */}
-            <FilterCombobox
-              value={selectedTeacher}
-              onChange={(val) => setSelectedTeacher(val)}
-              options={(() => {
-                const baseOptions = uniqueTeachers.map(t => ({ value: t!, label: t! })).filter(o => o.label);
-                if (selectedTeacher && !baseOptions.some(o => o.value === selectedTeacher)) {
-                  return [...baseOptions, { value: selectedTeacher, label: selectedTeacher }];
-                }
-                return baseOptions;
-              })()}
-              placeholder="Tìm GV..."
-              icon={Users}
-            />
-
-            {/* Course Filter */}
-            <FilterCombobox
-              value={selectedCourse}
-              onChange={(val) => setSelectedCourse(val)}
-              options={(() => {
-                const baseOptions = uniqueCourses.map(c => ({ value: c!, label: c! })).filter(o => o.label);
-                if (selectedCourse && !baseOptions.some(o => o.value === selectedCourse)) {
-                  return [...baseOptions, { value: selectedCourse, label: selectedCourse }];
-                }
-                return baseOptions;
-              })()}
-              placeholder="Tìm môn..."
-              icon={BookOpen}
-            />
-
-            {/* Room Filter - Multi-select */}
-            <div className="relative w-full sm:w-56">
-              <Listbox value={selectedRooms} onChange={setSelectedRooms} multiple>
-                <div className="relative">
-                  <Listbox.Button className="relative w-full cursor-default overflow-hidden rounded-lg bg-white text-left border border-gray-200 focus-within:border-fpt-orange focus-within:ring-1 focus-within:ring-fpt-orange sm:text-sm flex items-center transition-colors py-2 px-3">
-                    <Home size={16} className="text-gray-400 mr-2 flex-shrink-0" />
-                    <span className="block truncate flex-1 text-sm text-gray-700">
-                      {selectedRooms.length === 0
-                        ? 'Chọn phòng...'
-                        : selectedRooms.length === 1
-                          ? selectedRooms[0]
-                          : `${selectedRooms.length} phòng`}
-                    </span>
-                    <ChevronsUpDown className="h-4 w-4 text-gray-400 flex-shrink-0" aria-hidden="true" />
-                  </Listbox.Button>
-                  <Transition
-                    as={Fragment}
-                    leave="transition ease-in duration-100"
-                    leaveFrom="opacity-100"
-                    leaveTo="opacity-0"
-                  >
-                    <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50 scroller">
-                      {displayRooms.map((room) => (
-                        <Listbox.Option
-                          key={room}
-                          className={({ active }) =>
-                            `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-fpt-orange text-white' : 'text-gray-900'}`
-                          }
-                          value={room}
-                        >
-                          {({ selected, active }) => (
-                            <>
-                              <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
-                                {room}
-                              </span>
-                              {selected && (
-                                <span className={`absolute inset-y-0 left-0 flex items-center pl-3 ${active ? 'text-white' : 'text-fpt-orange'}`}>
-                                  <Check className="h-5 w-5" aria-hidden="true" />
-                                </span>
-                              )}
-                            </>
-                          )}
-                        </Listbox.Option>
-                      ))}
-                    </Listbox.Options>
-                  </Transition>
-                </div>
-              </Listbox>
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-2 ml-1">
+                Lớp học
+              </label>
+              <FilterCombobox
+                value={selectedClass}
+                onChange={(val) => setSelectedClass(val)}
+                options={(() => {
+                  const baseOptions = uniqueClasses.map(c => ({ value: c.prefix, label: c.prefix })).filter(o => o.label);
+                  if (selectedClass && !baseOptions.some(o => o.value === selectedClass)) {
+                    return [...baseOptions, { value: selectedClass, label: selectedClass }];
+                  }
+                  return baseOptions;
+                })()}
+                placeholder="Tìm lớp..."
+                icon={School}
+              />
             </div>
 
-            {/* Clear filters button */}
-            {(selectedClass || selectedTeacher || selectedCourse || selectedRooms.length > 0) && (
-              <button
-                onClick={() => {
-                  setSelectedClass(null);
-                  setSelectedTeacher(null);
-                  setSelectedCourse(null);
-                  setSelectedRooms([]);
-                }}
-                className="text-sm text-fpt-orange hover:text-orange-600 font-medium whitespace-nowrap"
-              >
-                Xóa bộ lọc
-              </button>
-            )}
+            {/* Teacher Filter */}
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-2 ml-1">
+                Giảng viên
+              </label>
+              <FilterCombobox
+                value={selectedTeacher}
+                onChange={(val) => setSelectedTeacher(val)}
+                options={(() => {
+                  const baseOptions = uniqueTeachers.map(t => ({ value: t!, label: t! })).filter(o => o.label);
+                  if (selectedTeacher && !baseOptions.some(o => o.value === selectedTeacher)) {
+                    return [...baseOptions, { value: selectedTeacher, label: selectedTeacher }];
+                  }
+                  return baseOptions;
+                })()}
+                placeholder="Tìm GV..."
+                icon={Users}
+              />
+            </div>
 
-            {/* Export Excel Button */}
-            <button
-              onClick={handleExportExcel}
-              disabled={exportingWeek || !selected || !selectedDate}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors ml-auto"
-            >
-              {exportingWeek ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Download size={16} />
+            {/* Course Filter */}
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-2 ml-1">
+                Môn học
+              </label>
+              <FilterCombobox
+                value={selectedCourse}
+                onChange={(val) => setSelectedCourse(val)}
+                options={(() => {
+                  const baseOptions = uniqueCourses.map(c => ({ value: c!, label: c! })).filter(o => o.label);
+                  if (selectedCourse && !baseOptions.some(o => o.value === selectedCourse)) {
+                    return [...baseOptions, { value: selectedCourse, label: selectedCourse }];
+                  }
+                  return baseOptions;
+                })()}
+                placeholder="Tìm môn..."
+                icon={BookOpen}
+              />
+            </div>
+
+            {/* Room Filter - Multi-select */}
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-2 ml-1">
+                Phòng học
+              </label>
+              <div className="relative w-full">
+                <Listbox value={selectedRooms} onChange={setSelectedRooms} multiple>
+                  <div className="relative">
+                    <Listbox.Button className="relative w-full cursor-default overflow-hidden rounded-2xl bg-white dark:bg-zinc-900 text-left border-2 border-gray-100 dark:border-zinc-800 focus-within:border-fpt-orange focus-within:ring-4 focus-within:ring-fpt-orange/10 sm:text-sm flex items-center transition-all hover:border-fpt-orange/40 h-[52px] px-4">
+                      <Home size={18} className="text-gray-400 mr-3 flex-shrink-0" />
+                      <span className="block truncate flex-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        {selectedRooms.length === 0
+                          ? 'Chọn phòng...'
+                          : selectedRooms.length === 1
+                            ? selectedRooms[0]
+                            : `${selectedRooms.length} phòng`}
+                      </span>
+                      <ChevronsUpDown className="h-4 w-4 text-gray-400 flex-shrink-0" aria-hidden="true" />
+                    </Listbox.Button>
+                    <Transition
+                      as={Fragment}
+                      leave="transition ease-in duration-100"
+                      leaveFrom="opacity-100"
+                      leaveTo="opacity-0"
+                    >
+                      <Listbox.Options className="absolute mt-2 max-h-60 w-full overflow-auto rounded-2xl bg-white dark:bg-zinc-900 py-1.5 text-base shadow-xl border-2 border-gray-100 dark:border-zinc-800 focus:outline-none sm:text-sm z-50 scroller animate-in fade-in zoom-in-95 duration-200">
+                        {displayRooms.map((room) => (
+                          <Listbox.Option
+                            key={room}
+                            className={({ active }) =>
+                              `relative cursor-default select-none py-3 pl-10 pr-4 rounded-xl mx-1.5 transition-colors ${active ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange' : 'text-gray-700 dark:text-gray-300'}`
+                            }
+                            value={room}
+                          >
+                            {({ selected, active }) => (
+                              <>
+                                <span className={`block truncate ${selected ? 'font-bold' : 'font-normal'}`}>
+                                  {room}
+                                </span>
+                                {selected && (
+                                  <span className={`absolute inset-y-0 left-0 flex items-center pl-3 ${active ? 'text-white' : 'text-fpt-orange'}`}>
+                                    <Check className="h-5 w-5" aria-hidden="true" />
+                                  </span>
+                                )}
+                              </>
+                            )}
+                          </Listbox.Option>
+                        ))}
+                      </Listbox.Options>
+                    </Transition>
+                  </div>
+                </Listbox>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-4 ml-auto">
+              {/* Clear filters button */}
+              {(selectedClass || selectedTeacher || selectedCourse || selectedRooms.length > 0) && (
+                <button
+                  onClick={() => {
+                    setSelectedClass(null);
+                    setSelectedTeacher(null);
+                    setSelectedCourse(null);
+                    setSelectedRooms([]);
+                  }}
+                  className="h-[52px] px-6 text-sm font-bold text-fpt-orange hover:bg-orange-50 dark:hover:bg-orange-900/10 rounded-2xl transition-all"
+                >
+                  Xóa bộ lọc
+                </button>
               )}
-              Xuất Excel
-            </button>
+
+              {/* Export Excel Button */}
+              <button
+                onClick={handleExportExcel}
+                disabled={exportingWeek || !selected || !selectedDate}
+                className="flex h-[52px] items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-200 disabled:cursor-not-allowed text-white px-6 rounded-2xl text-sm font-bold transition-all shadow-lg shadow-green-600/10 active:scale-95 disabled:scale-100"
+              >
+                {exportingWeek ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Download size={18} />
+                )}
+                <span>Xuất Excel</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1167,7 +1180,7 @@ export const SchedulePage: React.FC = () => {
                 <table className="w-full border-collapse min-w-[900px]">
                   <thead>
                     <tr className="bg-gray-50">
-                      <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-gray-200 w-40">
+                      <th className="px-4 py-5 text-left w-40 text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                         Phòng học
                       </th>
                       {slotTimes.map(({ slot, start, end }) => (
@@ -1269,7 +1282,7 @@ export const SchedulePage: React.FC = () => {
       {/* Slot Detail Popup */}
       {selectedSlot && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-[100] animate-in fade-in duration-300"
+          className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-[500] animate-in fade-in duration-300"
           onClick={() => setSelectedSlot(null)}
         >
           <div
@@ -1354,56 +1367,51 @@ export const SchedulePage: React.FC = () => {
             {/* Rescheduling Form - Adjusted style */}
             {isRescheduling && (
               <div className="bg-orange-50/50 rounded-2xl p-4 mb-6 border border-orange-100/50 animate-in slide-in-from-top-4 duration-300">
-                <h4 className="text-[11px] font-bold text-fpt-orange uppercase tracking-wider mb-3 flex items-center gap-2">
+                <h4 className="text-[11px] font-medium text-fpt-orange uppercase tracking-wider mb-3 flex items-center gap-2">
                   <RefreshCw size={13} />
                   Thay đổi lịch học
                 </h4>
 
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Ngày đổi</label>
-                    <input
-                      type="date"
+                    <label className="block text-[9px] font-medium text-slate-400 uppercase tracking-widest mb-1">Ngày đổi</label>
+                    <CustomDatePicker
                       value={rescheduleDate}
                       min={semesterStartDate}
                       max={semesterEndDate}
-                      onChange={(e) => {
-                        setRescheduleDate(e.target.value);
+                      onChange={(value) => {
+                        setRescheduleDate(value);
                         setRescheduleSlot(null);
                         setRescheduleRoom(null);
                       }}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all"
+                      className="w-full"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Tiết đổi</label>
-                      <select
-                        value={rescheduleSlot || ''}
-                        onChange={(e) => setRescheduleSlot(Number(e.target.value))}
+                      <label className="block text-[9px] font-medium text-slate-400 uppercase tracking-widest mb-1">Tiết đổi</label>
+                      <CustomSelect
+                        value={rescheduleSlot?.toString() || ''}
+                        onChange={(value) => setRescheduleSlot(Number(value))}
                         disabled={!rescheduleDate || loadingAvailability}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all disabled:opacity-50"
-                      >
-                        <option value="">Chọn tiết</option>
-                        {availableSlots.map(num => (
-                          <option key={num} value={num}>Slot {num}</option>
-                        ))}
-                      </select>
+                        options={[
+                          { value: '', label: 'Chọn tiết' },
+                          ...availableSlots.map(num => ({ value: num.toString(), label: `Slot ${num}` }))
+                        ]}
+                      />
                     </div>
                     <div>
-                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Phòng đổi</label>
-                      <select
-                        value={rescheduleRoom || ''}
-                        onChange={(e) => setRescheduleRoom(Number(e.target.value))}
+                      <label className="block text-[9px] font-medium text-slate-400 uppercase tracking-widest mb-1">Phòng đổi</label>
+                      <CustomSelect
+                        value={rescheduleRoom?.toString() || ''}
+                        onChange={(value) => setRescheduleRoom(Number(value))}
                         disabled={!rescheduleSlot}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all disabled:opacity-50"
-                      >
-                        <option value="">Chọn phòng</option>
-                        {availableRooms.map(r => (
-                          <option key={r.id} value={r.id}>{r.name}</option>
-                        ))}
-                      </select>
+                        options={[
+                          { value: '', label: 'Chọn phòng' },
+                          ...availableRooms.map(r => ({ value: r.id.toString(), label: r.name }))
+                        ]}
+                      />
                     </div>
                   </div>
                 </div>
@@ -1419,8 +1427,8 @@ export const SchedulePage: React.FC = () => {
                       const path = `/academic-staff/attendance/realtime/${selectedSlot.id}`;
                       const userStr = localStorage.getItem('user');
                       const user = userStr ? JSON.parse(userStr) : null;
-                      const mappedPath = (user?.role === 'LECTURER') 
-                        ? path.replace('/academic-staff/', '/lecturer/granted/') 
+                      const mappedPath = (user?.role === 'LECTURER')
+                        ? path.replace('/academic-staff/', '/lecturer/granted/')
                         : path;
                       window.open(mappedPath, '_blank');
                     }}
@@ -1501,3 +1509,5 @@ export const SchedulePage: React.FC = () => {
 };
 
 export default SchedulePage;
+
+

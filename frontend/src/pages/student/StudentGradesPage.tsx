@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { StudentLayout } from '../../layouts/StudentLayout';
 import { useSearchParams } from 'react-router-dom';
 import { Card } from '../../components/common/Card';
-import { BookOpen, GraduationCap, AlertCircle, Loader2, ChevronDown, Check } from 'lucide-react';
+import { GraduationCap, AlertCircle, Loader2, BookOpen } from 'lucide-react';
 import { studentMyGradeService, StudentCourseOption, StudentGradeDetailResponse, GradeCategory } from '../../services/api/studentMyGradeService';
 import { sortGradeCategories } from '../../utils/gradeSortUtils';
+import { CustomSelect } from '../../components/common/CustomSelect';
 
 interface SemesterOption {
     id: number;
@@ -25,28 +26,7 @@ export const StudentGradesPage: React.FC = () => {
     const [gradeLoading, setGradeLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Dropdown states
-    const [isSemesterOpen, setIsSemesterOpen] = useState(false);
-    const [isCourseOpen, setIsCourseOpen] = useState(false);
-    const semesterDropdownRef = useRef<HTMLDivElement>(null);
-    const courseDropdownRef = useRef<HTMLDivElement>(null);
 
-    // Close dropdowns when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (semesterDropdownRef.current && !semesterDropdownRef.current.contains(event.target as Node)) {
-                setIsSemesterOpen(false);
-            }
-            if (courseDropdownRef.current && !courseDropdownRef.current.contains(event.target as Node)) {
-                setIsCourseOpen(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, []);
 
     const getUserId = (): number => {
         const userStr = localStorage.getItem('user');
@@ -91,7 +71,7 @@ export const StudentGradesPage: React.FC = () => {
                     return;
                 }
             }
-            
+
             // Priority 2: Default to first semester
             setSelectedSemesterId(semesters[0].id);
         }
@@ -185,17 +165,6 @@ export const StudentGradesPage: React.FC = () => {
         return sortGradeCategories(gradeData.gradeCategories);
     }, [gradeData]);
 
-    const getSelectedSemesterName = () => {
-        const semester = semesters.find(s => s.id === selectedSemesterId);
-        return semester ? semester.name : 'Chọn học kỳ';
-    };
-
-    const getSelectedCourseName = () => {
-        if (!selectedClassName) return '-- Chọn môn học --';
-        const course = filteredCourses.find(c => c.className === selectedClassName);
-        return course ? `${course.className} - ${course.courseName}` : selectedClassName;
-    };
-
     if (loading) {
         return (
             <StudentLayout pageTitle="Bảng Điểm">
@@ -237,98 +206,42 @@ export const StudentGradesPage: React.FC = () => {
         <StudentLayout pageTitle="Bảng Điểm">
             <div className="space-y-6 pb-24">
                 {/* Header */}
-                <div>
-                    <div className="flex items-center gap-2 text-fpt-orange font-bold text-sm mb-1">
-                        <GraduationCap size={16} /> Kết quả học tập
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-zinc-800">
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-3">
+                            <div className="w-2 h-8 bg-fpt-orange rounded-full" />
+                            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Bảng điểm chi tiết</h1>
+                        </div>
+                        <p className="text-gray-500 dark:text-gray-400 font-medium ml-5 flex items-center gap-2">
+                            <GraduationCap size={16} className="text-fpt-orange" /> Kết quả học tập của sinh viên
+                        </p>
                     </div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                        Bảng điểm chi tiết
-                    </h1>
                 </div>
 
-                {/* Filter Section - Like Lecturer Grade Management */}
-                <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-6 shadow-sm">
-                    <div className="flex flex-col md:flex-row gap-4">
+                {/* Filter Section - Standardized with CustomSelect */}
+                <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-zinc-800 p-8 shadow-sm">
+                    <div className="flex flex-col md:flex-row items-end gap-6">
                         {/* Semester Selector */}
-                        <div className="flex-1" ref={semesterDropdownRef}>
-                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                Học kỳ
-                            </label>
-                            <div className="relative">
-                                <button
-                                    onClick={() => setIsSemesterOpen(!isSemesterOpen)}
-                                    className="flex items-center justify-between w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 px-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-fpt-orange transition-all"
-                                >
-                                    <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                        {getSelectedSemesterName()}
-                                    </span>
-                                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isSemesterOpen ? 'rotate-180' : ''}`} />
-                                </button>
-
-                                {isSemesterOpen && (
-                                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg max-h-60 overflow-y-auto">
-                                        {semesters.map((semester) => (
-                                            <button
-                                                key={semester.id}
-                                                onClick={() => {
-                                                    setSelectedSemesterId(semester.id);
-                                                    setIsSemesterOpen(false);
-                                                }}
-                                                className={`flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors ${selectedSemesterId === semester.id
-                                                    ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange'
-                                                    : 'text-gray-900 dark:text-white'
-                                                    }`}
-                                            >
-                                                <span className="text-sm font-medium">{semester.name}</span>
-                                                {selectedSemesterId === semester.id && <Check size={16} />}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                        <div className="flex-1 w-full">
+                            <CustomSelect
+                                label="Học kỳ"
+                                value={selectedSemesterId?.toString() || ''}
+                                onChange={(val: string) => setSelectedSemesterId(Number(val))}
+                                options={semesters.map(s => ({ label: s.name, value: s.id.toString() }))}
+                                placeholder="Chọn học kỳ"
+                            />
                         </div>
 
                         {/* Course Selector */}
-                        <div className="flex-1" ref={courseDropdownRef}>
-                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                Lớp học
-                            </label>
-                            <div className="relative">
-                                <button
-                                    onClick={() => !filteredCourses.length ? null : setIsCourseOpen(!isCourseOpen)}
-                                    disabled={filteredCourses.length === 0}
-                                    className={`flex items-center justify-between w-full rounded-lg border border-gray-200 dark:border-zinc-700 px-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-fpt-orange transition-all ${filteredCourses.length === 0
-                                        ? 'bg-gray-100 dark:bg-zinc-800 text-gray-400 cursor-not-allowed'
-                                        : 'bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white'
-                                        }`}
-                                >
-                                    <span className="text-sm font-medium truncate">
-                                        {getSelectedCourseName()}
-                                    </span>
-                                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isCourseOpen ? 'rotate-180' : ''}`} />
-                                </button>
-
-                                {isCourseOpen && (
-                                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg max-h-60 overflow-y-auto">
-                                        {filteredCourses.map((course) => (
-                                            <button
-                                                key={course.className}
-                                                onClick={() => {
-                                                    setSelectedClassName(course.className);
-                                                    setIsCourseOpen(false);
-                                                }}
-                                                className={`flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors ${selectedClassName === course.className
-                                                    ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange'
-                                                    : 'text-gray-900 dark:text-white'
-                                                    }`}
-                                            >
-                                                <span className="text-sm font-medium">{course.className} - {course.courseName}</span>
-                                                {selectedClassName === course.className && <Check size={16} />}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                        <div className="flex-1 w-full">
+                            <CustomSelect
+                                label="Lớp học"
+                                value={selectedClassName || ''}
+                                onChange={(val: string) => setSelectedClassName(val)}
+                                options={filteredCourses.map(c => ({ label: `${c.className} - ${c.courseName}`, value: c.className }))}
+                                placeholder={filteredCourses.length === 0 ? "Không có lớp học" : "Chọn lớp học"}
+                                disabled={filteredCourses.length === 0}
+                            />
                         </div>
                     </div>
                 </div>
@@ -362,19 +275,19 @@ export const StudentGradesPage: React.FC = () => {
                                 {/* ORANGE Table Header */}
                                 <thead>
                                     <tr className="bg-gradient-to-r from-fpt-orange to-orange-500">
-                                        <th className="text-left px-4 py-3 text-xs font-bold text-white uppercase tracking-wider w-[20%]">
+                                        <th className="px-4 py-5 text-white text-left w-[20%] text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             Loại điểm
                                         </th>
-                                        <th className="text-left px-4 py-3 text-xs font-bold text-white uppercase tracking-wider w-[32%]">
+                                        <th className="px-4 py-5 text-white text-left w-[32%] text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             Mục điểm
                                         </th>
-                                        <th className="text-center px-4 py-3 text-xs font-bold text-white uppercase tracking-wider w-[12%]">
+                                        <th className="px-4 py-5 text-white text-center w-[12%] text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             Trọng số
                                         </th>
-                                        <th className="text-center px-4 py-3 text-xs font-bold text-white uppercase tracking-wider w-[12%]">
+                                        <th className="px-4 py-5 text-white text-center w-[12%] text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             Điểm
                                         </th>
-                                        <th className="text-left px-4 py-3 text-xs font-bold text-white uppercase tracking-wider w-[24%]">
+                                        <th className="px-4 py-5 text-white text-left w-[24%] text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             Ghi chú
                                         </th>
                                     </tr>
@@ -385,7 +298,7 @@ export const StudentGradesPage: React.FC = () => {
                                             {category.items.map((item, itemIndex) => {
                                                 const isTotal = item.itemName === 'Total';
                                                 const displayValue = isTotal ? category.totalValue : item.value;
-                                                const isPublished = isTotal 
+                                                const isPublished = isTotal
                                                     ? (item.isPublished || category.items.some(i => i.itemName !== 'Total' && i.isPublished))
                                                     : item.isPublished;
 
@@ -473,3 +386,5 @@ export const StudentGradesPage: React.FC = () => {
 };
 
 export default StudentGradesPage;
+
+

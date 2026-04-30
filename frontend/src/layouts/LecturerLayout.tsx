@@ -37,3 +37,4 @@ export const LecturerLayout: React.FC<LecturerLayoutProps> = ({ children, pageTi
         </div>
     );
 };
+

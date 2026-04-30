@@ -6,7 +6,7 @@ import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { notificationService, AdminNotification } from '../../services/api/notificationService';
 import { NotificationStatus, getStatusLabel, getTargetTypeLabel } from '../../types/notification';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 
 export const NotificationDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -257,3 +257,4 @@ export const NotificationDetailPage: React.FC = () => {
     </Layout >
   );
 };
+

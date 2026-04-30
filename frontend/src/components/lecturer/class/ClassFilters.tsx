@@ -1,5 +1,6 @@
 import React from 'react';
 import { SemesterResponse, CourseOptionResponse } from '../../../services/api/LecturerClass';
+import { CustomSelect } from '../../common/CustomSelect';
 
 interface ClassFiltersProps {
     semesters: SemesterResponse[];
@@ -19,44 +20,35 @@ export const ClassFilters: React.FC<ClassFiltersProps> = ({
     onCourseChange
 }) => {
     return (
-        <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-gray-100 dark:border-zinc-800 mb-6">
-            <div className="flex flex-col md:flex-row gap-6">
-                <div className="flex-1 max-w-sm">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Học kỳ
-                    </label>
-                    <select
+        <div className="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-gray-100 dark:border-zinc-800 mb-8 shadow-sm animate-in fade-in duration-500">
+            <div className="flex flex-col md:flex-row gap-8">
+                <div className="flex-1 md:max-w-xs">
+                    <CustomSelect
+                        label="Học kỳ"
                         value={selectedSemester}
-                        onChange={(e) => onSemesterChange(e.target.value)}
-                        className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg focus:ring-2 transition-all outline-none text-gray-900 dark:text-white"
-                    >
-                        <option value="">Chọn học kỳ</option>
-                        {semesters.map((semester) => (
-                            <option key={semester.code} value={semester.code}>
-                                {semester.name}
-                            </option>
-                        ))}
-                    </select>
+                        onChange={onSemesterChange}
+                        options={[
+                            { value: '', label: 'Chọn học kỳ' },
+                            ...semesters.map((semester) => ({ value: semester.code, label: semester.name }))
+                        ]}
+                        placeholder="Chọn học kỳ"
+                    />
                 </div>
 
-                <div className="flex-1 max-w-md">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Mã môn học
-                    </label>
-                    <select
+                <div className="flex-1 md:max-w-md">
+                    <CustomSelect
+                        label="Mã môn học"
                         value={selectedCourse}
-                        onChange={(e) => onCourseChange(e.target.value)}
-                        className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg focus:ring-2 transition-all outline-none text-gray-900 dark:text-white"
-                    >
-                        <option value="">Tất cả môn học</option>
-                        {courseOptions.map((course) => (
-                            <option key={course.code} value={course.code}>
-                                {course.code}
-                            </option>
-                        ))}
-                    </select>
+                        onChange={onCourseChange}
+                        options={[
+                            { value: '', label: 'Tất cả môn học' },
+                            ...courseOptions.map((course) => ({ value: course.code, label: course.code }))
+                        ]}
+                        placeholder="Tất cả môn học"
+                    />
                 </div>
             </div>
         </div>
     );
 };
+

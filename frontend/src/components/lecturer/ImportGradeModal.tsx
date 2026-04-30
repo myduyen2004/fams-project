@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, Upload, Loader2, Download, AlertCircle, CheckCircle2 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { studentGradeService, GradePreviewResponse, GradePreviewRow } from '../../services/api/studentGradeService';
 
 // Custom Tooltip Component with better styling
@@ -452,3 +452,4 @@ export const ImportGradeModal: React.FC<ImportGradeModalProps> = ({
         </div>
     );
 };
+

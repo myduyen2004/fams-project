@@ -11,7 +11,7 @@ import {
   AdminNotification
 } from '../../services/api/notificationService';
 import { NotificationStatus, TargetType } from '../../types/notification';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import {
   NotificationFilters,
@@ -200,12 +200,12 @@ export const NotificationManagementPage = () => {
                     checked={notifications.length > 0 && selectedIds.length === notifications.length}
                   />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">STT</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Tiêu đề thông báo</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Đối tượng</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Ngày gửi</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Trạng thái</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg">Hành động</th>
+                <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">STT</th>
+                <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tiêu đề thông báo</th>
+                <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Đối tượng</th>
+                <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Ngày gửi</th>
+                <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap rounded-tr-lg">Hành động</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
@@ -262,3 +262,5 @@ export const NotificationManagementPage = () => {
     </Layout>
   );
 };
+
+

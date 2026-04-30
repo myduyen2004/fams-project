@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { academicStaffService } from '../../../services/api/academicStaffService';
+import { CustomDatePicker } from '../../common/CustomDatePicker';
 
 export const AttendanceFrequencyChart: React.FC<{
   data?: any[];
@@ -27,13 +28,13 @@ export const AttendanceFrequencyChart: React.FC<{
     const start = new Date(weekStart);
     const end = new Date(start);
     end.setDate(end.getDate() + 6);
-    
+
     const formatDate = (date: Date) => {
       const day = String(date.getDate()).padStart(2, '0');
       const month = String(date.getMonth() + 1).padStart(2, '0');
       return `${day}/${month}`;
     };
-    
+
     return `${formatDate(start)} - ${formatDate(end)}`;
   })();
 
@@ -49,7 +50,7 @@ export const AttendanceFrequencyChart: React.FC<{
         <div className="flex items-center gap-2">
           {/* Week navigation */}
           {onPrevWeek && (
-            <button 
+            <button
               onClick={onPrevWeek}
               disabled={loading}
               className="p-1.5 rounded-lg border border-gray-200 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
@@ -66,7 +67,7 @@ export const AttendanceFrequencyChart: React.FC<{
             </div>
           )}
           {onNextWeek && (
-            <button 
+            <button
               onClick={onNextWeek}
               disabled={loading}
               className="p-1.5 rounded-lg border border-gray-200 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
@@ -93,22 +94,22 @@ export const AttendanceFrequencyChart: React.FC<{
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
-            <XAxis 
-              dataKey="day" 
-              axisLine={false} 
-              tickLine={false} 
+            <XAxis
+              dataKey="day"
+              axisLine={false}
+              tickLine={false}
               tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }}
               dy={10}
               padding={{ left: 30, right: 30 }}
             />
-            <YAxis 
-              axisLine={false} 
-              tickLine={false} 
+            <YAxis
+              axisLine={false}
+              tickLine={false}
               tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }}
               domain={[0, 100]}
               tickFormatter={(value) => `${value}%`}
             />
-            <Tooltip 
+            <Tooltip
               contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', fontSize: '12px' }}
               formatter={(value: any) => [`${value}%`, 'Tỷ lệ vắng']}
               labelFormatter={(label, payload) => {
@@ -118,11 +119,11 @@ export const AttendanceFrequencyChart: React.FC<{
                 return label;
               }}
             />
-            <Line 
-              type="monotone" 
-              dataKey="absencePercentage" 
-              stroke="#F37021" 
-              strokeWidth={3} 
+            <Line
+              type="monotone"
+              dataKey="absencePercentage"
+              stroke="#F37021"
+              strokeWidth={3}
               dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
               activeDot={{ r: 6, stroke: '#F37021', strokeWidth: 0 }}
             />
@@ -159,41 +160,43 @@ export const DailyAttendanceDonut: React.FC<{ stats?: any }> = ({ stats: initial
     }
   }, []);
 
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newDate = e.target.value;
-    setSelectedDate(newDate);
-    fetchDailyStats(newDate);
-  };
+
 
   const present = stats?.present || 0;
   const absent = stats?.absent || 0;
   const total = present + absent;
   const percent = total > 0 ? Math.round((present / total) * 100) : 0;
-  
+
   const pieData = [
     { name: 'Đã điểm danh', value: present, color: '#F37021' },
     { name: 'Vắng mặt', value: absent, color: '#E5E7EB' },
   ];
 
-  const dateStr = stats?.date || new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+  const dateStr = stats?.date
+    ? (stats.date.includes(',') ? stats.date.split(',')[1].trim() : stats.date)
+    : new Date().toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-zinc-800 flex flex-col h-[400px]">
       <div className="flex justify-between items-center pb-2 mb-2 border-b border-gray-100 dark:border-zinc-800">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Tỷ lệ chuyên cần ngày</h3>
-          <p className="text-[10px] text-gray-400 font-bold uppercase mt-1 tracking-wider">{dateStr}</p>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+            Tỷ lệ chuyên cần ngày
+          </h3>
+          <p className="text-[10px] text-gray-400 font-medium uppercase mt-1 tracking-wider">{dateStr}</p>
         </div>
         <div className="relative">
-          <input
-            type="date"
+          <CustomDatePicker
             value={selectedDate}
-            onChange={handleDateChange}
-            className="w-[130px] text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400 transition-all"
+            onChange={(value) => {
+              setSelectedDate(value);
+              fetchDailyStats(value);
+            }}
+            className="w-[230px]"
           />
         </div>
       </div>
-      
+
       <div className="flex-1 flex items-center justify-center relative mt-2">
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/60 dark:bg-zinc-900/60 z-10 rounded-xl">
@@ -226,21 +229,22 @@ export const DailyAttendanceDonut: React.FC<{ stats?: any }> = ({ stats: initial
       </div>
 
       <div className="w-full mt-auto space-y-2 pt-2">
-          <div className="flex justify-between items-center text-[11px]">
-            <div className="flex items-center gap-2 font-bold text-zinc-500">
-              <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-              Đã điểm danh
-            </div>
-            <span className="font-bold text-zinc-800 dark:text-gray-300">{present.toLocaleString()}</span>
+        <div className="flex justify-between items-center text-[11px]">
+          <div className="flex items-center gap-2 font-bold text-zinc-500">
+            <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+            Đã điểm danh
           </div>
-          <div className="flex justify-between items-center text-[11px]">
-            <div className="flex items-center gap-2 font-bold text-zinc-500">
-              <div className="w-2 h-2 rounded-full bg-gray-200"></div>
-              Vắng mặt
-            </div>
-            <span className="font-bold text-zinc-800 dark:text-gray-300">{absent.toLocaleString()}</span>
-          </div>
+          <span className="font-bold text-zinc-800 dark:text-gray-300">{present.toLocaleString()}</span>
         </div>
+        <div className="flex justify-between items-center text-[11px]">
+          <div className="flex items-center gap-2 font-bold text-zinc-500">
+            <div className="w-2 h-2 rounded-full bg-gray-200"></div>
+            Vắng mặt
+          </div>
+          <span className="font-bold text-zinc-800 dark:text-gray-300">{absent.toLocaleString()}</span>
+        </div>
+      </div>
     </div>
   );
 };
+

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, Upload, Loader2, FileSpreadsheet } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { courseService } from '../../services/api/courseService';
 import { CourseImportDTO } from '../../types/course';
 
@@ -44,7 +44,7 @@ export const ImportCourseModal: React.FC<ImportCourseModalProps> = ({ isOpen, on
             const data = await courseService.previewImportCourses(file);
             setPreviewData(data);
             if (data.length === 0) {
-                toast('File không có dữ liệu hợp lệ', { icon: '⚠️' });
+                toast.warning('File không có dữ liệu hợp lệ', { icon: '⚠️' });
             } else {
                 toast.success(`Đã đọc ${data.length} dòng`);
             }
@@ -94,7 +94,7 @@ export const ImportCourseModal: React.FC<ImportCourseModalProps> = ({ isOpen, on
     const canImport = errorCount === 0 && validCount > 0;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
             <div className={`relative bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ${previewData ? 'w-full max-w-5xl max-h-[92vh]' : 'w-full max-w-lg'}`}>
 
                 {/* Header */}
@@ -109,7 +109,7 @@ export const ImportCourseModal: React.FC<ImportCourseModalProps> = ({ isOpen, on
                             </p>
                         )}
                     </div>
-                    <button onClick={handleClose}><X size={20} className="text-gray-400 hover:text-gray-600" /></button>
+                    <button onClick={handleClose} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all active:scale-95"><X size={20} className="text-gray-400 hover:text-gray-600" /></button>
                 </div>
 
                 {/* Content */}
@@ -117,7 +117,7 @@ export const ImportCourseModal: React.FC<ImportCourseModalProps> = ({ isOpen, on
                     {!previewData ? (
                         // Upload Form
                         <form onSubmit={handlePreview} className="space-y-4">
-                            <div className="p-4 bg-blue-50 dark:bg-blue-900/10 text-blue-800 dark:text-blue-300 rounded-lg text-sm">
+                            <div className="p-4 bg-blue-50 dark:bg-blue-900/10 text-blue-800 dark:text-blue-300 rounded-2xl text-sm border border-blue-100 dark:border-blue-900/20">
                                 <p className="font-semibold mb-1">Hướng dẫn:</p>
                                 <ul className="list-disc pl-4 space-y-1">
                                     <li>Tải lên file <strong>.xlsx</strong> chứa dữ liệu môn học.</li>
@@ -129,7 +129,7 @@ export const ImportCourseModal: React.FC<ImportCourseModalProps> = ({ isOpen, on
                                 </ul>
                             </div>
 
-                            <button
+                             <button
                                 type="button"
                                 onClick={async () => {
                                     try {
@@ -147,13 +147,13 @@ export const ImportCourseModal: React.FC<ImportCourseModalProps> = ({ isOpen, on
                                     }
                                 }}
                                 disabled={loading}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-xl hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors font-semibold"
+                                className="w-full flex items-center justify-center gap-2 h-[44px] bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-2xl hover:bg-green-100 dark:hover:bg-green-900/30 transition-all font-bold active:scale-95"
                             >
                                 <FileSpreadsheet size={18} />
                                 Tải file mẫu Excel
                             </button>
 
-                            <div className="border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-lg p-6 flex flex-col items-center text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors relative">
+                            <div className="border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-2xl p-6 flex flex-col items-center text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors relative">
                                 <input required type="file" accept=".xlsx, .xls" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileChange} />
                                 <Upload size={32} className="text-fpt-orange mb-2" />
                                 {file ? (
@@ -167,8 +167,8 @@ export const ImportCourseModal: React.FC<ImportCourseModalProps> = ({ isOpen, on
                             </div>
 
                             <div className="flex justify-end gap-3 mt-6">
-                                <button type="button" onClick={handleClose} className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Hủy</button>
-                                <button type="submit" disabled={loading} className="px-6 py-2 bg-fpt-orange text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center gap-2">
+                                <button type="button" onClick={handleClose} className="h-[44px] px-6 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-bold text-gray-600 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all active:scale-95">Hủy</button>
+                                <button type="submit" disabled={loading} className="flex items-center justify-center gap-2 h-[44px] px-6 rounded-2xl bg-fpt-orange text-sm font-bold text-white hover:bg-orange-600 shadow-lg shadow-fpt-orange/20 transition-all active:scale-95 disabled:opacity-50">
                                     {loading && <Loader2 size={16} className="animate-spin" />} Xem trước
                                 </button>
                             </div>
@@ -178,12 +178,12 @@ export const ImportCourseModal: React.FC<ImportCourseModalProps> = ({ isOpen, on
                         <div className="space-y-4">
                             {/* Error alert if cannot import */}
                             {errorCount > 0 && (
-                                <div className="p-4 bg-red-50 dark:bg-red-900/10 text-red-800 dark:text-red-300 rounded-lg text-sm">
+                                <div className="p-4 bg-red-50 dark:bg-red-900/10 text-red-800 dark:text-red-300 rounded-2xl text-sm border border-red-100 dark:border-red-900/20">
                                     <p className="font-semibold">⚠️ Không thể import do có {errorCount} dòng bị lỗi. Vui lòng sửa file Excel và thử lại.</p>
                                 </div>
                             )}
 
-                            <div className="border rounded-lg overflow-hidden border-gray-200 dark:border-zinc-700">
+                            <div className="border rounded-2xl overflow-hidden border-gray-200 dark:border-zinc-700 shadow-sm">
                                 <table className="w-full text-sm text-left">
                                     <thead className="bg-gray-50 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 font-medium border-b border-gray-200 dark:border-zinc-700">
                                         <tr>
@@ -261,16 +261,16 @@ export const ImportCourseModal: React.FC<ImportCourseModalProps> = ({ isOpen, on
                             <div className="flex justify-between items-center pt-4 border-t border-gray-100 dark:border-zinc-800">
                                 <button
                                     onClick={() => setPreviewData(null)}
-                                    className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
+                                    className="h-[44px] px-6 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-bold text-gray-600 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all active:scale-95 flex items-center gap-2"
                                 >
                                     <Upload size={16} className="rotate-180" /> Quay lại upload
                                 </button>
                                 <div className="flex gap-3">
-                                    <button onClick={handleClose} className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Hủy</button>
+                                    <button onClick={handleClose} className="h-[44px] px-6 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-bold text-gray-600 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all active:scale-95">Hủy</button>
                                     <button
                                         onClick={handleConfirmImport}
                                         disabled={loading || !canImport}
-                                        className="px-6 py-2 bg-fpt-orange text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+                                        className="flex items-center justify-center gap-2 h-[44px] px-6 rounded-2xl bg-fpt-orange text-sm font-bold text-white hover:bg-orange-600 shadow-lg shadow-fpt-orange/20 transition-all active:scale-95 disabled:opacity-50"
                                     >
                                         {loading && <Loader2 size={16} className="animate-spin" />}
                                         {canImport ? `Xác nhận import (${validCount})` : 'Không thể import'}
@@ -284,3 +284,4 @@ export const ImportCourseModal: React.FC<ImportCourseModalProps> = ({ isOpen, on
         </div>
     );
 };
+

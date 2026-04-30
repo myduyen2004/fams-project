@@ -1,5 +1,7 @@
 package com.fams.backend.service.impl;
 
+import com.fams.backend.entity.Alert;
+
 import com.fams.backend.entity.Semester;
 import com.fams.backend.repository.SemesterRepository;
 import org.apache.poi.ss.usermodel.*;
@@ -36,6 +38,12 @@ class StagingImportServiceTest {
 
     @Mock
     private SemesterRepository semesterRepository;
+
+    @Mock
+    private AlertService alertService;
+
+    @Mock
+    private SystemLogService systemLogService;
 
     @InjectMocks
     private StagingImportService stagingImportService;

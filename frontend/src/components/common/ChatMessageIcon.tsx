@@ -183,3 +183,4 @@ export const ChatMessageIcon: React.FC = () => {
         </div>
     );
 };
+

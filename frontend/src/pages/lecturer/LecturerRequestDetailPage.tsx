@@ -16,7 +16,7 @@ import {
     GraduationCap
 } from 'lucide-react';
 import dayjs from 'dayjs';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 export const LecturerRequestDetailPage: React.FC = () => {
@@ -512,3 +512,4 @@ export const LecturerRequestDetailPage: React.FC = () => {
         </LecturerLayout >
     );
 };
+

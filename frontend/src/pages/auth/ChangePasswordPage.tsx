@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../../services/api/authService';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { Loader2, ArrowRight, AlertTriangle, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
 // --- Illustration ---
@@ -122,7 +122,7 @@ export const ChangePasswordPage: React.FC = () => {
           <div className="w-10 h-10 bg-fpt-orange rounded-xl flex items-center justify-center p-2 shadow-lg shadow-orange-500/20">
             <img src="/assets/images/fams-logo.png" alt="Logo" className="w-full h-full object-contain brightness-0 invert" />
           </div>
-          <span className="text-xl font-bold text-gray-900 dark:text-white uppercase tracking-wider">FAMS</span>
+          <span className="text-xl font-semibold text-gray-900 dark:text-white uppercase tracking-wider">FAMS</span>
         </div>
 
         {/* Card */}
@@ -135,7 +135,7 @@ export const ChangePasswordPage: React.FC = () => {
 
           {/* Heading */}
           <div className="text-center mb-10">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">
+            <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 dark:text-white mb-2 tracking-tight">
               {isFirstLogin || isPasswordChangeRequired ? 'Đổi mật khẩu lần đầu' : 'Đổi mật khẩu'}
             </h1>
             <p className="text-gray-500 dark:text-zinc-400 text-sm">
@@ -155,7 +155,7 @@ export const ChangePasswordPage: React.FC = () => {
                 type="password"
                 required
                 placeholder="Nhập mật khẩu hiện tại"
-                className="w-full px-6 py-4 bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/5 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-sm"
+                className="w-full px-6 h-[52px] bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/10 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-sm font-medium"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
               />
@@ -170,7 +170,7 @@ export const ChangePasswordPage: React.FC = () => {
                   type={showPassword ? "text" : "password"}
                   required
                   placeholder="Tối thiểu 8 ký tự"
-                  className="w-full px-6 py-4 bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/5 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-sm pr-12"
+                  className="w-full px-6 h-[52px] bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/10 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-sm pr-12 font-medium"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -194,7 +194,7 @@ export const ChangePasswordPage: React.FC = () => {
                     ))}
                  </div>
                  <p className="text-[10px] text-gray-400">
-                   Độ mạnh mật khẩu: <span className={`font-bold ${passwordStrength > 0 ? strength.color.replace('bg-', 'text-') : ''}`}>{strength.label}</span>
+                   Độ mạnh mật khẩu: <span className={`font-semibold ${passwordStrength > 0 ? strength.color.replace('bg-', 'text-') : ''}`}>{strength.label}</span>
                  </p>
               </div>
             </div>
@@ -207,7 +207,7 @@ export const ChangePasswordPage: React.FC = () => {
                 type="password"
                 required
                 placeholder="Xác nhận mật khẩu mới"
-                className="w-full px-6 py-4 bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/5 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-sm"
+                className="w-full px-6 h-[52px] bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/10 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-sm font-medium"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
@@ -216,10 +216,10 @@ export const ChangePasswordPage: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-fpt-orange hover:bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-orange-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full h-[52px] bg-fpt-orange hover:bg-orange-600 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/20 transition-all hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? <Loader2 size={24} className="animate-spin" /> : 
-                  <span className="flex items-center gap-2">Xác nhận <ArrowRight size={20}/></span>
+                  <span className="flex items-center gap-2 text-base">Xác nhận <ArrowRight size={20}/></span>
               }
             </button>
           </form>
@@ -255,10 +255,11 @@ export const ChangePasswordPage: React.FC = () => {
              <AlertTriangle size={20} className="text-orange-500" />
            </div>
            <p className="text-[11px] text-orange-950/60 dark:text-orange-400/60 leading-relaxed">
-             <b>Mẹo bảo mật:</b> Tránh sử dụng thông tin cá nhân như ngày sinh hay tên của bạn làm mật khẩu. Mật khẩu mạnh giúp bảo vệ dữ liệu học tập của bạn an toàn hơn.
+             <span className="font-semibold">Mẹo bảo mật:</span> Tránh sử dụng thông tin cá nhân như ngày sinh hay tên của bạn làm mật khẩu. Mật khẩu mạnh giúp bảo vệ dữ liệu học tập của bạn an toàn hơn.
            </p>
         </div>
       </div>
     </div>
   );
 };
+

@@ -4,7 +4,7 @@ import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { ChevronRight, Loader2, Box, Grid3X3 } from 'lucide-react';
 import { roomService } from '../../services/api/roomService';
 import { Room } from '../../types/room';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Environment, useTexture } from '@react-three/drei';
 import { RoomAPAssignment } from '../../components/academic-staff/RoomAPAssignment';
@@ -324,12 +324,12 @@ export const RoomDetail: React.FC = () => {
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setIs3DMode(!is3DMode)}
-                                className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors flex items-center gap-2 shadow-sm ${is3DMode
-                                    ? 'bg-fpt-orange text-white border-fpt-orange hover:bg-orange-600'
-                                    : 'bg-white dark:bg-zinc-800 border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-zinc-700'
+                                className={`h-[52px] px-6 rounded-2xl border-2 text-sm font-bold transition-all flex items-center gap-2 shadow-sm ${is3DMode
+                                    ? 'bg-fpt-orange text-white border-fpt-orange hover:bg-orange-600 hover:shadow-lg hover:shadow-fpt-orange/20'
+                                    : 'bg-white dark:bg-zinc-900 border-gray-100 dark:border-zinc-800 text-gray-700 dark:text-gray-200 hover:border-fpt-orange/40 hover:bg-gray-50 dark:hover:bg-zinc-800'
                                     }`}
                             >
-                                {is3DMode ? <Grid3X3 size={16} /> : <Box size={16} />}
+                                {is3DMode ? <Grid3X3 size={18} /> : <Box size={18} />}
                                 {is3DMode ? 'Chế độ 2D' : 'Chế độ 3D'}
                             </button>
                         </div>
@@ -460,3 +460,4 @@ export const RoomDetail: React.FC = () => {
         </AcademicStaffLayout>
     );
 };
+

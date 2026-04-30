@@ -113,3 +113,4 @@ export const LecturerTableRow: React.FC<LecturerTableRowProps> = React.memo(({
 });
 
 LecturerTableRow.displayName = 'LecturerTableRow';
+

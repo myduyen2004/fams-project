@@ -4,12 +4,13 @@ import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { chatService, AIChatMessage, AIChatSession, ContinuationRequest, MissingField, ThinkingStep } from '../../services/api/chatService';
-import { toast } from 'react-hot-toast';
+import toast from "@utils/toast";
 import { format } from 'date-fns';
 import { AcademicStaffSidebar } from '../../components/academic-staff/AcademicStaffSidebar';
 import { LecturerSidebar } from '../../components/lecturer/LecturerSidebar';
 import { StudentSidebar } from '../../components/student/StudentSidebar';
 import { AdminSidebar } from '../../components/admin/AdminSidebar';
+import { CustomSelect } from '../../components/common/CustomSelect';
 
 import { CommonHeader } from '../../components/common/CommonHeader';
 
@@ -194,7 +195,7 @@ const ChatInput = memo(({ onSendMessage, onUploadFile, isLoading, disabled }: Ch
                     {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                 </button>
             </form>
-            <p className="mt-2 text-center text-[10px] font-bold uppercase tracking-[0.24em] text-gray-400">FAMS AI Assistant</p>
+            <p className="mt-2 text-center text-[10px] font-semibold uppercase tracking-[0.24em] text-gray-400">FAMS AI Assistant</p>
         </div>
     );
 });
@@ -220,10 +221,10 @@ const MissingFieldForm = memo(({ request, isLoading, onSubmit, onCancel }: Missi
         <div className="mx-auto mb-3 w-full max-w-[min(100%,48rem)] rounded-2xl border border-gray-200 bg-white p-3.5 shadow-[0_8px_18px_rgba(15,23,42,0.05)] dark:border-zinc-800 dark:bg-zinc-900">
             <div className="mb-3 flex items-start justify-between gap-3">
                 <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.24em] text-fpt-orange">
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-fpt-orange">
                         {request.agentLabel || 'Agent hỗ trợ'}
                     </p>
-                    <h3 className="mt-1 text-sm font-bold text-gray-900 dark:text-white">
+                    <h3 className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
                         {request.actionReview ? 'Xác nhận thông tin trước khi thực hiện thao tác' : 'Cần thêm thông tin để trả lời chính xác'}
                     </h3>
                     {request.answer && (
@@ -655,7 +656,7 @@ export const ChatPage: React.FC = () => {
                             <div className="chat-ambient-orb chat-ambient-orb-two" />
                             <div className="chat-ambient-grid" />
                         </div>
-                        <header className="h-16 border-b border-gray-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md flex items-center justify-between px-4 z-10">
+                        <header className="h-16 flex-shrink-0 border-b border-gray-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md flex items-center justify-between px-4 z-10">
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -669,12 +670,12 @@ export const ChatPage: React.FC = () => {
                                         <Bot className="w-6 h-6 text-white" />
                                     </div>
                                     <div>
-                                        <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
+                                        <h1 className="text-lg font-semibold text-gray-900 dark:text-white leading-tight">
                                             {userRole ? `FAMS AI ${userRole.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}` : 'FAMS AI Assistant'}
                                         </h1>
                                         <div className="flex items-center gap-1.5">
                                             <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                                            <span className="text-[10px] text-gray-500 dark:text-zinc-400 uppercase tracking-wider font-semibold">Cơ chế 4 giai đoạn</span>
+                                            <span className="text-[10px] text-gray-500 dark:text-zinc-400 uppercase tracking-wider font-medium">Cơ chế 4 giai đoạn</span>
                                         </div>
                                     </div>
                                 </div>
@@ -682,24 +683,22 @@ export const ChatPage: React.FC = () => {
 
                             <div className="flex items-center gap-4">
                                 <div className="flex flex-col gap-1">
-                                    <label className="text-[10px] uppercase font-bold text-gray-400 dark:text-zinc-500">Reasoning Model</label>
-                                    <select
+                                    <label className="text-[10px] uppercase font-semibold text-gray-400 dark:text-zinc-500">Reasoning Model</label>
+                                    <CustomSelect
                                         value={selectedRoutingModel}
-                                        onChange={(e) => setSelectedRoutingModel(e.target.value)}
-                                        className="text-xs bg-gray-50 dark:bg-zinc-800 border-none rounded p-1 focus:ring-1 focus:ring-fpt-orange text-gray-700 dark:text-zinc-300"
-                                    >
-                                        {MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                                    </select>
+                                        onChange={(value) => setSelectedRoutingModel(value)}
+                                        options={MODELS.map(m => ({ value: m.id, label: m.name }))}
+                                        className="text-xs bg-gray-50 dark:bg-zinc-800 border-none rounded p-1 text-gray-700 dark:text-zinc-300"
+                                    />
                                 </div>
                                 <div className="flex flex-col gap-1">
-                                    <label className="text-[10px] uppercase font-bold text-gray-400 dark:text-zinc-500">Answer Model</label>
-                                    <select
+                                    <label className="text-[10px] uppercase font-semibold text-gray-400 dark:text-zinc-500">Answer Model</label>
+                                    <CustomSelect
                                         value={selectedAnswerModel}
-                                        onChange={(e) => setSelectedAnswerModel(e.target.value)}
-                                        className="text-xs bg-gray-50 dark:bg-zinc-800 border-none rounded p-1 focus:ring-1 focus:ring-fpt-orange text-gray-700 dark:text-zinc-300"
-                                    >
-                                        {MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                                    </select>
+                                        onChange={(value) => setSelectedAnswerModel(value)}
+                                        options={MODELS.map(m => ({ value: m.id, label: m.name }))}
+                                        className="text-xs bg-gray-50 dark:bg-zinc-800 border-none rounded p-1 text-gray-700 dark:text-zinc-300"
+                                    />
                                 </div>
                             </div>
                         </header>
@@ -716,7 +715,7 @@ export const ChatPage: React.FC = () => {
                                     </div>
 
                                     <div className="space-y-3">
-                                        <h2 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">
+                                        <h2 className="text-4xl font-bold text-gray-900 dark:text-white tracking-tight">
                                             Chào mừng đến với <span className="text-fpt-orange">FAMS AI</span>
                                         </h2>
                                         <p className="text-gray-500 dark:text-zinc-400 text-lg font-medium">
@@ -870,3 +869,4 @@ export const ChatPage: React.FC = () => {
         </div>
     );
 };
+

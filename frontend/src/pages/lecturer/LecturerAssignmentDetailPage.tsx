@@ -9,7 +9,7 @@ import { Pagination } from '../../components/common/Pagination';
 import {
     ArrowLeft, Clock, ExternalLink, Search, Loader2, BookOpen, Lock, X, Download, MessageSquare, ShieldAlert, SlidersHorizontal
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 
 const PAGE_SIZE = 30;
 const BATCH_CHECK_CONCURRENCY = 3;
@@ -25,6 +25,7 @@ interface BatchCheckRow {
     studentName: string;
     plagiarismPercent?: number;
     plagiarized?: boolean;
+    avatar?: string;
     status: 'SUCCESS' | 'ERROR';
     errorMessage?: string;
     checkedAt: string;
@@ -231,7 +232,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                     }));
 
             if (targets.length === 0) {
-                toast('Không có bài nộp hợp lệ để check trong bài tập này');
+                toast.info('Không có bài nộp hợp lệ để check trong bài tập này');
                 return;
             }
 
@@ -262,6 +263,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                 studentName: target.submission.studentName || '—',
                                 plagiarismPercent: result.plagiarismPercent,
                                 plagiarized: result.plagiarized,
+                                avatar: target.submission.avatar,
                                 status: 'SUCCESS',
                                 checkedAt: now,
                             }
@@ -278,6 +280,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                 submissionId: target.submission.id as number,
                                 studentCode: target.submission.studentCode || '—',
                                 studentName: target.submission.studentName || '—',
+                                avatar: target.submission.avatar,
                                 status: 'ERROR',
                                 errorMessage: message,
                                 checkedAt: now,
@@ -671,16 +674,16 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                        <table className="w-full border-collapse">
                             <thead>
-                                <tr className="bg-orange-50/50 dark:bg-orange-900/10 border-b border-gray-200 dark:border-zinc-700 text-[#001D4A] dark:text-zinc-300">
-                                    <th className="text-left px-6 py-4 font-bold text-xs uppercase tracking-wider w-16">STT</th>
-                                    <th className="text-left px-6 py-4 font-bold text-xs uppercase tracking-wider">Học viên</th>
-                                    <th className="text-left px-6 py-4 font-bold text-xs uppercase tracking-wider">Trạng thái</th>
-                                    <th className="text-left px-6 py-4 font-bold text-xs uppercase tracking-wider">File đính kèm</th>
-                                    <th className="text-left px-6 py-4 font-bold text-xs uppercase tracking-wider">Bài làm / Ghi chú</th>
-                                    <th className="text-center px-6 py-4 font-bold text-xs uppercase tracking-wider">Check đạo văn</th>
-                                    <th className="text-center px-6 py-4 font-bold text-xs uppercase tracking-wider">Nhận xét</th>
+                                <tr className="bg-fpt-orange text-white">
+                                    <th className="px-4 py-5 text-left w-16 text-xs font-bold uppercase tracking-widest whitespace-nowrap rounded-tl-2xl">STT</th>
+                                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Học viên</th>
+                                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">File đính kèm</th>
+                                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Bài làm / Ghi chú</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Đạo văn</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap rounded-tr-2xl">Nhận xét</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
@@ -701,8 +704,12 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs shrink-0">
-                                                        {(sub.studentName?.charAt(0) || 'S').toUpperCase()}
+                                                    <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
+                                                        {sub.avatar ? (
+                                                            <img src={sub.avatar} alt={sub.studentName} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            (sub.studentName?.charAt(0) || 'S').toUpperCase()
+                                                        )}
                                                     </div>
                                                     <div>
                                                         <p className="font-bold text-[#001D4A] dark:text-white leading-tight">{sub.studentName || '—'}</p>
@@ -786,7 +793,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                     </div>
 
                     {filteredSubmissions.length > 0 && (
-                        <div className="px-6 py-4 border-t border-gray-100 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/10">
+                        <div className="px-8 py-8 border-t border-gray-50 dark:border-zinc-800/50 bg-gray-50/30">
                             <Pagination
                                 currentPage={currentPage}
                                 totalPages={totalPages}
@@ -816,8 +823,12 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
 
                         <div className="p-6">
                             <div className="bg-orange-50 dark:bg-orange-900/10 rounded-xl p-4 mb-6 border border-orange-100 dark:border-orange-900/30 flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-orange-200 dark:bg-orange-800 flex items-center justify-center font-bold text-orange-700 dark:text-orange-300 text-sm shrink-0">
-                                    {(commentSubmission.studentName?.charAt(0) || 'S').toUpperCase()}
+                                <div className="w-10 h-10 rounded-full bg-orange-200 dark:bg-orange-800 flex items-center justify-center font-bold text-orange-700 dark:text-orange-300 text-sm shrink-0 overflow-hidden border-2 border-orange-100/50">
+                                    {commentSubmission.avatar ? (
+                                        <img src={commentSubmission.avatar} alt={commentSubmission.studentName} className="w-full h-full object-cover" />
+                                    ) : (
+                                        (commentSubmission.studentName?.charAt(0) || 'S').toUpperCase()
+                                    )}
                                 </div>
                                 <div>
                                     <p className="font-bold text-[#001D4A] dark:text-white leading-tight">{commentSubmission.studentName}</p>
@@ -866,13 +877,24 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                     <div className="w-full max-w-5xl overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
                         <div className="flex items-start justify-between border-b border-gray-100 px-6 py-5 dark:border-zinc-800">
                             <div>
-                                <h3 className="flex items-center gap-2 text-lg font-bold text-[#001D4A] dark:text-white">
-                                    <ShieldAlert className="h-5 w-5 text-fpt-orange" />
-                                    Kết quả check đạo văn
-                                </h3>
-                                <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
-                                    {plagiarismSubmission.studentName} - {plagiarismSubmission.studentCode}
-                                </p>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-sm shrink-0 overflow-hidden border-2 border-gray-100 dark:border-zinc-800">
+                                        {plagiarismResult?.avatar ? (
+                                            <img src={plagiarismResult.avatar} alt={plagiarismSubmission.studentName} className="w-full h-full object-cover" />
+                                        ) : (
+                                            (plagiarismSubmission.studentName?.charAt(0) || 'S').toUpperCase()
+                                        )}
+                                    </div>
+                                    <div>
+                                        <h3 className="flex items-center gap-2 text-lg font-bold text-[#001D4A] dark:text-white leading-none">
+                                            <ShieldAlert className="h-5 w-5 text-fpt-orange" />
+                                            Kết quả check đạo văn
+                                        </h3>
+                                        <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
+                                            {plagiarismSubmission.studentName} - {plagiarismSubmission.studentCode}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                             <button
                                 onClick={closePlagiarismDialog}
@@ -964,12 +986,12 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                             <table className="w-full text-sm">
                                                 <thead>
                                                     <tr className="bg-gray-50 dark:bg-zinc-800/40">
-                                                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Tên</th>
-                                                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Lớp</th>
-                                                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Bài tập trùng</th>
-                                                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">File đính kèm</th>
-                                                        <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">% đạo văn</th>
-                                                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Lý do</th>
+                                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tên</th>
+                                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Lớp</th>
+                                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Bài tập trùng</th>
+                                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">File đính kèm</th>
+                                                        <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">% đạo văn</th>
+                                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Lý do</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
@@ -983,8 +1005,19 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                                         filteredSimilarMatches.map(match => (
                                                             <tr key={match.submissionId} className="hover:bg-gray-50 dark:hover:bg-zinc-800/30">
                                                                 <td className="px-4 py-3">
-                                                                    <p className="font-semibold text-[#001D4A] dark:text-white">{match.studentName}</p>
-                                                                    <p className="text-xs font-mono text-gray-500 dark:text-zinc-400">{match.studentCode}</p>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-[10px] shrink-0 overflow-hidden border border-gray-100 dark:border-zinc-800">
+                                                                            {match.avatar ? (
+                                                                                <img src={match.avatar} alt={match.studentName} className="w-full h-full object-cover" />
+                                                                            ) : (
+                                                                                (match.studentName?.charAt(0) || 'S').toUpperCase()
+                                                                            )}
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="font-semibold text-[#001D4A] dark:text-white leading-tight">{match.studentName}</p>
+                                                                            <p className="text-[10px] font-mono text-gray-500 dark:text-zinc-400">{match.studentCode}</p>
+                                                                        </div>
+                                                                    </div>
                                                                 </td>
                                                                 <td className="px-4 py-3 text-xs text-gray-700 dark:text-zinc-300">
                                                                     {match.className || plagiarismResult.className || '—'}
@@ -1038,7 +1071,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
             )}
 
             {showBatchResultModal && (
-                <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/60 p-4">
+                <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 p-4">
                     <div className="w-full max-w-6xl overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
                         <div className="flex items-start justify-between border-b border-gray-100 px-6 py-5 dark:border-zinc-800">
                             <div>
@@ -1101,12 +1134,12 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="bg-gray-50 dark:bg-zinc-800/40">
-                                            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Assignment</th>
-                                            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Sinh viên</th>
-                                            <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">% đạo văn</th>
-                                            <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Trạng thái</th>
-                                            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Ghi chú</th>
-                                            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Thời gian</th>
+                                            <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Assignment</th>
+                                            <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Sinh viên</th>
+                                            <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">% đạo văn</th>
+                                            <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                                            <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Ghi chú</th>
+                                            <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Thời gian</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
@@ -1124,8 +1157,19 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                                         <p className="text-xs text-gray-500 dark:text-zinc-400">{row.assignmentTitle}</p>
                                                     </td>
                                                     <td className="px-4 py-3">
-                                                        <p className="font-semibold text-[#001D4A] dark:text-white">{row.studentName}</p>
-                                                        <p className="text-xs font-mono text-gray-500 dark:text-zinc-400">{row.studentCode}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-[10px] shrink-0 overflow-hidden border border-gray-100 dark:border-zinc-800">
+                                                                {row.avatar ? (
+                                                                    <img src={row.avatar} alt={row.studentName} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    (row.studentName?.charAt(0) || 'S').toUpperCase()
+                                                                )}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-semibold text-[#001D4A] dark:text-white leading-tight">{row.studentName}</p>
+                                                                <p className="text-[10px] font-mono text-gray-500 dark:text-zinc-400">{row.studentCode}</p>
+                                                            </div>
+                                                        </div>
                                                     </td>
                                                     <td className="px-4 py-3 text-center font-black text-[#001D4A] dark:text-white">
                                                         {row.status === 'SUCCESS' ? `${row.plagiarismPercent ?? 0}%` : '—'}
@@ -1163,7 +1207,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
             )}
 
             {showPlagiarismConfigModal && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4">
+                <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 p-4">
                     <div className="w-full max-w-md overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
                         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-zinc-800">
                             <h3 className="text-base font-bold text-[#001D4A] dark:text-white">Cấu hình ngưỡng đạo văn</h3>
@@ -1231,3 +1275,5 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
 };
 
 export default LecturerAssignmentDetailPage;
+
+

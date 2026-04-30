@@ -56,6 +56,7 @@ export interface AssignmentSubmissionDTO {
     referenceName?: string;
     referenceUrls?: string[];
     referenceNames?: string[];
+    avatar?: string;
     timetableSlotId?: number;
 }
 
@@ -76,6 +77,7 @@ export interface AssignmentPlagiarismMatchDTO {
     studentName: string;
     className?: string;
     assignmentTitle?: string;
+    avatar?: string;
     plagiarismPercent: number;
     probability: number;
     textScore: number;
@@ -115,6 +117,7 @@ export interface AssignmentPlagiarismDTO {
     courseName: string;
     studentCode: string;
     studentName: string;
+    avatar?: string;
     scope: string;
     model: string;
     strategy: string;

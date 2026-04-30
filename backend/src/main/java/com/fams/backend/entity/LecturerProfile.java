@@ -2,8 +2,6 @@ package com.fams.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import com.fams.backend.entity.Major;
-import com.fams.backend.entity.Specialization;
 
 @Entity
 @Table(name = "lecturer_profiles")

@@ -16,7 +16,7 @@ import { academicStaffService, ScheduleRequestResponse } from '../../services/ap
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import dayjs from 'dayjs';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 
 export const RequestDetailPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -698,3 +698,4 @@ export const RequestDetailPage = () => {
 };
 
 export default RequestDetailPage;
+

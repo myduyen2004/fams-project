@@ -3,10 +3,11 @@ import { Plus, Upload, Search, X, Loader2, FileSpreadsheet } from 'lucide-react'
 import { useRoleAwareNavigate } from '../../hooks/useRoleAwareNavigate';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { majorService } from '../../services/api/majorService';
-import { StatusFilter, Pagination, SelectionActionBar, StatusBadge } from '../../components/academic-staff';
+import { StatusFilter, SelectionActionBar, StatusBadge } from '../../components/academic-staff';
+import { Pagination } from '../../components/common/Pagination';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Major, MajorImportDTO } from '../../types/major';
 import { usePagination } from '../../hooks/usePagination';
@@ -71,7 +72,7 @@ const ImportMajorModal: React.FC<ImportMajorModalProps> = ({ isOpen, onClose, on
             const data = await majorService.previewImportMajors(file);
             setPreviewData(data);
             if (data.length === 0) {
-                toast('File không có dữ liệu hợp lệ', { icon: '⚠️' });
+                toast.error('File không có dữ liệu hợp lệ');
             } else {
                 toast.success(`Đã đọc ${data.length} dòng`);
             }
@@ -122,7 +123,7 @@ const ImportMajorModal: React.FC<ImportMajorModalProps> = ({ isOpen, onClose, on
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
             <div className={`relative bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ${previewData ? 'w-full max-w-5xl max-h-[92vh]' : 'w-full max-w-lg'}`}>
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800 shrink-0">
@@ -203,14 +204,14 @@ const ImportMajorModal: React.FC<ImportMajorModalProps> = ({ isOpen, onClose, on
                                     type="button"
                                     onClick={handleClose}
                                     disabled={loading}
-                                    className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 disabled:opacity-50"
+                                    className="h-[44px] px-6 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-bold text-gray-600 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-50"
                                 >
                                     Hủy
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="flex items-center justify-center rounded-lg bg-fpt-orange px-5 py-2.5 text-sm font-medium text-white hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-300 disabled:opacity-50"
+                                    className="flex items-center justify-center h-[44px] px-6 rounded-2xl bg-fpt-orange text-sm font-bold text-white hover:bg-orange-600 shadow-lg shadow-fpt-orange/20 transition-all active:scale-95 disabled:opacity-50"
                                 >
                                     {loading && <Loader2 size={16} className="animate-spin mr-2" />}
                                     Xem trước
@@ -290,7 +291,7 @@ const ImportMajorModal: React.FC<ImportMajorModalProps> = ({ isOpen, onClose, on
                                     type="button"
                                     onClick={() => setPreviewData(null)}
                                     disabled={loading}
-                                    className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 disabled:opacity-50"
+                                    className="h-[44px] px-6 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-bold text-gray-600 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-50"
                                 >
                                     Quay lại
                                 </button>
@@ -299,7 +300,7 @@ const ImportMajorModal: React.FC<ImportMajorModalProps> = ({ isOpen, onClose, on
                                         type="button"
                                         onClick={handleConfirmImport}
                                         disabled={loading}
-                                        className="flex items-center justify-center rounded-lg bg-fpt-orange px-5 py-2.5 text-sm font-medium text-white hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-300 disabled:opacity-50"
+                                        className="flex items-center justify-center h-[44px] px-6 rounded-2xl bg-fpt-orange text-sm font-bold text-white hover:bg-orange-600 shadow-lg shadow-fpt-orange/20 transition-all active:scale-95 disabled:opacity-50"
                                     >
                                         {loading && <Loader2 size={16} className="animate-spin mr-2" />}
                                         Xác nhận Import ({validCount + warningCount} dòng)
@@ -364,54 +365,60 @@ const MajorCreateModal: React.FC<MajorCreateModalProps> = ({ isOpen, onClose, on
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-xl bg-white shadow-xl dark:bg-zinc-900">
-                <div className="flex items-center justify-between border-b border-gray-100 p-4 dark:border-zinc-800">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Tạo ngành mới</h2>
-                    <button onClick={onClose} className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-zinc-800">
-                        <X className="h-5 w-5 text-gray-500 dark:text-zinc-400" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800">
+                <div className="flex items-center justify-between border-b border-gray-100 p-6 dark:border-zinc-800">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Tạo ngành mới</h2>
+                    <button onClick={onClose} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all active:scale-95">
+                        <X className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                     </button>
                 </div>
 
-                <form onSubmit={formik.handleSubmit} className="p-4 space-y-4">
+                <form onSubmit={formik.handleSubmit} className="p-6 space-y-5">
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">Mã ngành <span className="text-red-500">*</span></label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-2 ml-1">
+                            Mã ngành <span className="text-red-500">*</span>
+                        </label>
                         <input
                             type="text"
                             name="code"
-                            className={`w-full rounded-lg border p-2.5 text-sm dark:bg-zinc-800 dark:text-white ${formik.touched.code && formik.errors.code ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-fpt-orange focus:ring-fpt-orange dark:border-zinc-700'}`}
+                            className={`w-full h-[52px] px-4 rounded-2xl border-2 text-sm transition-all focus:outline-none focus:ring-4 dark:bg-zinc-900 dark:text-white ${formik.touched.code && formik.errors.code ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-100 dark:border-zinc-800 focus:border-fpt-orange focus:ring-fpt-orange/10 hover:border-fpt-orange/40'}`}
                             placeholder="VD: SE, IA..."
                             value={formik.values.code}
                             onChange={formik.handleChange}
                             onBlur={formik.handleBlur}
                         />
                         {formik.touched.code && formik.errors.code && (
-                            <p className="mt-1 text-xs text-red-500">{formik.errors.code}</p>
+                            <p className="mt-1.5 ml-1 text-xs text-red-500">{formik.errors.code}</p>
                         )}
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">Tên ngành <span className="text-red-500">*</span></label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-2 ml-1">
+                            Tên ngành <span className="text-red-500">*</span>
+                        </label>
                         <input
                             type="text"
                             name="name"
-                            className={`w-full rounded-lg border p-2.5 text-sm dark:bg-zinc-800 dark:text-white ${formik.touched.name && formik.errors.name ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-fpt-orange focus:ring-fpt-orange dark:border-zinc-700'}`}
+                            className={`w-full h-[52px] px-4 rounded-2xl border-2 text-sm transition-all focus:outline-none focus:ring-4 dark:bg-zinc-900 dark:text-white ${formik.touched.name && formik.errors.name ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-100 dark:border-zinc-800 focus:border-fpt-orange focus:ring-fpt-orange/10 hover:border-fpt-orange/40'}`}
                             placeholder="VD: Kỹ thuật phần mềm"
                             value={formik.values.name}
                             onChange={formik.handleChange}
                             onBlur={formik.handleBlur}
                         />
                         {formik.touched.name && formik.errors.name && (
-                            <p className="mt-1 text-xs text-red-500">{formik.errors.name}</p>
+                            <p className="mt-1.5 ml-1 text-xs text-red-500">{formik.errors.name}</p>
                         )}
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">Thời gian đào tạo</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-2 ml-1">
+                            Thời gian đào tạo
+                        </label>
                         <input
                             type="text"
                             name="programDuration"
-                            className="w-full rounded-lg border border-gray-300 p-2.5 text-sm bg-gray-100 dark:bg-zinc-700 dark:text-zinc-400 dark:border-zinc-700 cursor-not-allowed"
+                            className="w-full h-[52px] px-4 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 text-sm bg-gray-50 dark:bg-zinc-800/50 text-gray-500 dark:text-zinc-500 cursor-not-allowed font-medium"
                             value={formik.values.programDuration}
                             disabled
                             readOnly
@@ -419,32 +426,36 @@ const MajorCreateModal: React.FC<MajorCreateModalProps> = ({ isOpen, onClose, on
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">Mô tả</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-2 ml-1">
+                            Mô tả
+                        </label>
                         <textarea
                             rows={3}
                             name="description"
-                            className="w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:border-fpt-orange focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                            className="w-full px-4 py-3 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 text-sm transition-all focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange hover:border-fpt-orange/40 dark:bg-zinc-900 dark:text-white outline-none"
                             value={formik.values.description}
                             onChange={formik.handleChange}
                             onBlur={formik.handleBlur}
+                            placeholder="Nhập mô tả ngành học..."
                         ></textarea>
                     </div>
 
-                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100 dark:border-zinc-800">
+                    <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-100 dark:border-zinc-800">
                         <button
                             type="button"
                             onClick={onClose}
                             disabled={isLoading}
-                            className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 disabled:opacity-50"
+                            className="h-[44px] px-6 rounded-2xl bg-gray-100 dark:bg-zinc-800 text-sm font-bold text-gray-500 dark:text-zinc-400 hover:bg-gray-200 dark:hover:bg-zinc-700 transition-all active:scale-95 disabled:opacity-50"
                         >
                             Hủy
                         </button>
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="flex items-center justify-center rounded-lg bg-fpt-orange px-5 py-2.5 text-sm font-medium text-white hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-300 disabled:opacity-50"
+                            className="flex items-center justify-center gap-2 h-[44px] px-8 rounded-2xl bg-fpt-orange text-sm font-bold text-white hover:bg-orange-600 shadow-lg shadow-fpt-orange/20 transition-all active:scale-95 disabled:opacity-50"
                         >
-                            {isLoading ? 'Đang xử lý...' : 'Tạo ngành'}
+                            {isLoading && <Loader2 size={16} className="animate-spin" />}
+                            Tạo ngành
                         </button>
                     </div>
                 </form>
@@ -501,54 +512,60 @@ const MajorUpdateModal: React.FC<MajorUpdateModalProps> = ({ isOpen, onClose, on
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-xl bg-white shadow-xl dark:bg-zinc-900">
-                <div className="flex items-center justify-between border-b border-gray-100 p-4 dark:border-zinc-800">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Cập nhật thông tin ngành</h2>
-                    <button onClick={onClose} className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-zinc-800">
-                        <X className="h-5 w-5 text-gray-500 dark:text-zinc-400" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800">
+                <div className="flex items-center justify-between border-b border-gray-100 p-6 dark:border-zinc-800">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Cập nhật thông tin ngành</h2>
+                    <button onClick={onClose} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all active:scale-95">
+                        <X className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                     </button>
                 </div>
 
-                <form onSubmit={formik.handleSubmit} className="p-4 space-y-4">
+                <form onSubmit={formik.handleSubmit} className="p-6 space-y-5">
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">Mã ngành <span className="text-red-500">*</span></label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-2 ml-1">
+                            Mã ngành <span className="text-red-500">*</span>
+                        </label>
                         <input
                             type="text"
                             name="code"
-                            className={`w-full rounded-lg border p-2.5 text-sm dark:bg-zinc-800 dark:text-white ${formik.touched.code && formik.errors.code ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-fpt-orange focus:ring-fpt-orange dark:border-zinc-700'}`}
+                            className={`w-full h-[52px] px-4 rounded-2xl border-2 text-sm transition-all focus:outline-none focus:ring-4 dark:bg-zinc-900 dark:text-white ${formik.touched.code && formik.errors.code ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-100 dark:border-zinc-800 focus:border-fpt-orange focus:ring-fpt-orange/10 hover:border-fpt-orange/40'}`}
                             placeholder="VD: SE, IA..."
                             value={formik.values.code}
                             onChange={formik.handleChange}
                             onBlur={formik.handleBlur}
                         />
                         {formik.touched.code && formik.errors.code && (
-                            <p className="mt-1 text-xs text-red-500">{formik.errors.code}</p>
+                            <p className="mt-1.5 ml-1 text-xs text-red-500">{formik.errors.code}</p>
                         )}
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">Tên ngành <span className="text-red-500">*</span></label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-2 ml-1">
+                            Tên ngành <span className="text-red-500">*</span>
+                        </label>
                         <input
                             type="text"
                             name="name"
-                            className={`w-full rounded-lg border p-2.5 text-sm dark:bg-zinc-800 dark:text-white ${formik.touched.name && formik.errors.name ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-fpt-orange focus:ring-fpt-orange dark:border-zinc-700'}`}
+                            className={`w-full h-[52px] px-4 rounded-2xl border-2 text-sm transition-all focus:outline-none focus:ring-4 dark:bg-zinc-900 dark:text-white ${formik.touched.name && formik.errors.name ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-100 dark:border-zinc-800 focus:border-fpt-orange focus:ring-fpt-orange/10 hover:border-fpt-orange/40'}`}
                             placeholder="VD: Kỹ thuật phần mềm"
                             value={formik.values.name}
                             onChange={formik.handleChange}
                             onBlur={formik.handleBlur}
                         />
                         {formik.touched.name && formik.errors.name && (
-                            <p className="mt-1 text-xs text-red-500">{formik.errors.name}</p>
+                            <p className="mt-1.5 ml-1 text-xs text-red-500">{formik.errors.name}</p>
                         )}
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">Thời gian đào tạo</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-2 ml-1">
+                            Thời gian đào tạo
+                        </label>
                         <input
                             type="text"
                             name="programDuration"
-                            className="w-full rounded-lg border border-gray-300 p-2.5 text-sm bg-gray-100 dark:bg-zinc-700 dark:text-zinc-400 dark:border-zinc-700 cursor-not-allowed"
+                            className="w-full h-[52px] px-4 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 text-sm bg-gray-50 dark:bg-zinc-800/50 text-gray-500 dark:text-zinc-500 cursor-not-allowed font-medium"
                             value={formik.values.programDuration}
                             disabled
                             readOnly
@@ -556,32 +573,35 @@ const MajorUpdateModal: React.FC<MajorUpdateModalProps> = ({ isOpen, onClose, on
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">Mô tả</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-2 ml-1">
+                            Mô tả
+                        </label>
                         <textarea
                             rows={3}
                             name="description"
-                            className="w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:border-fpt-orange focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                            className="w-full px-4 py-3 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 text-sm transition-all focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange hover:border-fpt-orange/40 dark:bg-zinc-900 dark:text-white outline-none"
                             value={formik.values.description}
                             onChange={formik.handleChange}
                             onBlur={formik.handleBlur}
                         ></textarea>
                     </div>
 
-                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100 dark:border-zinc-800">
+                    <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-100 dark:border-zinc-800">
                         <button
                             type="button"
                             onClick={onClose}
                             disabled={isLoading}
-                            className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 disabled:opacity-50"
+                            className="h-[44px] px-6 rounded-2xl bg-gray-100 dark:bg-zinc-800 text-sm font-bold text-gray-500 dark:text-zinc-400 hover:bg-gray-200 dark:hover:bg-zinc-700 transition-all active:scale-95 disabled:opacity-50"
                         >
                             Hủy
                         </button>
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="flex items-center justify-center rounded-lg bg-fpt-orange px-5 py-2.5 text-sm font-medium text-white hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-300 disabled:opacity-50"
+                            className="flex items-center justify-center gap-2 h-[44px] px-8 rounded-2xl bg-fpt-orange text-sm font-bold text-white hover:bg-orange-600 shadow-lg shadow-fpt-orange/20 transition-all active:scale-95 disabled:opacity-50"
                         >
-                            {isLoading ? 'Cập nhật' : 'Cập nhật'}
+                            {isLoading && <Loader2 size={16} className="animate-spin" />}
+                            Lưu thay đổi
                         </button>
                     </div>
                 </form>
@@ -772,50 +792,59 @@ export const MajorManagement: React.FC = () => {
     return (
         <AcademicStaffLayout pageTitle="Quản lý ngành">
             <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <div></div> {/* Spacer */}
-                    <div className="flex gap-3">
-                        <Tooltip content="Tải file Excel mẫu để nhập dữ liệu" position="bottom">
-                            <button
-                                onClick={() => setIsImportModalOpen(true)}
-                                className="flex items-center gap-2 rounded-lg border border-fpt-orange bg-orange-50 px-4 py-2 text-sm font-medium text-fpt-orange hover:bg-orange-100 transition-colors"
-                            >
-                                <Upload className="h-4 w-4" />
-                                Import danh sách ngành
-                            </button>
-                        </Tooltip>
-                        <Tooltip content="Thêm một ngành học mới" position="bottom">
-                            <button
-                                onClick={() => setIsImportSpecModalOpen(true)}
-                                className="flex items-center gap-2 rounded-lg border border-blue-500 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-500 hover:bg-blue-100"
-                            >
-                                <Upload className="h-4 w-4" />
-                                Import chuyên ngành
-                            </button>
-                        </Tooltip>
+                {/* Header & Filter Card */}
+                <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-8 shadow-sm mb-6 animate-in fade-in duration-500">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
+                        <div>
+                            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Quản lý ngành</h1>
+                            <p className="text-sm text-gray-500 dark:text-zinc-400 mt-1">Quản lý danh sách các ngành học và chuyên ngành</p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <Tooltip content="Tải file Excel mẫu để nhập dữ liệu" position="bottom">
+                                <button
+                                    onClick={() => setIsImportModalOpen(true)}
+                                    className="flex h-[52px] items-center gap-2 rounded-2xl border-2 border-fpt-orange/20 bg-orange-50 dark:bg-orange-900/10 px-6 text-sm font-bold text-fpt-orange hover:bg-orange-100 dark:hover:bg-orange-900/20 hover:border-fpt-orange/40 transition-all shadow-sm active:scale-95"
+                                >
+                                    <Upload className="h-[18px] w-[18px]" />
+                                    Import ngành
+                                </button>
+                            </Tooltip>
+                            <Tooltip content="Nhập chuyên ngành từ file Excel" position="bottom">
+                                <button
+                                    onClick={() => setIsImportSpecModalOpen(true)}
+                                    className="flex h-[52px] items-center gap-2 rounded-2xl border-2 border-blue-500/20 bg-blue-50 dark:bg-blue-900/10 px-6 text-sm font-bold text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/20 hover:border-blue-500/40 transition-all shadow-sm active:scale-95"
+                                >
+                                    <Upload className="h-[18px] w-[18px]" />
+                                    Import chuyên ngành
+                                </button>
+                            </Tooltip>
 
-                        <button
-                            onClick={() => setIsCreateModalOpen(true)}
-                            className="flex items-center gap-2 rounded-lg bg-fpt-orange px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Tạo ngành
-                        </button>
+                            <button
+                                onClick={() => setIsCreateModalOpen(true)}
+                                className="flex h-[52px] items-center gap-2 rounded-2xl bg-fpt-orange px-8 text-sm font-bold text-white hover:bg-orange-600 transition-all shadow-lg shadow-fpt-orange/20 active:scale-95"
+                            >
+                                <Plus className="h-[18px] w-[18px]" strokeWidth={3} />
+                                Tạo ngành
+                            </button>
+                        </div>
                     </div>
-                </div>
 
-                <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                    <div className="mb-4 flex flex-col gap-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                            <div className="relative flex-1 max-w-md">
-                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Tìm kiếm..."
-                                    value={searchTerm}
-                                    onChange={handleSearch}
-                                    className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-fpt-orange focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
-                                />
+                    <div className="flex flex-col gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
+                            <div className="flex-1 md:max-w-lg">
+                                <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-2 ml-1">
+                                    Tìm kiếm
+                                </label>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Tìm mã hoặc tên ngành..."
+                                        value={searchTerm}
+                                        onChange={handleSearch}
+                                        className="w-full h-[52px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 pl-10 pr-4 text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 hover:shadow-lg hover:shadow-fpt-orange/5 text-gray-900 dark:text-white"
+                                    />
+                                </div>
                             </div>
                             <StatusFilter
                                 value={statusFilter}
@@ -829,27 +858,33 @@ export const MajorManagement: React.FC = () => {
                             />
                         </div>
 
-                        <SelectionActionBar
-                            selectedCount={selectedIds.length}
-                            showDeactivate={showDeactivate}
-                            onUpdate={() => setIsUpdateModalOpen(true)}
-                            onDelete={handleBulkDelete}
-                            onStatusChange={handleBulkStatusChange}
-                            canDelete={selectedIds.every(id => {
-                                const item = data.find(m => m.id === id);
-                                return item?.status === 'INACTIVE' && item?.canDelete;
-                            })}
-                            itemLabel="ngành"
-                            activateLabel="Mở lại"
-                            deactivateLabel="Ngừng đào tạo"
-                        />
                     </div>
+                </div>
+
+                <SelectionActionBar
+                    selectedCount={selectedIds.length}
+                    showDeactivate={showDeactivate}
+                    onUpdate={() => setIsUpdateModalOpen(true)}
+                    onDelete={handleBulkDelete}
+                    onStatusChange={handleBulkStatusChange}
+                    canDelete={selectedIds.every(id => {
+                        const item = data.find(m => m.id === id);
+                        return item?.status === 'INACTIVE' && item?.canDelete;
+                    })}
+                    itemLabel="ngành"
+                    activateLabel="Mở lại"
+                    deactivateLabel="Ngừng đào tạo"
+                />
+
+                {/* Table Block */}
+                <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden animate-in fade-in duration-700">
+
 
                     <div className="overflow-x-auto">
-                        <table className="w-full">
+                        <table className="w-full text-left">
                             <thead>
                                 <tr className="bg-fpt-orange text-white">
-                                    <th className="px-4 py-3 text-left rounded-tl-lg">
+                                    <th className="w-12 px-4 py-5">
                                         <input
                                             type="checkbox"
                                             className="w-4 h-4 rounded border-white/20 text-white focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer"
@@ -857,11 +892,11 @@ export const MajorManagement: React.FC = () => {
                                             checked={data.length > 0 && selectedIds.length === data.length}
                                         />
                                     </th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Mã ngành</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Tên ngành</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Thời gian đào tạo</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Trạng thái</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg">Số chuyên ngành</th>
+                                    <th className="px-4 py-5 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã ngành</th>
+                                    <th className="px-4 py-5 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tên ngành</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Thời gian đào tạo</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Số chuyên ngành</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
@@ -890,7 +925,7 @@ export const MajorManagement: React.FC = () => {
                                             className={`border-b transition-colors cursor-pointer ${selectedIds.includes(major.id) ? 'bg-orange-50 dark:bg-orange-900/20' : 'bg-white hover:bg-gray-50 dark:bg-zinc-900 dark:hover:bg-zinc-800/50'} dark:border-zinc-800`}
                                             onClick={() => handleRowClick(major)}
                                         >
-                                            <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                            <td className="px-4 py-5" onClick={(e) => e.stopPropagation()}>
                                                 <input
                                                     type="checkbox"
                                                     className="w-4 h-4 rounded border-gray-300 text-fpt-orange focus:ring-fpt-orange dark:border-zinc-600 dark:bg-zinc-700 cursor-pointer"
@@ -898,13 +933,13 @@ export const MajorManagement: React.FC = () => {
                                                     onChange={() => handleSelectOne(major.id)}
                                                 />
                                             </td>
-                                            <td className="px-4 py-3 font-medium font-semibold text-gray-900">{major.code}</td>
-                                            <td className="px-4 py-3 text-gray-600 dark:text-zinc-400">{major.name}</td>
-                                            <td className="px-4 py-3 text-center font-medium text-gray-600 dark:text-zinc-400 ">{major.programDuration}</td>
-                                            <td className="px-4 py-3 text-center">
+                                            <td className="px-4 py-5 font-bold text-gray-900 dark:text-white uppercase tracking-tight">{major.code}</td>
+                                            <td className="px-4 py-5 text-sm font-medium text-gray-700 dark:text-zinc-300">{major.name}</td>
+                                            <td className="px-4 py-5 text-center font-bold text-gray-600 dark:text-zinc-400">{major.programDuration}</td>
+                                            <td className="px-4 py-5 text-center">
                                                 <StatusBadge status={major.status} variant="table" />
                                             </td>
-                                            <td className="px-4 py-3 text-center font-medium text-gray-700 dark:text-zinc-300">
+                                            <td className="px-4 py-5 text-center font-bold text-gray-900 dark:text-white">
                                                 {major.numberOfSpecializations}
                                             </td>
                                         </tr>
@@ -915,13 +950,15 @@ export const MajorManagement: React.FC = () => {
                     </div>
 
                     {/* Pagination */}
-                    <Pagination
-                        page={page}
-                        totalElements={totalElements}
-                        pageSize={10}
-                        onPageChange={setPage}
-                        itemLabel="ngành"
-                    />
+                    <div className="px-8 pb-8">
+                        <Pagination
+                            currentPage={page}
+                            totalPages={Math.ceil(totalElements / 10)}
+                            totalElements={totalElements}
+                            pageSize={10}
+                            onPageChange={setPage}
+                        />
+                    </div>
 
                     <MajorCreateModal
                         isOpen={isCreateModalOpen}
@@ -938,32 +975,35 @@ export const MajorManagement: React.FC = () => {
                         />
                     )}
 
-                    <ImportSpecializationModal
-                        isOpen={isImportSpecModalOpen}
-                        onClose={() => setIsImportSpecModalOpen(false)}
-                        majorId={selectedIds.length === 1 ? selectedIds[0] : undefined}
-                        onSuccess={fetchMajors}
-                    />
-
-                    <ConfirmModal
-                        isOpen={confirmModal.isOpen}
-                        onClose={closeConfirmModal}
-                        onConfirm={confirmModal.onConfirm}
-                        title={confirmModal.title}
-                        message={confirmModal.message}
-                        type={confirmModal.type}
-                        confirmLabel={confirmModal.confirmLabel}
-                    />
-
-                    <ImportMajorModal
-                        isOpen={isImportModalOpen}
-                        onClose={() => setIsImportModalOpen(false)}
-                        onSuccess={fetchMajors}
-                    />
                 </div>
             </div>
+
+            <ImportSpecializationModal
+                isOpen={isImportSpecModalOpen}
+                onClose={() => setIsImportSpecModalOpen(false)}
+                majorId={selectedIds.length === 1 ? selectedIds[0] : undefined}
+                onSuccess={fetchMajors}
+            />
+
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                onClose={closeConfirmModal}
+                onConfirm={confirmModal.onConfirm}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                type={confirmModal.type}
+                confirmLabel={confirmModal.confirmLabel}
+            />
+
+            <ImportMajorModal
+                isOpen={isImportModalOpen}
+                onClose={() => setIsImportModalOpen(false)}
+                onSuccess={fetchMajors}
+            />
         </AcademicStaffLayout>
     );
 };
 
 export default MajorManagement;
+
+

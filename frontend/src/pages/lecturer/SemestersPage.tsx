@@ -5,3 +5,4 @@ import { SemesterListTemplate } from '../../components/shared/SemesterListTempla
 export const SemestersPage: React.FC = () => {
     return <SemesterListTemplate Layout={LecturerLayout} />;
 };
+

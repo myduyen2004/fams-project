@@ -35,7 +35,7 @@ import {
 import { getViewableFileUrl } from "../../services/utils/fileViewerUtils";
 import { Client } from "@stomp/stompjs";
 import { WS_URL } from "../../services/api/config";
-import { toast } from "react-hot-toast";
+import toast from "@utils/toast";
 import { ConfirmModal } from "../common/ConfirmModal";
 
 interface MessagesPageProps {
@@ -2030,7 +2030,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                         showReactionPickerId === msg.id && (
                                           <div
                                             className={`absolute -top-12 ${msg.isOwn ? "right-0" : "left-0"
-                                              } z-[100] pb-2`}
+                                              } z-[500] pb-2`}
                                             onMouseLeave={() =>
                                               setShowReactionPickerId(null)
                                             }
@@ -2705,7 +2705,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
 
       {/* Minimal Zalo-like Preview Overlay */}
       {previewData && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/95 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-black/95 animate-in fade-in duration-200">
           {/* Minimal Header */}
           <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between text-white/70 z-10 bg-gradient-to-b from-black/50 to-transparent">
             <div className="flex items-center gap-3 pl-4">
@@ -2815,3 +2815,4 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
 };
 
 export default MessagesPage;
+

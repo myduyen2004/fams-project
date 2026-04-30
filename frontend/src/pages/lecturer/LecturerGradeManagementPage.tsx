@@ -1,17 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { lecturerClassService, SemesterResponse, ClassSectionResponse } from '../../services/api/LecturerClass';
 import { studentGradeService, GradeOverviewResponse, GradeComponentInfo } from '../../services/api/studentGradeService';
 import { lecturerOtpService } from '../../services/api/lecturerOtpService';
 import { authService } from '../../services/api/authService';
-import { ChevronDown, FileSpreadsheet, Download, Users, TrendingUp, Award, Check, Loader2, Edit3, Save, X, Search, Send } from 'lucide-react';
+import { FileSpreadsheet, Download, Users, TrendingUp, Award, Check, Loader2, Edit3, Save, X, Search, Send, AlertCircle } from 'lucide-react';
 import { ImportGradeModal } from '../../components/lecturer/ImportGradeModal';
 import { StudentInfoModal } from '../../components/common/StudentInfoModal';
 import { OtpSetupModal } from '../../components/lecturer/OtpSetupModal';
 import { OtpVerificationModal } from '../../components/lecturer/OtpVerificationModal';
 import { sortGradeComponents } from '../../utils/gradeSortUtils';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { useLocation } from 'react-router-dom';
+import { CustomSelect } from '../../components/common/CustomSelect';
 
 export const LecturerGradeManagementPage: React.FC = () => {
     const location = useLocation();
@@ -25,10 +26,6 @@ export const LecturerGradeManagementPage: React.FC = () => {
     const [loadingGrades, setLoadingGrades] = useState<boolean>(false);
 
     // Dropdown states
-    const [isSemesterOpen, setIsSemesterOpen] = useState(false);
-    const [isClassOpen, setIsClassOpen] = useState(false);
-    const semesterDropdownRef = useRef<HTMLDivElement>(null);
-    const classDropdownRef = useRef<HTMLDivElement>(null);
 
     // Import modal state
     const [showImportModal, setShowImportModal] = useState(false);
@@ -57,23 +54,6 @@ export const LecturerGradeManagementPage: React.FC = () => {
     const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
 
     const user = authService.getUser();
-
-    // Close dropdowns when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (semesterDropdownRef.current && !semesterDropdownRef.current.contains(event.target as Node)) {
-                setIsSemesterOpen(false);
-            }
-            if (classDropdownRef.current && !classDropdownRef.current.contains(event.target as Node)) {
-                setIsClassOpen(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, []);
 
     // Check OTP status on mount
     useEffect(() => {
@@ -110,23 +90,7 @@ export const LecturerGradeManagementPage: React.FC = () => {
         fetchSemesters();
     }, []);
 
-    // Load classes when semester changes
-    useEffect(() => {
-        if (selectedSemester && user?.id) {
-            fetchClasses();
-        }
-    }, [selectedSemester, user?.id]);
-
-    // Load grades when class changes
-    useEffect(() => {
-        if (selectedClass) {
-            fetchGrades();
-        } else {
-            setGradeOverview(null);
-        }
-    }, [selectedClass]);
-
-    const fetchClasses = async () => {
+    const fetchClasses = useCallback(async () => {
         try {
             const data = await lecturerClassService.getTeachingClasses(selectedSemester, {
                 lecturerId: user?.id,
@@ -135,9 +99,6 @@ export const LecturerGradeManagementPage: React.FC = () => {
             setClasses(data.content);
             // Reset selected class when semester changes, if not matching state
             if (!state?.className || state.className !== selectedClass) {
-                // Keep the current selectedClass if it was already set (e.g. via state)
-                // but if we are here because of a manual semester change, we might want to reset
-                // For now, let's only reset if the current selectedClass is NOT in the new classes list
                 if (!data.content.find(c => c.className === selectedClass)) {
                     setSelectedClass('');
                 }
@@ -145,9 +106,9 @@ export const LecturerGradeManagementPage: React.FC = () => {
         } catch (error) {
             console.error("Failed to fetch classes", error);
         }
-    };
+    }, [selectedSemester, user?.id, selectedClass, state?.className]);
 
-    const fetchGrades = async () => {
+    const fetchGrades = useCallback(async () => {
         setLoadingGrades(true);
         try {
             const data = await studentGradeService.getGradeOverview(selectedClass);
@@ -157,7 +118,24 @@ export const LecturerGradeManagementPage: React.FC = () => {
         } finally {
             setLoadingGrades(false);
         }
-    };
+    }, [selectedClass]);
+
+    // Load classes when semester changes
+    useEffect(() => {
+        if (selectedSemester && user?.id) {
+            fetchClasses();
+        }
+    }, [fetchClasses]);
+
+    // Load grades when class changes
+    useEffect(() => {
+        if (selectedClass) {
+            fetchGrades();
+        } else {
+            setGradeOverview(null);
+        }
+    }, [fetchGrades]);
+
 
     // Regular score - always black text, no background
     const getScoreColor = (score: number | null): string => {
@@ -206,17 +184,6 @@ export const LecturerGradeManagementPage: React.FC = () => {
             }
         }
         return abbr + number;
-    };
-
-    const getSelectedSemesterName = () => {
-        const semester = semesters.find(s => s.code === selectedSemester);
-        return semester ? semester.name : 'Chọn học kỳ';
-    };
-
-    const getSelectedClassName = () => {
-        if (!selectedClass) return '-- Chọn lớp học --';
-        const cls = classes.find(c => c.className === selectedClass);
-        return cls ? `${cls.className} - ${cls.courseName}` : selectedClass;
     };
 
     const handleExport = async () => {
@@ -424,7 +391,7 @@ export const LecturerGradeManagementPage: React.FC = () => {
 
         // Kiểm tra xem đã có bất kỳ sinh viên nào có điểm FE chưa
         const hasAnyFEGrade = gradeOverview.studentGrades.some(s => s.grades[feComponent.id] !== null);
-        
+
         // Nếu chưa có điểm FE, chưa xét tỷ lệ đạt
         if (!hasAnyFEGrade) return null;
 
@@ -432,128 +399,69 @@ export const LecturerGradeManagementPage: React.FC = () => {
         // isPassing sẽ tự động được backend cập nhật khi có điểm FE hoặc Resit
         const passingStudents = gradeOverview.studentGrades.filter(s => s.isPassing).length;
         const totalStudents = gradeOverview.studentGrades.length;
-        
+
         return Math.round((passingStudents / totalStudents) * 100);
     }, [gradeOverview]);
+
+    const filteredStudents = useMemo(() =>
+        (gradeOverview?.studentGrades ?? []).filter(student => {
+            if (!searchTerm.trim()) return true;
+            const term = searchTerm.toLowerCase();
+            return student.studentName.toLowerCase().includes(term) ||
+                student.studentCode.toLowerCase().includes(term);
+        }),
+        [gradeOverview, searchTerm]
+    );
 
     return (
         <LecturerLayout pageTitle="Quản lý điểm số">
             <div className="mt-5 ml-10 mr-10 space-y-6">
                 {/* Filter Section - Semester and Class at top */}
                 <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-6 shadow-sm">
-                    <div className="flex flex-col md:flex-row gap-4">
-                        {/* Semester Selector */}
-                        <div className="flex-1" ref={semesterDropdownRef}>
-                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                Học kỳ
-                            </label>
-                            <div className="relative">
-                                <button
-                                    onClick={() => setIsSemesterOpen(!isSemesterOpen)}
-                                    className="flex items-center justify-between w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 px-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-fpt-orange transition-all"
-                                >
-                                    <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                        {getSelectedSemesterName()}
-                                    </span>
-                                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isSemesterOpen ? 'rotate-180' : ''}`} />
-                                </button>
-
-                                {isSemesterOpen && (
-                                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg max-h-60 overflow-y-auto">
-                                        {semesters.map((semester) => (
-                                            <button
-                                                key={semester.id}
-                                                onClick={() => {
-                                                    setSelectedSemester(semester.code);
-                                                    setIsSemesterOpen(false);
-                                                }}
-                                                className={`flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors ${selectedSemester === semester.code
-                                                    ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange'
-                                                    : 'text-gray-900 dark:text-white'
-                                                    }`}
-                                            >
-                                                <span className="text-sm font-medium">{semester.name}</span>
-                                                {selectedSemester === semester.code && <Check size={16} />}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
+                    <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6">
+                        <div className="flex flex-wrap items-end gap-4 flex-1">
+                            {/* Semester Selector */}
+                            <div className="w-full sm:w-64">
+                                <CustomSelect
+                                    label="Học kỳ"
+                                    value={selectedSemester}
+                                    onChange={(val) => setSelectedSemester(val)}
+                                    options={semesters.map(s => ({ label: s.name, value: s.code }))}
+                                />
                             </div>
-                        </div>
 
-                        {/* Class Selector */}
-                        <div className="flex-1" ref={classDropdownRef}>
-                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                Lớp học
-                            </label>
-                            <div className="relative">
-                                <button
-                                    onClick={() => !classes.length ? null : setIsClassOpen(!isClassOpen)}
+                            {/* Class Selector */}
+                            <div className="w-full sm:w-96">
+                                <CustomSelect
+                                    label="Lớp học"
+                                    value={selectedClass}
+                                    onChange={(val) => setSelectedClass(val)}
+                                    options={[
+                                        { label: '-- Chọn lớp học --', value: '' },
+                                        ...classes.map(c => ({ label: `${c.className} - ${c.courseName}`, value: c.className }))
+                                    ]}
                                     disabled={classes.length === 0}
-                                    className={`flex items-center justify-between w-full rounded-lg border border-gray-200 dark:border-zinc-700 px-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-fpt-orange transition-all ${classes.length === 0
-                                        ? 'bg-gray-100 dark:bg-zinc-800 text-gray-400 cursor-not-allowed'
-                                        : 'bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white'
-                                        }`}
-                                >
-                                    <span className="text-sm font-medium truncate">
-                                        {getSelectedClassName()}
-                                    </span>
-                                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isClassOpen ? 'rotate-180' : ''}`} />
-                                </button>
-
-                                {isClassOpen && (
-                                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg max-h-60 overflow-y-auto">
-                                        <button
-                                            onClick={() => {
-                                                setSelectedClass('');
-                                                setIsClassOpen(false);
-                                            }}
-                                            className={`flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors ${!selectedClass
-                                                ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange'
-                                                : 'text-gray-900 dark:text-white'
-                                                }`}
-                                        >
-                                            <span className="text-sm font-medium">-- Chọn lớp học --</span>
-                                            {!selectedClass && <Check size={16} />}
-                                        </button>
-                                        {classes.map((cls) => (
-                                            <button
-                                                key={cls.className}
-                                                onClick={() => {
-                                                    setSelectedClass(cls.className);
-                                                    setIsClassOpen(false);
-                                                }}
-                                                className={`flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors ${selectedClass === cls.className
-                                                    ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange'
-                                                    : 'text-gray-900 dark:text-white'
-                                                    }`}
-                                            >
-                                                <span className="text-sm font-medium">{cls.className}</span>
-                                                {selectedClass === cls.className && <Check size={16} />}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
+                                />
                             </div>
                         </div>
 
-                        {/* Action Buttons - Export and Import only, Edit moved to table toolbar */}
-                        <div className="flex items-end gap-2">
+                        {/* Action Buttons - Export and Import only */}
+                        <div className="flex items-end gap-3 pb-1">
                             <button
                                 onClick={handleExport}
-                                className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-zinc-700 transition-all disabled:opacity-50"
+                                className="flex h-[52px] items-center gap-2 px-6 bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm text-gray-700 dark:text-gray-200 font-bold hover:border-fpt-orange/40 hover:shadow-lg transition-all active:scale-95 disabled:opacity-50 whitespace-nowrap"
                                 disabled={!gradeOverview || exporting}
                             >
-                                {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                                Xuất Excel
+                                {exporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+                                <span>Xuất Excel</span>
                             </button>
                             <button
                                 onClick={handleImportClick}
-                                className="flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-all disabled:opacity-50"
+                                className="flex h-[52px] items-center gap-2 px-8 bg-fpt-orange text-white rounded-2xl text-sm font-bold shadow-lg shadow-fpt-orange/20 hover:bg-orange-600 transition-all active:scale-95 disabled:opacity-50 whitespace-nowrap"
                                 disabled={!gradeOverview || gradeOverview?.gradesSubmitted}
                             >
-                                <FileSpreadsheet size={16} />
-                                Nhập điểm
+                                <FileSpreadsheet size={18} />
+                                <span>Nhập điểm</span>
                             </button>
                         </div>
                     </div>
@@ -561,7 +469,7 @@ export const LecturerGradeManagementPage: React.FC = () => {
 
                 {/* Class Info Header */}
                 {gradeOverview && (
-                    <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 p-4 shadow-sm">
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 p-6 shadow-sm">
                         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                             <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-2">
@@ -602,22 +510,22 @@ export const LecturerGradeManagementPage: React.FC = () => {
                             </div>
 
                             {/* Stats Cards */}
-                            <div className="flex gap-3">
-                                <div className="bg-orange-50 dark:bg-orange-900/10 rounded-lg px-3 py-2 border border-orange-100 dark:border-orange-900/30 min-w-[100px]">
-                                    <div className="flex items-center gap-1.5 text-orange-600 dark:text-orange-400 text-xs font-medium mb-0.5">
-                                        <TrendingUp size={14} />
+                            <div className="flex gap-4">
+                                <div className="bg-orange-50/50 dark:bg-orange-900/10 rounded-2xl px-4 py-3 border border-orange-100 dark:border-orange-900/30 min-w-[120px] shadow-sm shadow-orange-500/5">
+                                    <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 text-[10px] font-black uppercase tracking-wider mb-1">
+                                        <TrendingUp size={14} className="stroke-[3]" />
                                         Điểm TB
                                     </div>
-                                    <div className="text-xl font-bold text-gray-900 dark:text-white">
+                                    <div className="text-2xl font-black text-gray-900 dark:text-white leading-none">
                                         {gradeOverview.averageGrade ?? '--'}
                                     </div>
                                 </div>
-                                <div className="bg-green-50 dark:bg-green-900/10 rounded-lg px-3 py-2 border border-green-100 dark:border-green-900/30 min-w-[100px]">
-                                    <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400 text-xs font-medium mb-0.5">
-                                        <Award size={14} />
+                                <div className="bg-green-50/50 dark:bg-green-900/10 rounded-2xl px-4 py-3 border border-green-100 dark:border-green-900/30 min-w-[120px] shadow-sm shadow-green-500/5">
+                                    <div className="flex items-center gap-2 text-green-600 dark:text-green-400 text-[10px] font-black uppercase tracking-wider mb-1">
+                                        <Award size={14} className="stroke-[3]" />
                                         Tỷ lệ đạt
                                     </div>
-                                    <div className="text-xl font-bold text-gray-900 dark:text-white">
+                                    <div className="text-2xl font-black text-gray-900 dark:text-white leading-none">
                                         {dynamicPassRate !== null ? `${dynamicPassRate}%` : '--'}
                                     </div>
                                 </div>
@@ -628,59 +536,59 @@ export const LecturerGradeManagementPage: React.FC = () => {
 
                 {/* Table Toolbar - Search and Edit/Submit Buttons */}
                 {gradeOverview && (
-                    <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                         {/* Search Input */}
                         <div className="relative w-full sm:w-1/2">
-                            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                             <input
                                 type="text"
                                 placeholder="Tìm sinh viên theo tên hoặc MSSV..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-fpt-orange focus:border-transparent"
+                                className="w-full h-[52px] pl-12 pr-4 bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm text-gray-900 dark:text-white focus:border-fpt-orange/40 focus:ring-0 transition-all outline-none"
                             />
                         </div>
 
                         {/* Edit/Submit Buttons */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                             {isEditMode ? (
                                 <>
                                     <button
                                         onClick={handleCancelEdit}
-                                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600 rounded-lg text-sm text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-zinc-600 transition-all"
+                                        className="flex h-[52px] items-center gap-2 px-6 bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm text-gray-600 dark:text-gray-300 font-bold hover:border-gray-300 dark:hover:border-zinc-600 transition-all active:scale-95 disabled:opacity-50"
                                         disabled={saving}
                                     >
                                         <X size={18} />
-                                        Hủy
+                                        <span>Hủy</span>
                                     </button>
                                     <button
                                         onClick={handleSaveGrades}
-                                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all disabled:opacity-50"
+                                        className="flex h-[52px] items-center gap-2 px-8 bg-green-600 text-white rounded-2xl text-sm font-bold shadow-lg shadow-green-600/20 hover:bg-green-700 transition-all active:scale-95 disabled:opacity-50"
                                         disabled={saving}
                                     >
                                         {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                                        Lưu thay đổi
+                                        <span>Lưu thay đổi</span>
                                     </button>
                                 </>
                             ) : (
                                 <>
                                     <button
                                         onClick={handleStartEdit}
-                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all disabled:opacity-50"
+                                        className="flex h-[52px] items-center gap-2 px-6 bg-blue-600 text-white rounded-2xl text-sm font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50"
                                         disabled={gradeOverview.gradesSubmitted}
                                         title={gradeOverview.gradesSubmitted ? 'Điểm đã được gửi, không thể chỉnh sửa' : ''}
                                     >
                                         <Edit3 size={18} />
-                                        Chỉnh sửa
+                                        <span>Chỉnh sửa</span>
                                     </button>
                                     {!gradeOverview.gradesSubmitted && (
                                         <button
                                             onClick={handleSubmitClick}
-                                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all disabled:opacity-50"
+                                            className="flex h-[52px] items-center gap-2 px-8 bg-green-600 text-white rounded-2xl text-sm font-bold shadow-lg shadow-green-600/20 hover:bg-green-700 transition-all active:scale-95 disabled:opacity-50"
                                             disabled={submitting}
                                         >
                                             {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                                            Gửi điểm
+                                            <span>Gửi điểm</span>
                                         </button>
                                     )}
                                 </>
@@ -701,19 +609,19 @@ export const LecturerGradeManagementPage: React.FC = () => {
                             <table className="w-full">
                                 <thead>
                                     <tr className="bg-fpt-orange text-white">
-                                        <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider w-16 text-center">
+                                        <th className="px-4 py-5 text-left w-16 text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             STT
                                         </th>
-                                        <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider min-w-[200px]">
+                                        <th className="px-4 py-5 text-left w-[200px] text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             Thông tin sinh viên
                                         </th>
-                                        <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider min-w-[120px]">
+                                        <th className="px-4 py-5 text-left w-[120px] text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             Mã SV
                                         </th>
                                         {sortedGradeComponents.map((component) => (
                                             <th
                                                 key={component.id}
-                                                className="px-2 py-3 text-center text-xs font-semibold uppercase tracking-wider min-w-[60px]"
+                                                className="px-4 py-5 text-center w-[60px] text-xs font-bold uppercase tracking-widest whitespace-nowrap"
                                             >
                                                 <div
                                                     className="cursor-help"
@@ -726,7 +634,7 @@ export const LecturerGradeManagementPage: React.FC = () => {
                                                 </div>
                                             </th>
                                         ))}
-                                        <th className="px-4 py-4 text-center text-xs font-semibold uppercase tracking-wider min-w-[100px]">
+                                        <th className="px-4 py-5 text-center w-[100px] text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             <div>Điểm TB</div>
                                             <div className="text-orange-200 font-normal mt-1">
                                                 Tổng kết
@@ -735,13 +643,7 @@ export const LecturerGradeManagementPage: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
-                                    {gradeOverview.studentGrades
-                                        .filter(student => {
-                                            if (!searchTerm.trim()) return true;
-                                            const term = searchTerm.toLowerCase();
-                                            return student.studentName.toLowerCase().includes(term) ||
-                                                student.studentCode.toLowerCase().includes(term);
-                                        })
+                                    {filteredStudents
                                         .map((student, index) => (
                                             <tr key={student.enrollmentId} className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
                                                 <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-zinc-400">
@@ -886,39 +788,55 @@ export const LecturerGradeManagementPage: React.FC = () => {
 
             {/* Submit Confirmation Modal */}
             {showSubmitConfirm && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl animate-in zoom-in-95 duration-200">
-                        <div className="text-center mb-6">
-                            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Send size={28} className="text-green-600 dark:text-green-400" />
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[500] animate-in fade-in duration-300 p-4">
+                    <div className="bg-white dark:bg-zinc-900 rounded-[32px] w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-300 border-2 border-gray-100 dark:border-zinc-800 overflow-hidden">
+                        <div className="p-8">
+                            <div className="w-20 h-20 bg-green-50 dark:bg-green-900/30 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
+                                <Send size={32} className="text-green-600 dark:text-green-400 stroke-[2.5]" />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                                Xác nhận gửi điểm
+
+                            <h3 className="text-2xl font-black text-center text-gray-900 dark:text-white mb-3 tracking-tight">
+                                Xác nhận gửi điểm?
                             </h3>
-                            <p className="text-gray-500 dark:text-gray-400 text-sm">
-                                Bạn có chắc muốn gửi điểm cho phòng đào tạo?
-                                Sau khi gửi, bạn sẽ <span className="font-semibold text-red-600">không thể chỉnh sửa</span> điểm nữa.
-                            </p>
-                        </div>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setShowSubmitConfirm(false)}
-                                className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-zinc-700 transition-all"
-                                disabled={submitting}
-                            >
-                                Hủy
-                            </button>
-                            <button
-                                onClick={handleConfirmSubmit}
-                                className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                                disabled={submitting}
-                            >
-                                {submitting ? (
-                                    <><Loader2 size={16} className="animate-spin" /> Đang gửi...</>
-                                ) : (
-                                    <><Send size={16} /> Xác nhận gửi</>
-                                )}
-                            </button>
+
+                            <div className="text-center space-y-4 mb-8">
+                                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed font-medium">
+                                    Bạn đang gửi điểm cho lớp <span className="font-bold text-gray-900 dark:text-white">{gradeOverview?.className}</span> - <span className="font-bold text-gray-900 dark:text-white">{gradeOverview?.courseName}</span>.
+                                </p>
+
+                                <div className="bg-red-50 dark:bg-red-900/10 border-2 border-red-100 dark:border-red-900/20 rounded-2xl p-4 text-xs text-red-700 dark:text-red-400 text-left flex gap-3">
+                                    <AlertCircle size={18} className="shrink-0 mt-0.5" />
+                                    <div className="flex flex-col gap-1">
+                                        <p className="font-black uppercase tracking-wider">Lưu ý quan trọng:</p>
+                                        <p className="font-bold opacity-90">Sau khi gửi, bạn sẽ không thể chỉnh sửa điểm được nữa.</p>
+                                        <p className="font-black uppercase tracking-wide underline underline-offset-2">Hệ thống sẽ khóa chức năng chỉnh sửa.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <button
+                                    onClick={() => setShowSubmitConfirm(false)}
+                                    className="flex-1 h-[52px] px-6 bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 rounded-2xl font-bold border-2 border-gray-100 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 transition-all active:scale-95"
+                                    disabled={submitting}
+                                >
+                                    Hủy bỏ
+                                </button>
+                                <button
+                                    onClick={handleConfirmSubmit}
+                                    className="flex-1 h-[52px] px-6 bg-green-600 text-white rounded-2xl font-bold shadow-lg shadow-green-600/20 hover:bg-green-700 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 whitespace-nowrap"
+                                    disabled={submitting}
+                                >
+                                    {submitting ? (
+                                        <Loader2 size={20} className="animate-spin" />
+                                    ) : (
+                                        <>
+                                            <Send size={18} />
+                                            Xác nhận gửi
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -932,4 +850,6 @@ export const LecturerGradeManagementPage: React.FC = () => {
         </LecturerLayout>
     );
 };
+
+
 

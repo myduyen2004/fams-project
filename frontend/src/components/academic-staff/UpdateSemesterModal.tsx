@@ -1,5 +1,162 @@
-import React, { useState, useEffect } from 'react';
-import { X, Lock, Info } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Info, Loader2, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
+
+// --- Inline Modal Components ---
+
+interface ModalDatePickerProps {
+    label?: string;
+    value: string;
+    onChange: (value: string) => void;
+    disabled?: boolean;
+    placeholder?: string;
+}
+
+const ModalDatePicker: React.FC<ModalDatePickerProps> = ({ label, value, onChange, disabled = false, placeholder = 'Chọn ngày...' }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [viewDate, setViewDate] = useState(value ? new Date(value) : new Date());
+    const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
+
+    const updateCoords = () => {
+        if (containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            setCoords({
+                top: rect.top + window.scrollY,
+                left: rect.left + window.scrollX,
+                width: rect.width
+            });
+        }
+    };
+
+    useEffect(() => {
+        if (isOpen) {
+            updateCoords();
+            window.addEventListener('resize', updateCoords);
+            window.addEventListener('scroll', updateCoords, true);
+        }
+        return () => {
+            window.removeEventListener('resize', updateCoords);
+            window.removeEventListener('scroll', updateCoords, true);
+        };
+    }, [isOpen]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                const picker = document.getElementById('datepicker-portal');
+                if (picker && picker.contains(event.target as Node)) return;
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+    const firstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
+
+    const handleDateSelect = (day: number) => {
+        const selectedDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
+        onChange(selectedDate.toISOString().split('T')[0]);
+        setIsOpen(false);
+    };
+
+    const nextMonth = () => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1));
+    const prevMonth = () => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1));
+
+    const renderCalendar = () => {
+        const days = [];
+        const totalDays = daysInMonth(viewDate.getFullYear(), viewDate.getMonth());
+        const startDay = firstDayOfMonth(viewDate.getFullYear(), viewDate.getMonth());
+
+        for (let i = 0; i < startDay; i++) {
+            days.push(<div key={`empty-${i}`} className="h-10 w-10" />);
+        }
+
+        for (let d = 1; d <= totalDays; d++) {
+            const isSelected = value && new Date(value).getDate() === d && 
+                               new Date(value).getMonth() === viewDate.getMonth() && 
+                               new Date(value).getFullYear() === viewDate.getFullYear();
+            days.push(
+                <button
+                    key={d}
+                    type="button"
+                    onClick={() => handleDateSelect(d)}
+                    className={`h-10 w-10 rounded-xl flex items-center justify-center text-sm transition-all
+                        ${isSelected ? 'bg-fpt-orange text-white font-bold shadow-lg shadow-fpt-orange/20' : 'hover:bg-orange-50 dark:hover:bg-orange-900/20 text-gray-700 dark:text-gray-300'}
+                    `}
+                >
+                    {d}
+                </button>
+            );
+        }
+        return days;
+    };
+
+    return (
+        <div className="relative" ref={containerRef}>
+            {label && <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1.5 ml-1">{label}</label>}
+            <button
+                type="button"
+                disabled={disabled}
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+                className={`w-full flex items-center justify-between px-4 h-[52px] border-2 rounded-2xl text-sm transition-all outline-none
+                    ${disabled ? 'bg-gray-100 dark:bg-zinc-800/50 border-gray-100 dark:border-zinc-800 text-gray-500 cursor-not-allowed font-medium' : 'bg-white dark:bg-zinc-900 border-gray-100 dark:border-zinc-800 focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange hover:border-fpt-orange/40 text-gray-900 dark:text-white'}
+                `}
+            >
+                <span className={value ? 'font-bold' : 'text-gray-400'}>
+                    {value ? new Date(value).toLocaleDateString('vi-VN') : placeholder}
+                </span>
+                <CalendarIcon size={16} className="text-gray-400" />
+            </button>
+
+            {createPortal(
+                <AnimatePresence>
+                    {isOpen && (
+                        <motion.div
+                            id="datepicker-portal"
+                            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                            style={{
+                                position: 'absolute',
+                                top: coords.top - 8,
+                                left: coords.left,
+                                width: Math.max(coords.width, 300),
+                                transform: 'translateY(-100%)',
+                                zIndex: 9999
+                            }}
+                            className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-2xl shadow-2xl p-4"
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <button type="button" onClick={prevMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
+                                    <ChevronLeft size={16} className="text-gray-600 dark:text-zinc-400" />
+                                </button>
+                                <span className="text-sm font-bold text-gray-900 dark:text-white">
+                                    {viewDate.toLocaleString('vi-VN', { month: 'long', year: 'numeric' })}
+                                </span>
+                                <button type="button" onClick={nextMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
+                                    <ChevronRight size={16} className="text-gray-600 dark:text-zinc-400" />
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-7 gap-1 mb-2">
+                                {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map(d => (
+                                    <div key={d} className="text-[10px] font-black text-gray-400 text-center uppercase tracking-widest">{d}</div>
+                                ))}
+                            </div>
+                            <div className="grid grid-cols-7 gap-1">
+                                {renderCalendar()}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
+        </div>
+    );
+};
 
 interface Semester {
   code: string;
@@ -38,7 +195,6 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Update form when semester prop changes
   useEffect(() => {
     if (semester) {
       setFormData({
@@ -62,7 +218,6 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
     if (!formData.name || !formData.startDate || !formData.endDate) {
       setError('Vui lòng điền đầy đủ thông tin');
       return;
@@ -73,7 +228,6 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
       return;
     }
 
-    // For upcoming semesters, validate that start date is in the future
     if (semester?.status === 'upcoming') {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -86,7 +240,6 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
       }
     }
 
-    // Check for duplicate name (excluding current semester)
     const duplicateName = existingSemesters.find(
       s => s.name.toLowerCase() === formData.name.toLowerCase() && s.code !== semester?.code
     );
@@ -95,7 +248,6 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
       return;
     }
 
-    // Check if semester can be updated (only upcoming or active)
     if (semester?.status !== 'upcoming' && semester?.status !== 'active') {
       setError('Chỉ có thể cập nhật các học kỳ sắp diễn ra hoặc đang diễn ra');
       return;
@@ -119,8 +271,7 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
         } else if (axiosError.response?.status === 400) {
           errorMessage = 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin';
         } else if (axiosError.response?.status === 500) {
-          // Default message for server errors related to date overlap
-          errorMessage = 'Thời gian học kỳ bị trùng với học kỳ khác hoặc có lỗi hệ thống. Vui lòng kiểm tra lại';
+          errorMessage = 'Thời gian học kỳ bị trùng with học kỳ khác hoặc có lỗi hệ thống. Vui lòng kiểm tra lại';
         }
       } else if (err instanceof Error) {
         errorMessage = err.message;
@@ -139,94 +290,76 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
   if (!isOpen || !semester) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 animate-in fade-in zoom-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 dark:border-zinc-800">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-          <h2 className="text-xl font-bold text-gray-800 tracking-tight">Cập nhật học kỳ</h2>
+        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Cập nhật học kỳ</h2>
           <button
             onClick={handleCancel}
-            className="text-gray-400 hover:text-gray-600 transition"
+            className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all active:scale-95"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
           </button>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            <div className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/20 text-red-700 dark:text-red-400 px-4 py-3 rounded-2xl text-sm font-medium">
               {error}
             </div>
           )}
 
           {/* Tên học kỳ */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-              Tên hiện tại <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1.5 ml-1">
+              Tên học kỳ <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition shadow-sm bg-white"
+              className="w-full h-[52px] px-4 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 outline-none text-gray-900 dark:text-white font-bold"
               disabled={loading}
             />
           </div>
 
           {/* Ngày bắt đầu & Ngày kết thúc */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Ngày bắt đầu <span className="text-red-500">*</span>
-                {isActive && <Lock className="w-3 h-3 inline ml-1 text-gray-400" />}
-              </label>
-              <input
-                type="date"
-                name="startDate"
-                value={formData.startDate}
-                onChange={handleChange}
-                className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-orange-500 transition shadow-sm ${isActive ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white text-gray-700'
-                  }`}
-                disabled={loading || isActive}
-              />
-            </div>
+            <ModalDatePicker
+              label="Ngày bắt đầu *"
+              value={formData.startDate}
+              onChange={(value) => setFormData({ ...formData, startDate: value })}
+              disabled={loading || isActive}
+            />
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Ngày kết thúc <span className="text-red-500">*</span>
-                {isActive && <Lock className="w-3 h-3 inline ml-1 text-gray-400" />}
-              </label>
-              <input
-                type="date"
-                name="endDate"
-                value={formData.endDate}
-                onChange={handleChange}
-                className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-orange-500 transition shadow-sm ${isActive ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white text-gray-700'
-                  }`}
-                disabled={loading || isActive}
-              />
-            </div>
+            <ModalDatePicker
+              label="Ngày kết thúc *"
+              value={formData.endDate}
+              onChange={(value) => setFormData({ ...formData, endDate: value })}
+              disabled={loading || isActive}
+            />
           </div>
 
           {/* Warning Note */}
-          <div className="flex items-start gap-2 text-amber-600">
-            <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <p className="text-[11px] font-medium">
+          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/20 rounded-2xl px-4 py-3 flex items-start gap-2 shadow-inner">
+            <Info className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+            <p className="text-[11px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-tight">
               {isActive
-                ? 'Học kỳ đang diễn ra: Không được phép thay đổi ngày bắt đầu và kết thúc. Chỉ có thể cập nhật tên học kỳ.'
-                : 'Lưu ý: Ngày bắt đầu học kỳ phải sau ngày hôm nay.'}
+                ? 'Đang diễn ra: Khóa chỉnh sửa ngày'
+                : 'Lưu ý: Ngày bắt đầu phải sau hôm nay'}
             </p>
           </div>
 
           {/* Buttons */}
-          <div className="flex items-center justify-end gap-3 mt-8 pt-4 border-t border-gray-50">
+          <div className="flex items-center justify-end gap-3 mt-8">
             <button
               type="button"
               onClick={handleCancel}
               disabled={loading}
-              className="px-5 py-2.5 bg-gray-400 hover:bg-gray-500 text-white rounded-lg font-semibold text-sm transition shadow-md disabled:opacity-50"
+              className="h-[44px] px-6 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 rounded-2xl font-bold text-sm transition-all hover:bg-gray-200 dark:hover:bg-zinc-700 active:scale-95 disabled:opacity-50"
             >
               Hủy
             </button>
@@ -234,9 +367,10 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold text-sm transition shadow-md disabled:opacity-50"
+              className="h-[44px] px-8 bg-fpt-orange text-white rounded-2xl font-bold text-sm transition-all hover:bg-orange-600 shadow-lg shadow-fpt-orange/20 active:scale-95 disabled:opacity-50 flex items-center gap-2"
             >
-              {loading ? 'Đang cập nhật...' : 'Cập nhật học kỳ'}
+              {loading && <Loader2 size={16} className="animate-spin" />}
+              {loading ? 'Đang lưu...' : 'Lưu thay đổi'}
             </button>
           </div>
         </form>
@@ -244,3 +378,4 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
     </div>
   );
 };
+

@@ -184,3 +184,19 @@
 .dark .notification-content-document a {
   color: #60a5fa;
 }
+
+/*
+ * ============================================================
+ * Z-INDEX STACKING LAYER SYSTEM
+ * ============================================================
+ * sidebar / header     : z-30 ~ z-50   (layout chrome)
+ * dropdown portals     : z-35           (CustomSelect, CustomDatePicker)
+ * modal overlays       : z-500          (create / update / confirm dialogs)
+ * toast / notifications: z-[9999]+      (always on top)
+ * ============================================================
+ */
+
+/* All full-screen modal overlays should sit above dropdowns */
+.modal-overlay {
+  z-index: 500 !important;
+}

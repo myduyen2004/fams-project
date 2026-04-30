@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { X, Upload, Loader2, Download, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { examGradeService, ExamGradeOverviewResponse, ExamGradeComponentInfo } from '../../services/api/examGradeService';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import * as XLSX from 'xlsx';
 
 // Custom Tooltip Component with better styling
@@ -18,7 +18,7 @@ const Tooltip: React.FC<{ content: string; children: React.ReactNode; className?
         >
             {children}
             {isVisible && (
-                <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap animate-in fade-in duration-150">
+                <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-xl shadow-lg whitespace-nowrap animate-in fade-in duration-150">
                     {content}
                     <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
                 </div>
@@ -261,7 +261,7 @@ export const ImportExamGradeModal: React.FC<ImportExamGradeModalProps> = ({
                         )}
                         {result && <p className="text-sm text-gray-500 mt-1">{courseCode} • {semesterCode}</p>}
                     </div>
-                    <button onClick={handleClose}><X size={20} className="text-gray-400 hover:text-gray-600" /></button>
+                    <button onClick={handleClose} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all active:scale-95"><X size={20} className="text-gray-400 hover:text-gray-600" /></button>
                 </div>
 
                 {/* Content */}
@@ -345,19 +345,18 @@ export const ImportExamGradeModal: React.FC<ImportExamGradeModalProps> = ({
 
                             <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-100 dark:border-zinc-800">
                                 <button type="button" onClick={handleClose}
-                                    className="px-6 py-2.5 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl transition-all">
+                                    className="h-[44px] px-6 text-sm font-bold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-2xl transition-all active:scale-95">
                                     Hủy
                                 </button>
                                 <button
                                     onClick={() => file && handlePreviewFile(file)}
                                     disabled={loading || !file}
-                                    className="group relative px-8 py-2.5 bg-fpt-orange text-white text-sm font-bold rounded-xl shadow-lg shadow-orange-500/20 hover:bg-orange-600 hover:shadow-orange-500/40 transition-all disabled:opacity-50 disabled:grayscale overflow-hidden"
+                                    className="group relative h-[44px] px-8 bg-fpt-orange text-white text-sm font-bold rounded-2xl shadow-lg shadow-fpt-orange/20 hover:bg-orange-600 hover:shadow-orange-500/40 transition-all disabled:opacity-50 disabled:grayscale overflow-hidden active:scale-95"
                                 >
                                     <div className="flex items-center gap-2 relative z-10">
                                         {loading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
                                         <span>Xem trước</span>
                                     </div>
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                                 </button>
                             </div>
                         </div>
@@ -366,18 +365,18 @@ export const ImportExamGradeModal: React.FC<ImportExamGradeModalProps> = ({
                         <div className="space-y-4">
                             {/* Summary Stats */}
                             <div className="grid grid-cols-3 gap-4">
-                                <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 border border-gray-200 dark:border-zinc-800 shadow-sm flex flex-col items-center justify-center">
+                                <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-gray-200 dark:border-zinc-800 shadow-sm flex flex-col items-center justify-center">
                                     <div className="text-sm text-gray-500 dark:text-gray-400 font-medium mb-1">Tổng số dòng</div>
                                     <div className="text-2xl font-bold text-gray-900 dark:text-white">{previewData.totalRows}</div>
                                 </div>
-                                <div className="bg-green-50 dark:bg-green-900/10 rounded-xl p-4 border border-green-100 dark:border-green-900/30 flex flex-col items-center justify-center">
+                                <div className="bg-green-50 dark:bg-green-900/10 rounded-2xl p-4 border border-green-100 dark:border-green-900/30 flex flex-col items-center justify-center">
                                     <div className="text-sm text-green-600 dark:text-green-400 font-medium mb-1 flex items-center gap-1">
                                         <div className="w-2 h-2 rounded-full bg-green-500"></div>
                                         Hợp lệ
                                     </div>
                                     <div className="text-2xl font-bold text-green-700 dark:text-green-400">{previewData.validRows}</div>
                                 </div>
-                                <div className="bg-red-50 dark:bg-red-900/10 rounded-xl p-4 border border-red-100 dark:border-red-900/30 flex flex-col items-center justify-center">
+                                <div className="bg-red-50 dark:bg-red-900/10 rounded-2xl p-4 border border-red-100 dark:border-red-900/30 flex flex-col items-center justify-center">
                                     <div className="text-sm text-red-600 dark:text-red-400 font-medium mb-1 flex items-center gap-1">
                                         <div className="w-2 h-2 rounded-full bg-red-500"></div>
                                         Lỗi
@@ -386,7 +385,7 @@ export const ImportExamGradeModal: React.FC<ImportExamGradeModalProps> = ({
                                 </div>
                             </div>
 
-                            <div className="border rounded-xl overflow-hidden border-gray-200 dark:border-zinc-700 shadow-sm">
+                            <div className="border rounded-2xl overflow-hidden border-gray-200 dark:border-zinc-700 shadow-sm">
                                 <div className="overflow-x-auto max-h-[45vh]">
                                     <table className="w-full text-sm text-left min-w-max">
                                         <thead className="bg-gradient-to-r from-fpt-orange to-orange-500 text-white font-medium sticky top-0 z-10">
@@ -467,7 +466,7 @@ export const ImportExamGradeModal: React.FC<ImportExamGradeModalProps> = ({
 
                             {/* Error Details */}
                             {previewData.errorRows > 0 && (
-                                <div className="p-4 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-800/30">
+                                <div className="p-4 bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-100 dark:border-red-800/30">
                                     <div className="flex items-center gap-2 text-red-700 dark:text-red-400 font-semibold text-sm mb-2">
                                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -496,16 +495,16 @@ export const ImportExamGradeModal: React.FC<ImportExamGradeModalProps> = ({
                             <div className="flex justify-between items-center pt-4 border-t border-gray-100 dark:border-zinc-800">
                                 <button
                                     onClick={() => setPreviewData(null)}
-                                    className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
+                                    className="h-[44px] px-6 text-sm font-bold text-gray-600 hover:bg-gray-100 rounded-2xl transition-all flex items-center gap-2 active:scale-95"
                                 >
                                     <Upload size={16} className="rotate-180" /> Quay lại upload
                                 </button>
                                 <div className="flex gap-3">
-                                    <button onClick={handleClose} className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Hủy</button>
+                                    <button onClick={handleClose} className="h-[44px] px-6 text-sm font-bold text-gray-600 hover:bg-gray-100 rounded-2xl transition-all active:scale-95">Hủy</button>
                                     <button
                                         onClick={handleImport}
                                         disabled={importing || previewData.validRows === 0}
-                                        className="px-6 py-2 bg-fpt-orange text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+                                        className="h-[44px] px-8 bg-fpt-orange text-white text-sm font-bold rounded-2xl hover:bg-orange-600 transition-all shadow-lg shadow-fpt-orange/20 disabled:opacity-50 flex items-center gap-2 active:scale-95"
                                     >
                                         {importing && <Loader2 size={16} className="animate-spin" />}
                                         {previewData.validRows > 0 ? `Xác nhận import (${previewData.validRows})` : 'Không thể import'}
@@ -519,4 +518,5 @@ export const ImportExamGradeModal: React.FC<ImportExamGradeModalProps> = ({
         </div>
     );
 };
+
 

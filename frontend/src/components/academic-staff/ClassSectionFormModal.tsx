@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Loader2, Save, Search, ChevronDown } from 'lucide-react';
 import apiClient from '../../services/api/authService';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 
 interface ClassSection {
     className: string;
@@ -73,24 +73,24 @@ const SearchableDropdown: React.FC<{
 
     return (
         <div className="relative" ref={dropdownRef}>
-            <label className="text-sm font-bold text-gray-700 mb-2 block">
+            <label className="text-sm font-medium text-gray-700 dark:text-zinc-400 mb-2 block ml-1">
                 {label} {required && !disabled && <span className="text-red-500">*</span>}
             </label>
             <button
                 type="button"
                 onClick={() => !disabled && setIsOpen(!isOpen)}
                 disabled={disabled}
-                className={`w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-orange-500 transition-all flex items-center justify-between
-                    ${disabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white hover:border-gray-300'}`}
+                className={`w-full h-[52px] px-4 border-2 rounded-2xl text-sm focus:outline-none transition-all flex items-center justify-between
+                    ${disabled ? 'bg-gray-50 dark:bg-zinc-800/50 border-gray-100 dark:border-zinc-800 text-gray-400 cursor-not-allowed' : 'bg-white dark:bg-zinc-900 border-gray-100 dark:border-zinc-800 hover:border-fpt-orange/40 text-gray-900 focus:border-fpt-orange focus:ring-4 focus:ring-fpt-orange/10'}`}
             >
-                <span className={value ? 'text-gray-900' : 'text-gray-400'}>
+                <span className={value ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-400'}>
                     {displayValue || placeholder}
                 </span>
                 {!disabled && <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />}
             </button>
 
             {isOpen && !disabled && (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-[400px] overflow-hidden">
+                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl shadow-xl max-h-[300px] overflow-hidden">
                     {/* Search Input */}
                     <div className="p-2 border-b border-gray-100">
                         <div className="relative">
@@ -100,14 +100,14 @@ const SearchableDropdown: React.FC<{
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 placeholder={searchPlaceholder}
-                                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-orange-500"
+                                className="w-full pl-9 pr-3 h-[44px] bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-fpt-orange focus:ring-4 focus:ring-fpt-orange/10 transition-all text-sm text-gray-900 dark:text-white"
                                 autoFocus
                             />
                         </div>
                     </div>
 
                     {/* Options List */}
-                    <div className="max-h-[340px] overflow-auto">
+                    <div className="max-h-[150px] overflow-auto">
                         {loading ? (
                             <div className="p-4 text-center text-sm text-gray-500">
                                 <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
@@ -127,7 +127,7 @@ const SearchableDropdown: React.FC<{
                                         setIsOpen(false);
                                         setSearch('');
                                     }}
-                                    className="w-full px-4 py-2.5 text-left text-sm text-gray-400 hover:bg-gray-50"
+                                    className="w-full px-4 py-2.5 text-left text-sm text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-700/50"
                                 >
                                     {placeholder}
                                 </button>
@@ -140,12 +140,12 @@ const SearchableDropdown: React.FC<{
                                             setIsOpen(false);
                                             setSearch('');
                                         }}
-                                        className={`w-full px-4 py-2 text-left text-xs hover:bg-orange-50 transition-colors
-                                            ${value === opt.value ? 'bg-orange-50 text-orange-600 font-medium' : 'text-gray-700'}`}
+                                        className={`w-full px-4 py-2 text-left transition-colors hover:bg-orange-50 dark:hover:bg-orange-900/10
+                                            ${value === opt.value ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange font-bold' : 'text-gray-700 dark:text-gray-300'}`}
                                     >
-                                        <div>{opt.label}</div>
+                                        <div className="text-sm">{opt.label}</div>
                                         {opt.sublabel && (
-                                            <div className="text-xs text-gray-400">{opt.sublabel}</div>
+                                            <div className="text-[11px] opacity-60">{opt.sublabel}</div>
                                         )}
                                     </button>
                                 ))}
@@ -286,8 +286,7 @@ export const ClassSectionFormModal: React.FC<ClassSectionFormModalProps> = ({
     // Build options for dropdowns
     const courseOptions = courses.map(c => ({
         value: c.code,
-        label: `${c.code} - ${c.name}`,
-        sublabel: c.name
+        label: `${c.code} - ${c.name}`
     }));
 
     const lecturerOptions = lecturers.map(l => ({
@@ -297,18 +296,18 @@ export const ClassSectionFormModal: React.FC<ClassSectionFormModalProps> = ({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg border border-gray-100 overflow-visible">
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-lg border border-gray-100 dark:border-zinc-800 overflow-visible">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-100">
+                <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
                     <div>
-                        <h3 className="text-xl font-bold text-gray-900">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                             {isEditMode ? 'Sửa lớp học phần' : 'Tạo lớp học phần mới'}
                         </h3>
-                        <p className="text-sm text-gray-500 mt-1">
-                            Học kỳ: <span className="font-medium text-orange-600">{semesterCode}</span>
+                        <p className="text-sm text-gray-500 dark:text-zinc-400 mt-1">
+                            Học kỳ: <span className="font-bold text-fpt-orange">{semesterCode}</span>
                         </p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                    <button onClick={onClose} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all active:scale-95">
                         <X size={20} className="text-gray-400 hover:text-gray-600" />
                     </button>
                 </div>
@@ -317,7 +316,7 @@ export const ClassSectionFormModal: React.FC<ClassSectionFormModalProps> = ({
                 <form onSubmit={handleSubmit} className="p-6 space-y-5">
                     {/* Class Name */}
                     <div>
-                        <label className="text-sm font-bold text-gray-700 mb-2 block">
+                        <label className="text-sm font-medium text-gray-700 dark:text-zinc-400 mb-2 block ml-1">
                             Mã lớp học phần {!isEditMode && <span className="text-red-500">*</span>}
                         </label>
                         <input
@@ -326,8 +325,8 @@ export const ClassSectionFormModal: React.FC<ClassSectionFormModalProps> = ({
                             onChange={(e) => setClassName(e.target.value)}
                             disabled={isEditMode}
                             placeholder="VD: SE18B02-PRN211"
-                            className={`w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-orange-500 transition-all
-                                ${isEditMode ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                            className={`w-full h-[52px] px-4 border-2 rounded-2xl text-sm transition-all focus:outline-none
+                                ${isEditMode ? 'bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white border-gray-100 hover:border-fpt-orange/40 focus:border-fpt-orange focus:ring-4 focus:ring-fpt-orange/10'}`}
                         />
                         {isEditMode && (
                             <p className="text-xs text-gray-400 mt-1">Không thể thay đổi mã lớp học phần</p>
@@ -368,7 +367,7 @@ export const ClassSectionFormModal: React.FC<ClassSectionFormModalProps> = ({
 
                     {/* Max Students */}
                     <div>
-                        <label className="text-sm font-bold text-gray-700 mb-2 block">
+                        <label className="text-sm font-medium text-gray-700 dark:text-zinc-400 mb-2 block ml-1">
                             Số SV tối đa
                         </label>
                         <input
@@ -378,24 +377,24 @@ export const ClassSectionFormModal: React.FC<ClassSectionFormModalProps> = ({
                             min={1}
                             max={200}
                             placeholder="30"
-                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-orange-500 transition-all"
+                            className="w-full h-[52px] px-4 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 outline-none text-gray-900 dark:text-white"
                         />
                     </div>
 
                     {/* Actions */}
-                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                    <div className="flex justify-end gap-3 mt-8">
                         <button
                             type="button"
                             onClick={onClose}
                             disabled={submitting}
-                            className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                            className="h-[44px] px-6 text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-2xl transition-all active:scale-95 disabled:opacity-50"
                         >
                             Hủy
                         </button>
                         <button
                             type="submit"
                             disabled={submitting || loadingCourses}
-                            className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold rounded-lg shadow-lg shadow-orange-600/20 transition-all flex items-center gap-2 disabled:opacity-50"
+                            className="h-[44px] px-8 bg-fpt-orange hover:bg-orange-600 text-white text-sm font-bold rounded-2xl shadow-lg shadow-fpt-orange/20 transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50"
                         >
                             {submitting ? (
                                 <>
@@ -415,3 +414,4 @@ export const ClassSectionFormModal: React.FC<ClassSectionFormModalProps> = ({
         </div>
     );
 };
+

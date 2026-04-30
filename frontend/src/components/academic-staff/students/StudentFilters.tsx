@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search, Upload, Download, Loader2 } from 'lucide-react';
+import { CustomSelect } from '../../common/CustomSelect';
 
 interface StudentFiltersProps {
     search: string;
@@ -46,72 +47,63 @@ export const StudentFilters: React.FC<StudentFiltersProps> = React.memo(({
             <div className="flex flex-col lg:flex-row lg:items-end gap-4">
 
                 {/* Search */}
-                <div className="flex-1 lg:max-w-md relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                        type="text"
-                        placeholder="Tìm kiếm theo tên, email, MSSV..."
-                        value={search}
-                        onChange={(e) => onSearchChange(e.target.value)}
-                        className="pl-10 pr-4 py-2.5 w-full border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white"
-                    />
+                <div className="flex-1 lg:max-w-md">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block ml-1">Tìm kiếm</label>
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Tìm kiếm theo tên, email, MSSV..."
+                            value={search}
+                            onChange={(e) => onSearchChange(e.target.value)}
+                            className="w-full h-[52px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 pl-10 pr-4 text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 hover:shadow-lg hover:shadow-fpt-orange/5 text-gray-900 dark:text-white"
+                        />
+                    </div>
                 </div>
 
                 {/* Ngành học */}
                 {onMajorFilterChange && (
-                    <div className="lg:w-48">
-                        <label className="block text-xs font-medium text-gray-600 dark:text-zinc-400 mb-1">
-                            Ngành học
-                        </label>
-                        <select
+                    <div className="lg:w-64">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block ml-1">Ngành học</label>
+                        <CustomSelect
                             value={majorFilter}
-                            onChange={(e) => onMajorFilterChange(e.target.value)}
-                            className="border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white"
-                        >
-                            <option value="all">Tất cả các ngành</option>
-                            {majors.map((major) => (
-                                <option key={major} value={major}>{major}</option>
-                            ))}
-                        </select>
+                            onChange={onMajorFilterChange}
+                            options={[
+                                { value: 'all', label: 'Tất cả các ngành' },
+                                ...majors.map((major) => ({ value: major, label: major }))
+                            ]}
+                        />
                     </div>
                 )}
 
                 {/* Chuyên ngành */}
                 {onSpecializationFilterChange && (
-                    <div className="lg:w-48">
-                        <label className="block text-xs font-medium text-gray-600 dark:text-zinc-400 mb-1">
-                            Chuyên ngành
-                        </label>
-                        <select
+                    <div className="lg:w-64">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block ml-1">Chuyên ngành</label>
+                        <CustomSelect
                             value={specializationFilter}
-                            onChange={(e) => onSpecializationFilterChange(e.target.value)}
-                            className="border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white"
-                        >
-                            <option value="all">Tất cả chuyên ngành</option>
-                            {specializations.map((spec) => (
-                                <option key={spec} value={spec}>{spec}</option>
-                            ))}
-                        </select>
+                            onChange={onSpecializationFilterChange}
+                            options={[
+                                { value: 'all', label: 'Tất cả chuyên ngành' },
+                                ...specializations.map((spec) => ({ value: spec, label: spec }))
+                            ]}
+                        />
                     </div>
                 )}
 
                 {/* Chuyên ngành hẹp */}
                 {onSubSpecializationFilterChange && (
-                    <div className="lg:w-44">
-                        <label className="block text-xs font-medium text-gray-600 dark:text-zinc-400 mb-1">
-                            Chuyên ngành hẹp
-                        </label>
-                        <select
+                    <div className="lg:w-64">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block ml-1">Chuyên ngành hẹp</label>
+                        <CustomSelect
                             value={subSpecializationFilter}
-                            onChange={(e) => onSubSpecializationFilterChange(e.target.value)}
+                            onChange={onSubSpecializationFilterChange}
                             disabled={subSpecializations.length === 0}
-                            className="border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white disabled:opacity-50"
-                        >
-                            <option value="all">Tất cả CN hẹp</option>
-                            {subSpecializations.map((ss) => (
-                                <option key={ss} value={ss}>{ss}</option>
-                            ))}
-                        </select>
+                            options={[
+                                { value: 'all', label: 'Tất cả CN hẹp' },
+                                ...subSpecializations.map((ss) => ({ value: ss, label: ss }))
+                            ]}
+                        />
                     </div>
                 )}
 
@@ -121,7 +113,7 @@ export const StudentFilters: React.FC<StudentFiltersProps> = React.memo(({
                         <button
                             onClick={onExportClick}
                             disabled={isExporting}
-                            className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors text-gray-700 dark:text-gray-300 disabled:opacity-50"
+                            className="flex items-center justify-center gap-2 px-6 h-[52px] bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 text-gray-700 dark:text-white text-sm font-bold rounded-2xl hover:border-fpt-orange/40 hover:shadow-lg hover:shadow-fpt-orange/5 transition-all shadow-sm disabled:opacity-50"
                         >
                             {isExporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
                             {isExporting ? 'Đang xuất...' : 'Xuất Excel'}
@@ -130,13 +122,12 @@ export const StudentFilters: React.FC<StudentFiltersProps> = React.memo(({
                     {showImportButton && onImportClick && (
                         <button
                             onClick={onImportClick}
-                            className="flex items-center gap-2 px-4 py-2.5 border border-fpt-orange text-fpt-orange rounded-lg text-sm font-medium hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                            className="flex items-center justify-center gap-2 px-6 h-[52px] bg-fpt-orange text-white text-sm font-bold rounded-2xl hover:bg-orange-600 hover:shadow-lg hover:shadow-fpt-orange/20 transition-all shadow-sm"
                         >
                             <Upload size={18} />
                             Import
                         </button>
                     )}
-
                 </div>
             </div>
         </div>
@@ -144,3 +135,4 @@ export const StudentFilters: React.FC<StudentFiltersProps> = React.memo(({
 });
 
 StudentFilters.displayName = 'StudentFilters';
+

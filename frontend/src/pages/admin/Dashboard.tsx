@@ -16,7 +16,7 @@ import {
 } from '../../types/dashboard';
 import { NewsItem } from '../../types/news';
 import { Users, UserCog, CreditCard, FileText, Activity, Newspaper, ArrowRight } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { useWebSocket } from '../../hooks/useWebSocket';
 
 export const Dashboard: React.FC = () => {
@@ -245,3 +245,4 @@ export const Dashboard: React.FC = () => {
     </AdminLayout>
   );
 };
+

@@ -21,7 +21,7 @@ import {
   Clock,
   Activity
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { aiToolService, AITool, AIToolTest } from '../../services/api/aiToolService';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 
@@ -273,9 +273,9 @@ export const AIToolManagement: React.FC = () => {
         </div>
 
         {/* Search & Filter Bar */}
-        <div className="bg-white rounded-2xl p-2.5 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100/80 flex items-center justify-between">
-          <div className="flex-1 flex items-center px-4">
-            <Search size={18} className="text-slate-400 shrink-0" />
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-0 shadow-sm border-2 border-gray-100 dark:border-zinc-800 flex items-center justify-between overflow-hidden">
+          <div className="flex-1 flex items-center h-[52px] px-4 relative">
+            <Search size={18} className="text-slate-400 shrink-0 absolute left-4" />
             <input
               type="text"
               placeholder="Tìm tên tool, mô tả..."
@@ -283,29 +283,29 @@ export const AIToolManagement: React.FC = () => {
               onChange={(e) => {
                 setSearchQuery(e.target.value);
               }}
-              className="w-full bg-transparent border-none focus:ring-0 text-[14px] px-3 py-2 outline-none text-slate-700 placeholder:text-slate-400"
+              className="w-full bg-transparent border-none focus:ring-0 text-[14px] pl-8 pr-4 py-2 outline-none text-slate-700 dark:text-zinc-200 placeholder:text-slate-400"
             />
           </div>
-          <div className="flex items-center gap-4 pr-2 shrink-0">
-            <div className="flex items-center gap-1.5 text-slate-400 border-r border-gray-100 pr-4">
+          <div className="flex items-center gap-4 pr-3 shrink-0 h-[52px]">
+            <div className="flex items-center gap-1.5 text-slate-400 border-r border-gray-100 dark:border-zinc-800 pr-4 h-6">
               <Filter size={14} />
               <span className="text-[10px] uppercase font-bold tracking-widest">PHÂN LOẠI:</span>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               {[
                 { id: 'ALL', label: 'Tất cả' },
-                { id: 'SQL_TEMPLATE', label: 'SQL TEMPLATE' },
-                { id: 'BACKEND_ACTION', label: 'BACKEND ACTION' },
-                { id: 'NAVIGATE_ONLY', label: 'NAVIGATE ONLY' }
+                { id: 'SQL_TEMPLATE', label: 'SQL' },
+                { id: 'BACKEND_ACTION', label: 'BACKEND' },
+                { id: 'NAVIGATE_ONLY', label: 'NAVIGATION' }
               ].map(type => (
                 <button
                   key={type.id}
                   onClick={() => {
                     setFilterType(type.id);
                   }}
-                  className={`px-4 py-2 rounded-xl text-[11px] font-bold tracking-wide transition-all ${filterType === type.id
-                    ? 'bg-[#F47021] text-white shadow-md shadow-orange-500/20'
-                    : 'text-slate-500 hover:bg-slate-50'
+                  className={`h-9 px-4 rounded-xl text-[11px] font-bold tracking-wide transition-all active:scale-95 ${filterType === type.id
+                    ? 'bg-fpt-orange text-white shadow-lg shadow-orange-500/20'
+                    : 'text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
                     }`}
                 >
                   {type.label}
@@ -397,13 +397,13 @@ export const AIToolManagement: React.FC = () => {
             <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="px-8 py-5 text-[10px] uppercase font-bold text-slate-400 tracking-widest w-[18%]">Công cụ AI / Định danh</th>
-                  <th className="px-6 py-5 text-[10px] uppercase font-bold text-slate-400 tracking-widest w-[22%]">Mô tả chức năng</th>
-                  <th className="px-6 py-5 text-[10px] uppercase font-bold text-slate-400 tracking-widest w-[20%]">Tham số bắt buộc</th>
-                  <th className="px-6 py-5 text-[10px] uppercase font-bold text-slate-400 tracking-widest w-[18%]">Quyền truy cập</th>
-                  <th className="px-6 py-5 text-[10px] uppercase font-bold text-slate-400 tracking-widest">Độ tin cậy</th>
-                  <th className="px-6 py-5 text-[10px] uppercase font-bold text-slate-400 tracking-widest">Trạng thái</th>
-                  <th className="px-8 py-5 text-[10px] uppercase font-bold text-slate-400 tracking-widest text-right">Quản lý</th>
+                  <th className="px-4 py-5 w-[18%] text-xs font-bold uppercase tracking-widest whitespace-nowrap">Công cụ AI / Định danh</th>
+                  <th className="px-4 py-5 w-[22%] text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mô tả chức năng</th>
+                  <th className="px-4 py-5 w-[20%] text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tham số bắt buộc</th>
+                  <th className="px-4 py-5 w-[18%] text-xs font-bold uppercase tracking-widest whitespace-nowrap">Quyền truy cập</th>
+                  <th className="px-4 py-5 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Độ tin cậy</th>
+                  <th className="px-4 py-5 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                  <th className="px-4 py-5 text-right text-xs font-bold uppercase tracking-widest whitespace-nowrap">Quản lý</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50/80">
@@ -592,23 +592,23 @@ export const AIToolManagement: React.FC = () => {
         </div> */}
 
         {/* Create/Edit Modal */}
-        {isModalOpen && (
-          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
-            <div className="bg-white w-full max-w-2xl rounded-[24px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        {isModalOpen && createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
+            <div className="bg-white dark:bg-zinc-900 w-full max-w-2xl rounded-[24px] shadow-2xl animate-in zoom-in-95 duration-200 border border-gray-100 dark:border-zinc-800">
               <form onSubmit={handleSave} className="flex flex-col max-h-[90vh]">
-                <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
+                <div className="px-8 py-6 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between">
                   <div className="space-y-1">
-                    <h3 className="text-[20px] font-bold text-slate-900 flex items-center gap-3">
-                      <div className="w-10 h-10 bg-orange-50 rounded-[12px] flex items-center justify-center text-[#F47021]">
+                    <h3 className="text-[20px] font-bold text-slate-900 dark:text-white flex items-center gap-3">
+                      <div className="w-10 h-10 bg-orange-50 dark:bg-orange-950/20 rounded-[12px] flex items-center justify-center text-[#F47021]">
                         <Edit2 size={20} />
                       </div>
                       Cập nhật Tool
                     </h3>
-                    <p className="text-slate-500 text-[13px] font-medium">
+                    <p className="text-slate-500 dark:text-zinc-400 text-[13px] font-medium">
                       Thao tác cập nhật logic hệ thống
                     </p>
                   </div>
-                  <button type="button" onClick={() => setIsModalOpen(false)} className="w-10 h-10 bg-slate-50 hover:bg-slate-100 rounded-full flex items-center justify-center transition-colors text-slate-400">
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="w-10 h-10 bg-slate-50 dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 rounded-full flex items-center justify-center transition-colors text-slate-400">
                     <X size={20} />
                   </button>
                 </div>
@@ -616,39 +616,39 @@ export const AIToolManagement: React.FC = () => {
                 <div className="px-8 py-6 space-y-6 overflow-y-auto">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">Định danh Tool <span className="text-red-500">*</span></label>
+                      <label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest pl-1">Định danh Tool <span className="text-red-500">*</span></label>
                       <input
                         type="text"
                         value={formData.name}
                         readOnly
-                        className="w-full bg-slate-50 border border-slate-200 rounded-[14px] px-4 py-3.5 outline-none font-semibold text-[14px] text-slate-700"
+                        className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-[14px] px-4 py-3.5 outline-none font-semibold text-[14px] text-slate-700 dark:text-zinc-200"
                       />
                       <p className="text-[11px] text-slate-400 pl-1">Tên tool là inventory cố định, không chỉnh sửa tại UI.</p>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">Loại vận hành <span className="text-red-500">*</span></label>
-                      <div className="w-full bg-slate-50 border border-slate-200 rounded-[14px] px-4 py-3.5 font-semibold text-[14px] text-slate-700">
+                      <label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest pl-1">Loại vận hành <span className="text-red-500">*</span></label>
+                      <div className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-[14px] px-4 py-3.5 font-semibold text-[14px] text-slate-700 dark:text-zinc-200">
                         {getToolTypeLabel(formData.type)}
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">Mô tả chức năng <span className="text-red-500">*</span></label>
+                    <label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest pl-1">Mô tả chức năng <span className="text-red-500">*</span></label>
                     <textarea
                       required
-                      rows={2}
+                      rows={3}
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       placeholder="Mô tả cho LLM biết khi nào dùng tool này..."
-                      className="w-full bg-white border border-gray-200 rounded-[14px] px-4 py-3.5 focus:border-[#F47021] focus:ring-4 focus:ring-orange-500/10 outline-none transition-all text-[14px] text-slate-800 font-medium"
+                      className="w-full bg-white dark:bg-zinc-950 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl px-4 py-3 focus:border-fpt-orange focus:ring-4 focus:ring-fpt-orange/10 outline-none transition-all text-sm text-gray-900 dark:text-zinc-200 font-medium"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1 flex justify-between">
+                      <label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest pl-1 flex justify-between">
                         Tham số bắt buộc
                       </label>
                       <input
@@ -656,11 +656,11 @@ export const AIToolManagement: React.FC = () => {
                         value={formData.requiredFields}
                         onChange={(e) => setFormData({ ...formData, requiredFields: e.target.value })}
                         placeholder="vd: student_code, class_name"
-                        className="w-full bg-white border border-gray-200 rounded-[14px] px-4 py-3.5 focus:border-[#F47021] focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-semibold text-[14px] text-slate-800"
+                        className="w-full h-[52px] bg-white dark:bg-zinc-950 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl px-4 focus:border-fpt-orange focus:ring-4 focus:ring-fpt-orange/10 outline-none transition-all font-bold text-sm text-gray-900 dark:text-zinc-200"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1 flex justify-between">
+                      <label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest pl-1 flex justify-between">
                         Tham số đầu ra bắt buộc
                       </label>
                       <input
@@ -668,16 +668,16 @@ export const AIToolManagement: React.FC = () => {
                         value={formData.requiredRespFields}
                         onChange={(e) => setFormData({ ...formData, requiredRespFields: e.target.value })}
                         placeholder="vd: student_name, status"
-                        className="w-full bg-white border border-gray-200 rounded-[14px] px-4 py-3.5 focus:border-[#F47021] focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-semibold text-[14px] text-slate-800"
+                        className="w-full h-[52px] bg-white dark:bg-zinc-950 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl px-4 focus:border-fpt-orange focus:ring-4 focus:ring-fpt-orange/10 outline-none transition-all font-semibold text-[14px] text-slate-800 dark:text-zinc-200"
                       />
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between bg-slate-50 rounded-[16px] p-5 border border-slate-100">
+                  <div className="flex items-center justify-between bg-slate-50 dark:bg-zinc-800/50 rounded-[16px] p-5 border border-slate-100 dark:border-zinc-700">
                     <div className="flex-1 w-full max-w-[200px] space-y-3">
                       <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Độ tin cậy</label>
-                        <span className="text-[13px] font-black text-[#F47021]">{formData.accuracyPercentage}%</span>
+                        <label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest">Độ tin cậy</label>
+                        <span className="text-[13px] font-black text-fpt-orange">{formData.accuracyPercentage}%</span>
                       </div>
                       <input
                         type="range"
@@ -687,35 +687,35 @@ export const AIToolManagement: React.FC = () => {
                         value={formData.accuracyPercentage}
                         readOnly
                         disabled
-                        className="w-full accent-[#F47021] h-1.5 bg-slate-200 rounded-lg appearance-none cursor-default opacity-70"
+                        className="w-full accent-fpt-orange h-1.5 bg-slate-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-default opacity-70"
                       />
                     </div>
 
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
-                      className={`flex items-center gap-3 px-5 py-2.5 rounded-full transition-all ${formData.isActive ? 'bg-green-50 text-green-700' : 'bg-slate-200 text-slate-500'
+                      className={`flex items-center gap-3 px-5 py-2.5 rounded-full transition-all ${formData.isActive ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-slate-200 dark:bg-zinc-700 text-slate-500 dark:text-zinc-400'
                         }`}
                     >
                       <span className="text-[13px] font-bold">{formData.isActive ? 'Đang bật' : 'Đang tắt'}</span>
-                      <div className={`w-[36px] h-[20px] rounded-full p-[2px] transition-colors relative ${formData.isActive ? 'bg-[#10B981]' : 'bg-slate-300'}`}>
+                      <div className={`w-[36px] h-[20px] rounded-full p-[2px] transition-colors relative ${formData.isActive ? 'bg-[#10B981]' : 'bg-slate-300 dark:bg-zinc-600'}`}>
                         <div className={`w-[16px] h-[16px] bg-white rounded-full shadow-sm transition-transform ${formData.isActive ? 'translate-x-[16px]' : 'translate-x-0'}`} />
                       </div>
                     </button>
                   </div>
                 </div>
 
-                <div className="px-8 py-5 border-t border-gray-100 bg-white flex justify-end gap-3 rounded-b-[24px]">
+                <div className="px-8 py-5 border-t border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex justify-end gap-3 rounded-b-[24px]">
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="px-6 py-2.5 rounded-[10px] text-slate-500 font-bold hover:bg-slate-50 transition-colors text-[13px]"
+                    className="h-[44px] px-6 rounded-2xl text-slate-500 dark:text-zinc-400 font-bold hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors text-[13px] active:scale-95"
                   >
                     Hủy
                   </button>
                   <button
                     type="submit"
-                    className="bg-[#0B101E] hover:bg-slate-800 text-white font-bold py-2.5 px-6 rounded-[10px] shadow-lg shadow-slate-900/10 flex items-center gap-2 transition-colors text-[13px]"
+                    className="h-[44px] bg-fpt-orange hover:bg-orange-600 text-white font-bold px-8 rounded-2xl shadow-lg shadow-fpt-orange/20 flex items-center gap-2 transition-all text-sm active:scale-95"
                   >
                     <Check size={16} />
                     Lưu công cụ
@@ -723,7 +723,8 @@ export const AIToolManagement: React.FC = () => {
                 </div>
               </form>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         {/* Test Module Modal */}
@@ -840,8 +841,8 @@ export const AIToolManagement: React.FC = () => {
                           <table className="w-full text-left text-[13px]">
                             <thead className="bg-slate-50 border-b border-gray-100">
                               <tr>
-                                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest w-[40%]">Trường</th>
-                                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Giá trị</th>
+                                <th className="px-4 py-5 w-[40%] text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trường</th>
+                                <th className="px-4 py-5 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Giá trị</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -977,3 +978,5 @@ export const AIToolManagement: React.FC = () => {
     </AdminLayout>
   );
 };
+
+

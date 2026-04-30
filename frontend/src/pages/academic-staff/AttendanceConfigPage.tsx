@@ -11,7 +11,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import apiClient from '../../services/api/authService';
 
@@ -401,3 +401,4 @@ export const AttendanceConfigPage: React.FC = () => {
     </AcademicStaffLayout>
   );
 };
+

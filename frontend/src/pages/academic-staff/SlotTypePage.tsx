@@ -1,12 +1,169 @@
-import React, { useState, useEffect } from 'react';
-import { Settings, Calendar, Plus, ArrowLeft, Trash2, Clock, Check, AlertCircle, ChevronRight, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Settings, Calendar, Plus, Trash2, Clock, Check, AlertCircle, ChevronRight, AlertTriangle, ChevronLeft, Calendar as CalendarIcon } from 'lucide-react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { useParams } from 'react-router-dom';
 import { useRoleAwareNavigate } from '../../hooks/useRoleAwareNavigate';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import apiClient from '../../services/api/authService';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { timetableService } from '../../services/api/timetableService';
+import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
+
+// --- Inline Modal Components ---
+
+interface ModalDatePickerProps {
+  label?: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+}
+
+const ModalDatePicker: React.FC<ModalDatePickerProps> = ({ label, value, onChange, disabled = false, placeholder = 'Chọn ngày...' }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [viewDate, setViewDate] = useState(value ? new Date(value) : new Date());
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
+
+  const updateCoords = () => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setCoords({
+        top: rect.top + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      updateCoords();
+      window.addEventListener('resize', updateCoords);
+      window.addEventListener('scroll', updateCoords, true);
+    }
+    return () => {
+      window.removeEventListener('resize', updateCoords);
+      window.removeEventListener('scroll', updateCoords, true);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        const picker = document.getElementById('datepicker-portal');
+        if (picker && picker.contains(event.target as Node)) return;
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+  const firstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
+
+  const handleDateSelect = (day: number) => {
+    const selectedDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
+    onChange(selectedDate.toISOString().split('T')[0]);
+    setIsOpen(false);
+  };
+
+  const nextMonth = () => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1));
+  const prevMonth = () => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1));
+
+  const renderCalendar = () => {
+    const days = [];
+    const totalDays = daysInMonth(viewDate.getFullYear(), viewDate.getMonth());
+    const startDay = firstDayOfMonth(viewDate.getFullYear(), viewDate.getMonth());
+
+    for (let i = 0; i < startDay; i++) {
+      days.push(<div key={`empty-${i}`} className="h-10 w-10" />);
+    }
+
+    for (let d = 1; d <= totalDays; d++) {
+      const isSelected = value && new Date(value).getDate() === d &&
+        new Date(value).getMonth() === viewDate.getMonth() &&
+        new Date(value).getFullYear() === viewDate.getFullYear();
+      days.push(
+        <button
+          key={d}
+          type="button"
+          onClick={() => handleDateSelect(d)}
+          className={`h-10 w-10 rounded-xl flex items-center justify-center text-sm transition-all
+                        ${isSelected ? 'bg-fpt-orange text-white font-bold shadow-lg shadow-fpt-orange/20' : 'hover:bg-orange-50 dark:hover:bg-orange-900/20 text-gray-700 dark:text-gray-300'}
+                    `}
+        >
+          {d}
+        </button>
+      );
+    }
+    return days;
+  };
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      {label && <label className="block text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 ml-1">{label}</label>}
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className={`w-full flex items-center justify-between px-4 h-[44px] border-2 rounded-2xl text-sm transition-all outline-none
+                    ${disabled ? 'bg-gray-100 dark:bg-zinc-800/50 border-gray-100 dark:border-zinc-800 text-gray-500 cursor-not-allowed font-medium' : 'bg-white dark:bg-zinc-900 border-gray-100 dark:border-zinc-800 focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange hover:border-fpt-orange/40 text-gray-900 dark:text-white'}
+                `}
+      >
+        <span className={value ? 'font-bold' : 'text-gray-400'}>
+          {value ? new Date(value).toLocaleDateString('vi-VN') : placeholder}
+        </span>
+        <CalendarIcon size={16} className="text-gray-400" />
+      </button>
+
+      {createPortal(
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              id="datepicker-portal"
+              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              style={{
+                position: 'absolute',
+                top: coords.top - 8,
+                left: coords.left,
+                width: Math.max(coords.width, 300),
+                transform: 'translateY(-100%)',
+                zIndex: 9999
+              }}
+              className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-2xl shadow-2xl p-4"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <button type="button" onClick={prevMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
+                  <ChevronLeft size={16} className="text-gray-600 dark:text-zinc-400" />
+                </button>
+                <span className="text-sm font-bold text-gray-900 dark:text-white">
+                  {viewDate.toLocaleString('vi-VN', { month: 'long', year: 'numeric' })}
+                </span>
+                <button type="button" onClick={nextMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
+                  <ChevronRight size={16} className="text-gray-600 dark:text-zinc-400" />
+                </button>
+              </div>
+              <div className="grid grid-cols-7 gap-1 mb-2">
+                {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map(d => (
+                  <div key={d} className="text-[10px] font-black text-gray-400 text-center uppercase tracking-widest">{d}</div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {renderCalendar()}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+    </div>
+  );
+};
 
 interface SlotTime {
   startTime: string;
@@ -55,7 +212,7 @@ const VIETNAMESE_HOLIDAYS_PRESETS = [
 export const SlotTypePage: React.FC = () => {
   const navigate = useRoleAwareNavigate();
   const { semesterCode } = useParams<{ semesterCode: string }>();
-  
+
   const [config, setConfig] = useState<SemesterConfig>({
     semesterName: '',
     startDate: '',
@@ -79,7 +236,7 @@ export const SlotTypePage: React.FC = () => {
 
   const [isReadOnly, setIsReadOnly] = useState(true);
   const [originalConfig, setOriginalConfig] = useState<SemesterConfig | null>(null);
-  
+
   const DEFAULT_CONFIG: Omit<SemesterConfig, 'semesterName' | 'startDate' | 'endDate' | 'isPublished'> = {
     selectedDays: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'],
     maxSlotsPerDay: 4,
@@ -106,7 +263,7 @@ export const SlotTypePage: React.FC = () => {
   useEffect(() => {
     const duration = parseInt(config.slotType);
     const BREAK_DURATION = 15; // 15-minute break between slots
-    
+
     // Use reduce to properly chain calculations - each slot depends on the NEWLY calculated previous slot
     const updatedSlots = config.slots.reduce<SlotTime[]>((acc, slot, index) => {
       if (index === 0) {
@@ -127,16 +284,16 @@ export const SlotTypePage: React.FC = () => {
       }
       return acc;
     }, []);
-    
-    const hasChanged = updatedSlots.some((slot, i) => 
+
+    const hasChanged = updatedSlots.some((slot, i) =>
       slot.startTime !== config.slots[i].startTime || slot.endTime !== config.slots[i].endTime
     );
-    
+
     if (hasChanged) {
       setConfig(prev => ({ ...prev, slots: updatedSlots }));
     }
   }, [config.slotType]);
-  
+
   // Fetch semester data
   useEffect(() => {
     if (semesterCode) {
@@ -158,10 +315,10 @@ export const SlotTypePage: React.FC = () => {
             holidays: data.holidays || DEFAULT_CONFIG.holidays,
             status: data.status || 'upcoming'
           };
-          
+
           setConfig(loadedConfig);
           setOriginalConfig(loadedConfig);
-          
+
           // If configuration exists (e.g. maxSlotsPerDay is not null), stay in read-only mode
           if (data.maxSlotsPerDay) {
             setIsReadOnly(true);
@@ -183,7 +340,7 @@ export const SlotTypePage: React.FC = () => {
   const toggleDay = (dayId: string) => {
     setConfig(prev => {
       const isSelected = prev.selectedDays.includes(dayId);
-      const newDays = isSelected 
+      const newDays = isSelected
         ? prev.selectedDays.filter(d => d !== dayId)
         : [...prev.selectedDays, dayId];
       return { ...prev, selectedDays: newDays };
@@ -233,10 +390,10 @@ export const SlotTypePage: React.FC = () => {
   };
 
   const removeHoliday = (index: number) => {
-    setConfig(prev => ({
-      ...prev,
-      holidays: prev.holidays.filter((_, i) => i !== index)
-    }));
+    setConfig(prev => {
+      const updatedHolidays = prev.holidays.filter((_, i) => i !== index);
+      return { ...prev, holidays: updatedHolidays };
+    });
   };
 
   const handleHolidayChange = (index: number, field: keyof Holiday, value: string) => {
@@ -275,7 +432,7 @@ export const SlotTypePage: React.FC = () => {
 
     const standardHolidays: Holiday[] = [];
     let holidaysInRange = 0;
-    
+
     VIETNAMESE_HOLIDAYS_PRESETS.forEach(preset => {
       const daysToLoad = preset.days || 1;
       for (let i = 0; i < daysToLoad; i++) {
@@ -373,7 +530,7 @@ export const SlotTypePage: React.FC = () => {
     try {
       await apiClient.post(`/v1/semesters/${semesterCode}/config`, payload);
       toast.success('Lưu cấu hình thành công', { id: toastId });
-      
+
       // Refresh data to get newest state
       const response = await apiClient.get(`/v1/semesters/get-by-code/${semesterCode}`);
       const data = response.data;
@@ -388,7 +545,7 @@ export const SlotTypePage: React.FC = () => {
         holidays: data.holidays || config.holidays,
         status: data.status || 'upcoming'
       };
-      
+
       setConfig(updatedConfig);
       setOriginalConfig(updatedConfig);
       setIsReadOnly(true);
@@ -412,193 +569,203 @@ export const SlotTypePage: React.FC = () => {
 
   return (
     <AcademicStaffLayout pageTitle="Cấu hình kỳ học">
-      <div className="max-w-7xl mx-auto space-y-3 pb-20 pt-2">
-        
+      <div className="max-w-7xl mx-auto space-y-4 pb-20 pt-2">
+
         {/* Top Header & Breadcrumb */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 text-sm text-gray-500">
-            <button onClick={() => navigate('/academic-staff/semesters')} className="hover:text-orange-600 transition-colors flex items-center gap-1">
-              <ArrowLeft className="w-4 h-4" /> Quản lý học kỳ
-            </button>
-            <ChevronRight className="w-4 h-4 text-gray-300" />
-            <span className="text-gray-900 font-bold">{semesterCode || 'SPRING 2026'}</span>
-            
-            {isReadOnly ? (
-              <span className="ml-2 px-2.5 py-0.5 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100 flex items-center gap-1.5 uppercase tracking-wide">
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                Chế độ xem
-              </span>
-            ) : (
-              <span className="ml-2 px-2.5 py-0.5 bg-orange-50 text-orange-600 rounded-full text-[10px] font-bold border border-orange-100 flex items-center gap-1.5 uppercase tracking-wide">
-                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-                Đang chỉnh sửa
-              </span>
-            )}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight leading-none uppercase">Cấu hình chi tiết</h1>
+              {isReadOnly ? (
+                <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[9px] font-black border border-blue-100 flex items-center gap-1.5 uppercase tracking-widest">
+                  <div className="w-1 h-1 rounded-full bg-blue-500" />
+                  Chế độ xem
+                </span>
+              ) : (
+                <span className="px-3 py-1 bg-fpt-orange/10 text-fpt-orange rounded-full text-[9px] font-black border border-fpt-orange/20 flex items-center gap-1.5 uppercase tracking-widest animate-pulse">
+                  <div className="w-1 h-1 rounded-full bg-fpt-orange" />
+                  Đang chỉnh sửa
+                </span>
+              )}
+            </div>
           </div>
-          
-          <div className="flex gap-2">
-            <button onClick={handleNavigateClassSection} className="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg text-xs font-bold text-white shadow-lg shadow-orange-600/20 transition-all active:scale-95">
-              QUẢN LÝ LỚP HỌC PHẦN
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleNavigateClassSection}
+              className="flex h-[44px] items-center gap-2 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 px-5 text-[10px] font-black text-gray-600 hover:border-fpt-orange hover:text-fpt-orange hover:shadow-lg transition-all active:scale-95 uppercase tracking-widest"
+            >
+              Quản lý lớp học phần
             </button>
             {isReadOnly ? (
               config.status === 'upcoming' ? (
-                <button 
+                <button
                   onClick={() => setIsReadOnly(false)}
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs font-bold text-white shadow-lg shadow-blue-600/20 transition-all active:scale-95 flex items-center gap-2"
+                  className="flex h-[44px] items-center gap-2 rounded-2xl bg-blue-600 px-6 text-[10px] font-black text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all active:scale-95 uppercase tracking-widest"
                 >
-                  <Settings className="w-3.5 h-3.5" /> CHỈNH SỬA
+                  <Settings className="w-3.5 h-3.5" /> Chỉnh sửa
                 </button>
               ) : (
-                <div className="flex items-center gap-2 bg-amber-50 text-amber-700 px-4 py-2 rounded-lg border border-amber-200">
-                  <AlertTriangle className="w-4 h-4" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Không thể chỉnh sửa do kỳ học đã hoặc đang diễn ra</span>
+                <div className="flex h-[44px] items-center gap-3 bg-amber-50 text-amber-700 px-5 rounded-2xl border border-amber-200">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  <span className="text-[9px] font-black uppercase tracking-widest leading-tight">Khóa chỉnh sửa</span>
                 </div>
               )
             ) : (
               <>
-                <button 
+                <button
                   onClick={handleCancelChanges}
-                  className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 bg-white hover:bg-gray-50 transition-all"
+                  className="flex h-[44px] items-center px-5 rounded-2xl bg-gray-100 dark:bg-zinc-800 text-gray-600 text-[10px] font-black hover:bg-gray-200 transition-all active:scale-95 uppercase tracking-widest"
                 >
-                  HỦY THAY ĐỔI
+                  Hủy thay đổi
                 </button>
-                <button 
-                  onClick={handleSubmit} 
-                  className="px-6 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg text-xs font-bold text-white shadow-lg shadow-orange-600/20 transition-all active:scale-95 flex items-center gap-2"
+                <button
+                  onClick={handleSubmit}
+                  className="flex h-[44px] items-center gap-2 rounded-2xl bg-fpt-orange px-6 text-[10px] font-black text-white hover:bg-orange-600 shadow-lg shadow-fpt-orange/20 transition-all active:scale-95 uppercase tracking-widest"
                 >
-                  <Check className="w-3.5 h-3.5" /> LƯU CẤU HÌNH
+                  <Check className="w-3.5 h-3.5" strokeWidth={3} /> Lưu cấu hình
                 </button>
               </>
             )}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3">
-          
-            {/* Row 1: Basic Information */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-4">
-              <div className="flex items-center mb-3">
-                <h2 className="text-xl font-bold text-gray-800">Thông tin chung</h2>
+        <div className="grid grid-cols-1 gap-4">
+
+          {/* Row 1: Basic Information */}
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <div className="p-1.5 rounded-xl bg-fpt-orange/10">
+                <Calendar className="w-4 h-4 text-fpt-orange" />
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Tên học kỳ */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-gray-700">Tên học kỳ</label>
-                  {isReadOnly ? (
-                    <div className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm font-bold text-gray-900">{config.semesterName || '--'}</div>
-                  ) : (
-                    <input type="text" placeholder="VD: SPRING 2026" value={config.semesterName} onChange={(e) => handleInputChange('semesterName', e.target.value)} className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold text-gray-900 outline-none hover:border-orange-400 focus:border-orange-500" />
-                  )}
-                </div>
-
-                {/* Thời gian kỳ học */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-gray-700">Thời gian kỳ học</label>
-                  {isReadOnly ? (
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm font-bold text-gray-900">{config.startDate || '--'}</div>
-                      <div className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm font-bold text-gray-900">{config.endDate || '--'}</div>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                      <input type="date" value={config.startDate} onChange={(e) => handleInputChange('startDate', e.target.value)} className="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-3 py-2 text-sm font-bold outline-none hover:border-orange-400 focus:border-orange-500" />
-                      <input type="date" value={config.endDate} onChange={(e) => handleInputChange('endDate', e.target.value)} className="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-3 py-2 text-sm font-bold outline-none hover:border-orange-400 focus:border-orange-500" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Ngày học trong tuần */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-gray-700 block">Ngày học trong tuần</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {DAYS_OF_WEEK.map(day => (
-                      <button 
-                        key={day.id} 
-                        onClick={() => toggleDay(day.id)}
-                        disabled={isReadOnly}
-                        className={`w-10 h-10 rounded-xl text-[11px] font-bold transition-all border-2 ${
-                          config.selectedDays.includes(day.id) 
-                            ? 'bg-orange-600 border-orange-600 text-white shadow-md' 
-                            : 'bg-white border-gray-100 text-gray-400 hover:border-gray-300'
-                        } ${isReadOnly ? 'cursor-not-allowed opacity-80 border-transparent' : ''}`}
-                      >
-                        {day.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-              </div>
+              <h2 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-widest">Thông tin chung học kỳ</h2>
             </div>
 
-          {/* Row 2: Logical Grouping: Content & Slots */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Tên học kỳ */}
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Tên học kỳ</label>
+                {isReadOnly ? (
+                  <div className="w-full h-[48px] bg-gray-50 dark:bg-zinc-800/50 rounded-2xl px-5 flex items-center text-sm font-bold text-gray-900 dark:text-white border-2 border-transparent">{config.semesterName || '--'}</div>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="VD: SPRING 2026"
+                    value={config.semesterName}
+                    onChange={(e) => handleInputChange('semesterName', e.target.value)}
+                    className="w-full h-[48px] bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl px-5 text-sm font-bold text-gray-900 dark:text-white outline-none hover:border-fpt-orange/40 focus:border-fpt-orange focus:ring-4 focus:ring-fpt-orange/10 transition-all"
+                  />
+                )}
+              </div>
+
+              {/* Thời gian kỳ học */}
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Thời gian kỳ học</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {isReadOnly ? (
+                    <>
+                      <div className="w-full h-[48px] bg-gray-50 dark:bg-zinc-800/50 rounded-2xl px-5 flex items-center text-sm font-bold text-gray-900 dark:text-white border-2 border-transparent">{config.startDate || '--'}</div>
+                      <div className="w-full h-[48px] bg-gray-50 dark:bg-zinc-800/50 rounded-2xl px-5 flex items-center text-sm font-bold text-gray-900 dark:text-white border-2 border-transparent">{config.endDate || '--'}</div>
+                    </>
+                  ) : (
+                    <>
+                      <ModalDatePicker value={config.startDate} onChange={(value) => handleInputChange('startDate', value)} placeholder="Bắt đầu" />
+                      <ModalDatePicker value={config.endDate} onChange={(value) => handleInputChange('endDate', value)} placeholder="Kết thúc" />
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Ngày học trong tuần */}
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Ngày học trong tuần</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {DAYS_OF_WEEK.map(day => (
+                    <button
+                      key={day.id}
+                      onClick={() => toggleDay(day.id)}
+                      disabled={isReadOnly}
+                      className={`w-9 h-[44px] rounded-xl text-[10px] font-black transition-all border-2 ${config.selectedDays.includes(day.id)
+                        ? 'bg-fpt-orange border-fpt-orange text-white shadow-lg shadow-fpt-orange/20'
+                        : 'bg-white dark:bg-zinc-900 border-gray-100 dark:border-zinc-800 text-gray-400 hover:border-fpt-orange/40'
+                        } ${isReadOnly ? 'cursor-not-allowed opacity-80 border-transparent' : 'active:scale-90'}`}
+                    >
+                      {day.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* Row 2: Content & Slots */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
             {/* Left Sidebar: Training Params */}
-            <div className="lg:col-span-4 space-y-3">
-              
-              {/* Training Parameters (Now at top of sidebar) */}
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-4 h-full">
-                <div className="space-y-4">
+            <div className="lg:col-span-4 space-y-4">
+
+              <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-zinc-800 shadow-sm p-6 space-y-6 h-full">
+                <div className="space-y-6">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-bold text-gray-800">Cài đặt đào tạo</h2>
+                    <div className="p-1.5 rounded-xl bg-fpt-orange/10">
+                      <Clock className="w-4 h-4 text-fpt-orange" />
+                    </div>
+                    <h2 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-widest">Tham số đào tạo</h2>
                   </div>
-                  
+
                   <div className="space-y-4">
-                    <div className="space-y-3">
-                      <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-2">
-                        <Clock className="w-3.5 h-3.5" /> Loại tiết học (Duration)
-                      </label>
-                      <div className="flex bg-gray-200/50 p-1 rounded-2xl border border-gray-100">
-                        <button onClick={() => handleInputChange('slotType', '90')} 
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Thời lượng tiết học</label>
+                      <div className="flex bg-gray-50 dark:bg-zinc-800/50 p-1 rounded-2xl border-2 border-gray-100 dark:border-zinc-800">
+                        <button onClick={() => handleInputChange('slotType', '90')}
                           disabled={isReadOnly}
-                          className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all duration-300 ${config.slotType === '90' ? 'bg-orange-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'} ${isReadOnly ? 'cursor-not-allowed' : ''}`}>
+                          className={`flex-1 py-2.5 rounded-xl text-[9px] font-black transition-all duration-300 uppercase tracking-widest ${config.slotType === '90' ? 'bg-white dark:bg-zinc-900 text-fpt-orange shadow-sm border border-gray-100 dark:border-zinc-700' : 'text-gray-400 hover:text-gray-600'} ${isReadOnly ? 'cursor-not-allowed' : ''}`}>
                           90 PHÚT
                         </button>
-                        <button onClick={() => handleInputChange('slotType', '135')} 
+                        <button onClick={() => handleInputChange('slotType', '135')}
                           disabled={isReadOnly}
-                          className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all duration-300 ${config.slotType === '135' ? 'bg-orange-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'} ${isReadOnly ? 'cursor-not-allowed' : ''}`}>
+                          className={`flex-1 py-2.5 rounded-xl text-[9px] font-black transition-all duration-300 uppercase tracking-widest ${config.slotType === '135' ? 'bg-white dark:bg-zinc-900 text-fpt-orange shadow-sm border border-gray-100 dark:border-zinc-700' : 'text-gray-400 hover:text-gray-600'} ${isReadOnly ? 'cursor-not-allowed' : ''}`}>
                           135 PHÚT
                         </button>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-3">
+                    <div className="grid grid-cols-1 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-sm font-semibold text-gray-700">Max Slots / Ngày</label>
+                        <label className="text-[9px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Số Slot tối đa / Ngày</label>
                         {isReadOnly ? (
-                          <div className="flex items-center bg-gray-50 rounded-lg px-3 py-2">
-                            <Settings className="w-4 h-4 text-gray-500" />
-                            <span className="px-2 text-sm font-bold text-gray-900">{config.maxSlotsPerDay}</span>
+                          <div className="flex h-[44px] items-center bg-gray-50 dark:bg-zinc-800/50 rounded-2xl px-5 text-sm font-bold text-gray-900 dark:text-white border-2 border-transparent">
+                            <Settings className="w-3.5 h-3.5 text-gray-400 mr-3" />
+                            <span>{config.maxSlotsPerDay}</span>
                           </div>
                         ) : (
-                          <div className="flex items-center bg-gray-100 border-2 border-gray-200 rounded-lg overflow-hidden px-3 transition-all hover:border-orange-400 focus-within:bg-white focus-within:border-orange-500">
-                            <Settings className="w-4 h-4 text-gray-500" />
-                            <input 
-                              type="number" 
-                              value={config.maxSlotsPerDay} 
+                          <div className="flex h-[44px] items-center bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl overflow-hidden px-5 transition-all hover:border-fpt-orange/40 focus-within:border-fpt-orange focus-within:ring-4 focus-within:ring-fpt-orange/10">
+                            <Settings className="w-3.5 h-3.5 text-gray-400 mr-2" />
+                            <input
+                              type="number"
+                              value={config.maxSlotsPerDay}
                               onChange={(e) => handleInputChange('maxSlotsPerDay', parseInt(e.target.value))}
-                              className="w-full bg-transparent py-2 px-2 text-sm font-bold text-gray-900 outline-none border-none focus:ring-0" 
+                              className="w-full bg-transparent text-sm font-bold text-gray-900 dark:text-white outline-none border-none focus:ring-0"
                             />
                           </div>
                         )}
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-sm font-semibold text-gray-700">Slots / Môn / Tuần</label>
+                        <label className="text-[9px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Số Slot / Môn / Tuần</label>
                         {isReadOnly ? (
-                          <div className="flex items-center bg-gray-50 rounded-lg px-3 py-2">
-                            <Calendar className="w-4 h-4 text-gray-500" />
-                            <span className="px-2 text-sm font-bold text-gray-900">{config.slotsPerSubjectPerWeek}</span>
+                          <div className="flex h-[44px] items-center bg-gray-50 dark:bg-zinc-800/50 rounded-2xl px-5 text-sm font-bold text-gray-900 dark:text-white border-2 border-transparent">
+                            <Calendar className="w-3.5 h-3.5 text-gray-400 mr-3" />
+                            <span>{config.slotsPerSubjectPerWeek}</span>
                           </div>
                         ) : (
-                          <div className="flex items-center bg-gray-100 border-2 border-gray-200 rounded-lg overflow-hidden px-3 transition-all hover:border-orange-400 focus-within:bg-white focus-within:border-orange-500">
-                            <Calendar className="w-4 h-4 text-gray-500" />
-                            <input 
-                              type="number" 
-                              value={config.slotsPerSubjectPerWeek} 
+                          <div className="flex h-[44px] items-center bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl overflow-hidden px-5 transition-all hover:border-fpt-orange/40 focus-within:border-fpt-orange focus-within:ring-4 focus-within:ring-fpt-orange/10">
+                            <Calendar className="w-3.5 h-3.5 text-gray-400 mr-2" />
+                            <input
+                              type="number"
+                              value={config.slotsPerSubjectPerWeek}
                               onChange={(e) => handleInputChange('slotsPerSubjectPerWeek', parseInt(e.target.value))}
-                              className="w-full bg-transparent py-2 px-2 text-sm font-bold text-gray-900 outline-none border-none focus:ring-0" 
+                              className="w-full bg-transparent text-sm font-bold text-gray-900 dark:text-white outline-none border-none focus:ring-0"
                             />
                           </div>
                         )}
@@ -607,73 +774,74 @@ export const SlotTypePage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-gray-100 mt-auto">
-                  <div className="bg-orange-50/50 border border-orange-100 rounded-2xl p-3 flex items-start gap-3">
-                    <AlertCircle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
-                    <p className="text-[11px] text-orange-800 leading-relaxed font-medium">
-                      Khi thay đổi <strong>Loại tiết học</strong>, toàn bộ <strong>Giờ kết thúc</strong> bên phải sẽ được tự động đồng bộ lại ngay lập tức.
-                    </p>
-                  </div>
+                <div className="bg-fpt-orange/5 border border-fpt-orange/10 rounded-2xl p-4 flex items-start gap-3">
+                  <AlertCircle className="w-4 h-4 text-fpt-orange shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-orange-900 dark:text-orange-200 leading-relaxed font-bold uppercase tracking-tight">
+                    Khi thay đổi LOẠI TIẾT HỌC, toàn bộ GIỜ KẾ THÚC sẽ được tự động tính toán lại.
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Right: The Grid/List */}
-            <div className="lg:col-span-8 space-y-6">
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col h-full">
-                <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/30">
+            {/* Right: Slots List */}
+            <div className="lg:col-span-8">
+              <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-zinc-800 shadow-xl flex flex-col h-full overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-50 dark:border-zinc-800 flex items-center justify-between bg-gray-50/30 dark:bg-zinc-900/50">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-bold text-gray-800">Cấu hình khung giờ (Slots)</h2>
+                    <div className="p-1.5 rounded-xl bg-fpt-orange/10">
+                      <Clock className="w-4 h-4 text-fpt-orange" />
+                    </div>
+                    <h2 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-widest">Khung giờ học (Slots)</h2>
                   </div>
                 </div>
 
                 <div className="flex-1 overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full border-collapse">
                     <thead>
-                      <tr className="bg-gray-50/50">
-                        <th className="px-5 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">STT</th>
-                        <th className="px-5 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">Giờ bắt đầu</th>
-                        <th className="px-5 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">Giờ kết thúc (Auto)</th>
-                        <th className="px-5 py-2.5 w-16 border-b border-gray-100"></th>
+                      <tr className="bg-gray-50 dark:bg-zinc-800/50 border-b border-gray-100 dark:border-zinc-800">
+                        <th className="px-4 py-5 text-left w-24 text-xs font-bold uppercase tracking-widest whitespace-nowrap">STT</th>
+                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Giờ bắt đầu</th>
+                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Giờ kết thúc (Auto)</th>
+                        <th className="px-6 py-3 w-20"></th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
                       {config.slots.map((slot, index) => (
-                        <tr key={index} className="group hover:bg-orange-50/30 transition-all duration-200">
-                          <td className="px-5 py-2.5">
-                            <span className="text-xs font-bold text-gray-500 group-hover:text-orange-600">SLOT {index + 1}</span>
+                        <tr key={index} className="group hover:bg-orange-50/30 dark:hover:bg-orange-900/5 transition-all duration-200">
+                          <td className="px-6 py-3">
+                            <span className="text-[10px] font-black text-gray-400 group-hover:text-fpt-orange uppercase tracking-widest transition-colors whitespace-nowrap">Slot {index + 1}</span>
                           </td>
-                          <td className="px-5 py-2.5">
+                          <td className="px-6 py-3">
                             {isReadOnly ? (
-                              <span className="text-sm font-bold text-gray-900">{slot.startTime || '--:--'}</span>
+                              <span className="text-sm font-black text-gray-900 dark:text-white bg-gray-50 dark:bg-zinc-800 px-3 py-1.5 rounded-xl border border-transparent">{slot.startTime || '--:--'}</span>
                             ) : (
-                              <input 
-                                type="time" 
-                                value={slot.startTime} 
+                              <input
+                                type="time"
+                                value={slot.startTime}
                                 onChange={(e) => handleSlotTimeChange(index, e.target.value)}
-                                className="bg-gray-100 border border-gray-300 rounded-xl px-2.5 py-1 text-sm font-bold text-gray-900 outline-none shadow-sm transition-all hover:border-orange-400 focus:border-orange-500 focus:bg-white"
+                                className="w-28 h-[40px] bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl px-3 text-sm font-black text-gray-900 dark:text-white outline-none shadow-sm transition-all hover:border-fpt-orange/40 focus:border-fpt-orange focus:ring-4 focus:ring-fpt-orange/10"
                               />
                             )}
                           </td>
-                          <td className="px-5 py-2.5">
-                            <div className="flex items-center gap-2">
+                          <td className="px-6 py-3">
+                            <div className="flex items-center gap-3">
                               {isReadOnly ? (
-                                <span className="text-sm font-bold text-gray-900">{slot.endTime || '--:--'}</span>
+                                <span className="text-sm font-black text-gray-900 dark:text-white bg-gray-50 dark:bg-zinc-800 px-3 py-1.5 rounded-xl border border-transparent">{slot.endTime || '--:--'}</span>
                               ) : (
-                                <input 
-                                  type="time" 
-                                  value={slot.endTime || ''} 
+                                <input
+                                  type="time"
+                                  value={slot.endTime || ''}
                                   disabled
-                                  className="bg-gray-100 border border-gray-300 rounded-xl px-2.5 py-1 text-sm font-bold text-gray-900 outline-none shadow-sm cursor-not-allowed opacity-80"
+                                  className="w-28 h-[40px] bg-gray-50 dark:bg-zinc-800/50 border-2 border-transparent rounded-2xl px-3 text-sm font-black text-gray-400 outline-none cursor-not-allowed"
                                 />
                               )}
-                              {!isReadOnly && <Check className="w-3 h-3 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                              {!isReadOnly && <Check className="w-3.5 h-3.5 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />}
                             </div>
                           </td>
-                          <td className="px-5 py-2.5 text-right">
+                          <td className="px-6 py-3 text-right">
                             {!isReadOnly && (
-                              <button onClick={() => removeSlot(index)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100" title="Xóa slot">
-                                <Trash2 className="w-4 h-4" />
+                              <button onClick={() => removeSlot(index)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all active:scale-90" title="Xóa slot">
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             )}
                           </td>
@@ -684,9 +852,9 @@ export const SlotTypePage: React.FC = () => {
                 </div>
 
                 {!isReadOnly && (
-                  <div className="p-5 bg-gray-50/30 border-t border-gray-100">
-                    <button onClick={addSlot} className="w-full py-2.5 border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center gap-3 text-gray-400 hover:text-orange-600 hover:border-orange-300 hover:bg-white transition-all font-bold text-xs uppercase tracking-widest">
-                      <Plus className="w-4 h-4" /> Thêm tiết học mới
+                  <div className="p-6 bg-gray-50/30 dark:bg-zinc-900/50 border-t border-gray-50 dark:border-zinc-800">
+                    <button onClick={addSlot} className="w-full h-[44px] border-2 border-dashed border-gray-200 dark:border-zinc-800 rounded-2xl flex items-center justify-center gap-3 text-gray-400 hover:text-fpt-orange hover:border-fpt-orange hover:bg-white dark:hover:bg-zinc-900 transition-all font-black text-[10px] uppercase tracking-widest active:scale-[0.98]">
+                      <Plus className="w-4 h-4" strokeWidth={3} /> Thêm tiết học mới
                     </button>
                   </div>
                 )}
@@ -697,90 +865,89 @@ export const SlotTypePage: React.FC = () => {
 
         </div>
 
-        {/* Row 3: Full-width Holiday Selection */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
-          <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/30">
+        {/* Row 3: Holiday Selection */}
+        <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-zinc-800 shadow-xl overflow-hidden flex flex-col">
+          <div className="px-6 py-4 border-b border-gray-50 dark:border-zinc-800 flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-gray-50/30 dark:bg-zinc-900/50">
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-gray-800">Kế hoạch nghỉ lễ của học kỳ</h2>
+              <div className="p-1.5 rounded-xl bg-fpt-orange/10">
+                <Calendar className="w-4 h-4 text-fpt-orange" />
+              </div>
+              <h2 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-widest">Kế hoạch nghỉ lễ</h2>
             </div>
             {!isReadOnly && (
-              <div className="flex items-center gap-3">
-                <button 
+              <div className="flex flex-wrap items-center gap-2">
+                <button
                   onClick={handleResetToDefault}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 text-gray-500 rounded-xl text-[10px] font-bold border border-gray-200 hover:bg-gray-200 transition-all uppercase"
+                  className="h-[38px] px-4 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-[9px] font-black text-gray-500 hover:border-gray-300 dark:hover:border-zinc-700 transition-all uppercase tracking-widest active:scale-95"
                 >
                   Đặt lại mặc định
                 </button>
-                <button 
+                <button
                   onClick={loadStandardHolidays}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-[10px] font-bold border border-red-100 hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                  className="h-[38px] flex items-center gap-2 px-4 bg-red-50 text-red-600 rounded-2xl text-[9px] font-black border-2 border-red-100 hover:bg-red-600 hover:text-white transition-all shadow-sm uppercase tracking-widest active:scale-95"
                 >
-                  <Calendar className="w-3.5 h-3.5" /> NẠP NGÀY LỄ VIỆT NAM
+                  <Calendar className="w-3.5 h-3.5" /> Nạp ngày lễ VN
                 </button>
-                <button 
+                <button
                   onClick={addHoliday}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-[10px] font-bold transition-all"
+                  className="h-[38px] flex items-center gap-2 px-4 bg-fpt-orange text-white rounded-2xl text-[9px] font-black hover:bg-orange-600 transition-all uppercase tracking-widest active:scale-95 shadow-lg shadow-fpt-orange/20"
                 >
-                  <Plus className="w-3.5 h-3.5" /> THÊM NGÀY NGHỈ
+                  <Plus className="w-3.5 h-3.5" strokeWidth={3} /> Thêm ngày nghỉ
                 </button>
               </div>
             )}
           </div>
 
-          <div className="flex-1 overflow-auto max-h-[400px] custom-scrollbar">
+          <div className="flex-1 overflow-auto max-h-[500px] custom-scrollbar">
             {config.holidays.length === 0 ? (
-              <div className="p-10 text-center">
-                <div className="mb-4 inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-50 text-gray-400">
-                  <Calendar className="w-6 h-6" />
+              <div className="p-16 text-center">
+                <div className="mb-4 inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gray-50 dark:bg-zinc-800 text-gray-400">
+                  <Calendar className="w-8 h-8" />
                 </div>
-                <p className="text-sm text-gray-400 italic font-medium">Chưa có ngày nghỉ nào được thiết lập cho học kỳ này</p>
+                <h3 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-widest mb-1">Chưa có dữ liệu</h3>
+                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tight">Thiết lập kế hoạch nghỉ lễ cho học kỳ</p>
               </div>
             ) : (
               <table className="w-full border-collapse">
-                <thead className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur-sm">
-                  <tr>
-                    <th className="px-5 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 w-16">STT</th>
-                    <th className="px-5 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 w-48">Ngày nghỉ</th>
-                    <th className="px-5 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">Lý do nghỉ lễ</th>
-                    <th className="px-5 py-2.5 text-right text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 w-24">Thao tác</th>
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-zinc-800/50 border-b border-gray-100 dark:border-zinc-800">
+                    <th className="px-4 py-5 text-left w-24 text-xs font-bold uppercase tracking-widest whitespace-nowrap">STT</th>
+                    <th className="px-4 py-5 text-left w-64 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Ngày nghỉ</th>
+                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Lý do / Mô tả</th>
+                    <th className="px-4 py-5 text-right w-24 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Thao tác</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
                   {config.holidays.map((holiday, index) => (
-                    <tr key={index} className="group hover:bg-orange-50/30 transition-all duration-200">
-                      <td className="px-5 py-2">
-                        <span className="text-xs font-bold text-gray-400 group-hover:text-orange-600 transition-colors">#{index + 1}</span>
+                    <tr key={index} className="group hover:bg-orange-50/30 dark:hover:bg-orange-900/5 transition-all duration-200">
+                      <td className="px-6 py-3">
+                        <span className="text-[10px] font-black text-gray-400 group-hover:text-fpt-orange transition-colors uppercase tracking-widest whitespace-nowrap">#{index + 1}</span>
                       </td>
-                      <td className="px-5 py-2">
+                      <td className="px-6 py-3">
                         {isReadOnly ? (
-                          <span className="text-xs font-bold text-gray-900">{holiday.holidayDate || '--'}</span>
+                          <span className="text-xs font-black text-gray-900 dark:text-white bg-gray-50 dark:bg-zinc-800 px-3 py-1.5 rounded-xl border border-transparent block w-fit">{holiday.holidayDate || '--'}</span>
                         ) : (
-                          <input 
-                            type="date" 
-                            value={holiday.holidayDate} 
-                            onChange={(e) => handleHolidayChange(index, 'holidayDate', e.target.value)}
-                            className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-bold text-gray-900 outline-none transition-all shadow-sm w-full hover:border-orange-400 focus:border-orange-500" 
-                          />
+                          <ModalDatePicker value={holiday.holidayDate} onChange={(value) => handleHolidayChange(index, 'holidayDate', value)} placeholder="Chọn ngày" />
                         )}
                       </td>
-                      <td className="px-5 py-2">
+                      <td className="px-6 py-3">
                         {isReadOnly ? (
-                          <span className="text-xs font-semibold text-gray-900">{holiday.description || '--'}</span>
+                          <span className="text-xs font-bold text-gray-700 dark:text-zinc-300 leading-relaxed">{holiday.description || 'Chưa có mô tả'}</span>
                         ) : (
-                          <input 
-                            type="text" 
-                            placeholder="Nhập lý do nghỉ lễ..." 
-                            value={holiday.description} 
+                          <input
+                            type="text"
+                            placeholder="Mô tả..."
+                            value={holiday.description}
                             onChange={(e) => handleHolidayChange(index, 'description', e.target.value)}
-                            className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-900 outline-none transition-all shadow-sm w-full hover:border-orange-400 focus:border-orange-500" 
+                            className="h-[44px] bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl px-4 text-sm font-bold text-gray-900 dark:text-white outline-none transition-all shadow-sm w-full hover:border-fpt-orange/40 focus:border-fpt-orange focus:ring-4 focus:ring-fpt-orange/10 placeholder:text-gray-400"
                           />
                         )}
                       </td>
-                      <td className="px-5 py-2 text-right">
+                      <td className="px-6 py-3 text-right">
                         {!isReadOnly && (
-                          <button 
-                            onClick={() => removeHoliday(index)} 
-                            className="p-1.5 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                          <button
+                            onClick={() => removeHoliday(index)}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-2xl transition-all active:scale-90"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -794,56 +961,43 @@ export const SlotTypePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Action Buttons Section */}
-        <div className="flex items-center justify-between bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-          <div className="flex items-center gap-2 text-gray-400 text-xs italic font-medium">
-            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-            Dữ liệu sẽ được lưu trữ an toàn trên hệ thống
+        {/* Action Buttons Footer */}
+        <div className="flex flex-col md:flex-row items-center justify-between bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-zinc-800 p-6 shadow-xl gap-4">
+          <div className="flex items-center gap-3 text-gray-400">
+            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/20">
+              <Check className="w-5 h-5 text-emerald-500" strokeWidth={3} />
+            </div>
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Hệ thống</p>
+              <p className="text-xs font-bold text-gray-900 dark:text-white">Dữ liệu sẵn sàng</p>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            {isReadOnly ? (
-              config.status === 'upcoming' && (
-                <button 
-                  onClick={() => setIsReadOnly(false)} 
-                  className="px-10 py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xl shadow-blue-600/20 transition-all active:scale-95 uppercase flex items-center gap-2"
-                >
-                  <Settings className="w-4 h-4" /> Bắt đầu chỉnh sửa
-                </button>
-              )
-            ) : (
-              <>
-                <button 
-                  onClick={handleCancelChanges} 
-                  className="px-8 py-3 text-xs font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all uppercase"
-                >
-                  Hủy thay đổi
-                </button>
-                <button 
-                  onClick={handleSubmit} 
-                  className="px-10 py-3 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl shadow-xl shadow-orange-600/20 transition-all active:scale-95 uppercase flex items-center gap-2"
-                >
-                  <Check className="w-4 h-4" /> Lưu cấu hình
-                </button>
-              </>
+
+          <div className="flex items-center gap-3">
+            {!isReadOnly && (
+              <button
+                onClick={handleSubmit}
+                className="h-[48px] px-8 bg-fpt-orange text-white rounded-2xl font-black text-[10px] hover:bg-orange-600 shadow-2xl shadow-fpt-orange/30 transition-all active:scale-95 uppercase tracking-widest flex items-center gap-2"
+              >
+                <Check className="w-4 h-4" strokeWidth={3} /> Hoàn tất lưu
+              </button>
             )}
           </div>
         </div>
-        
-        {/* Save Confirmation Modal */}
-        <ConfirmModal
-          isOpen={isConfirmModalOpen}
-          onClose={() => setIsConfirmModalOpen(false)}
-          onConfirm={handleConfirmSave}
-          title="Xác nhận lưu cấu hình"
-          message="Việc thay đổi cấu hình kỳ học sẽ xóa toàn bộ Thời khóa biểu (TKB) cũ của kỳ học này (nếu có). Bạn sẽ phải thực hiện tạo lại TKB mới sau khi lưu. Bạn có chắc chắn muốn tiếp tục?"
-          type="warning"
-          confirmLabel="Lưu và Xóa TKB cũ"
-          cancelLabel="Hủy"
-        />
-
       </div>
+
+      <ConfirmModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={handleConfirmSave}
+        title="Xác nhận thay đổi cấu hình"
+        message="Học kỳ này đã có thời khóa biểu được tạo. Nếu bạn thay đổi cấu hình Slot hoặc Ngày học, dữ liệu thời khóa biểu hiện tại có thể bị ảnh hưởng hoặc cần được tính toán lại. Bạn có chắc chắn muốn lưu không?"
+        type="warning"
+        confirmLabel="Vẫn lưu cấu hình"
+        cancelLabel="Kiểm tra lại"
+      />
     </AcademicStaffLayout>
   );
 };
 
-export default SlotTypePage;
+

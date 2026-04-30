@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ChevronRight, Loader2, Box, Grid3X3, DoorOpen, Building2, Layers, Users } from 'lucide-react';
 import { roomService } from '../../services/api/roomService';
 import { Room } from '../../types/room';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Environment, useTexture } from '@react-three/drei';
 import { getRoomTypeLabel } from '../../utils/roomUtils';
@@ -428,3 +428,4 @@ export const RoomDetailTemplate: React.FC<RoomDetailTemplateProps> = ({ Layout, 
         </Layout>
     );
 };
+

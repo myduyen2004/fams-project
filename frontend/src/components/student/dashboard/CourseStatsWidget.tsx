@@ -152,3 +152,4 @@ export const CourseStatsWidget: React.FC<CourseStatsWidgetProps> = ({
 };
 
 export default CourseStatsWidget;
+

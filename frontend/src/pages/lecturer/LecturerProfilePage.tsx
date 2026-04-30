@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Edit2, Save, X, Camera, Eye, EyeOff, Lock, Key, Loader2 } from 'lucide-react';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { userService } from '../../services/api/userService';
-import toast from 'react-hot-toast';
+import { CustomDatePicker } from '../../components/common/CustomDatePicker';
+import toast from "@utils/toast";
 
 interface UserProfile {
   id: number;
@@ -197,8 +198,8 @@ export const LecturerProfilePage: React.FC = () => {
     <LecturerLayout pageTitle="Hồ sơ cá nhân">
       <div className="max-w-4xl mx-auto p-6 space-y-6">
         {/* Profile Card */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg overflow-hidden">
-          <div className="h-32 bg-gradient-to-r from-fpt-orange via-orange-500 to-orange-400"></div>
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg">
+          <div className="h-32 bg-gradient-to-r from-fpt-orange via-orange-500 to-orange-400 rounded-t-2xl"></div>
 
           <div className="relative px-8 pb-8">
             {/* Avatar */}
@@ -342,11 +343,10 @@ export const LecturerProfilePage: React.FC = () => {
                     Ngày sinh
                   </label>
                   {isEditing ? (
-                    <input
-                      type="date"
+                    <CustomDatePicker
                       value={displayProfile.dob || ''}
-                      onChange={(e) => handleChange('dob', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-fpt-orange focus:border-transparent"
+                      onChange={(value) => handleChange('dob', value)}
+                      className="w-full"
                     />
                   ) : (
                     <p className="text-gray-900 dark:text-white font-medium">
@@ -384,93 +384,95 @@ export const LecturerProfilePage: React.FC = () => {
             </div>
           </div>
 
-          <form onSubmit={handlePasswordChange} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                Mật khẩu hiện tại
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Key className="text-gray-400" size={20} />
+          <form onSubmit={handlePasswordChange} className="space-y-6">
+            <div className="grid grid-cols-1 gap-6">
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-gray-500 mb-1.5 ml-1 font-bold">
+                  Mật khẩu hiện tại
+                </label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Key className="text-gray-400 group-focus-within:text-fpt-orange transition-colors" size={18} />
+                  </div>
+                  <input
+                    type={showPasswords.current ? 'text' : 'password'}
+                    value={passwordData.currentPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                    className="w-full pl-10 pr-10 h-[52px] border-2 border-gray-100 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40"
+                    placeholder="Nhập mật khẩu cũ"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center hover:text-fpt-orange transition-colors text-gray-400"
+                  >
+                    {showPasswords.current ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
-                <input
-                  type={showPasswords.current ? 'text' : 'password'}
-                  value={passwordData.currentPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                  className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-fpt-orange focus:border-transparent"
-                  placeholder="Nhập mật khẩu hiện tại"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                >
-                  {showPasswords.current ? <EyeOff className="text-gray-400" size={20} /> : <Eye className="text-gray-400" size={20} />}
-                </button>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                Mật khẩu mới
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Key className="text-gray-400" size={20} />
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-gray-500 mb-1.5 ml-1 font-bold">
+                  Mật khẩu mới
+                </label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Key className="text-gray-400 group-focus-within:text-fpt-orange transition-colors" size={18} />
+                  </div>
+                  <input
+                    type={showPasswords.new ? 'text' : 'password'}
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                    className="w-full pl-10 pr-10 h-[52px] border-2 border-gray-100 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40"
+                    placeholder="Tối thiểu 8 ký tự"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center hover:text-fpt-orange transition-colors text-gray-400"
+                  >
+                    {showPasswords.new ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
-                <input
-                  type={showPasswords.new ? 'text' : 'password'}
-                  value={passwordData.newPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                  className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-fpt-orange focus:border-transparent"
-                  placeholder="Nhập mật khẩu mới (tối thiểu 8 ký tự)"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                >
-                  {showPasswords.new ? <EyeOff className="text-gray-400" size={20} /> : <Eye className="text-gray-400" size={20} />}
-                </button>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                Xác nhận mật khẩu mới
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Key className="text-gray-400" size={20} />
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-gray-500 mb-1.5 ml-1 font-bold">
+                  Xác nhận mật khẩu
+                </label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Key className="text-gray-400 group-focus-within:text-fpt-orange transition-colors" size={18} />
+                  </div>
+                  <input
+                    type={showPasswords.confirm ? 'text' : 'password'}
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                    className="w-full pl-10 pr-10 h-[52px] border-2 border-gray-100 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40"
+                    placeholder="Nhập lại mật khẩu mới"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center hover:text-fpt-orange transition-colors text-gray-400"
+                  >
+                    {showPasswords.confirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
-                <input
-                  type={showPasswords.confirm ? 'text' : 'password'}
-                  value={passwordData.confirmPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                  className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-fpt-orange focus:border-transparent"
-                  placeholder="Nhập lại mật khẩu mới"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                >
-                  {showPasswords.confirm ? <EyeOff className="text-gray-400" size={20} /> : <Eye className="text-gray-400" size={20} />}
-                </button>
               </div>
             </div>
 
             <button
               type="submit"
               disabled={isChangingPassword}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-fpt-orange text-white rounded-lg hover:bg-orange-600 transition-colors font-medium disabled:opacity-50"
+              className="flex items-center justify-center gap-2 px-8 h-[52px] bg-fpt-orange text-white rounded-2xl hover:bg-orange-600 transition-all font-bold shadow-lg shadow-fpt-orange/20 disabled:opacity-50 w-full"
             >
               {isChangingPassword ? (
                 <Loader2 size={18} className="animate-spin" />
               ) : (
                 <Lock size={18} />
               )}
-              {isChangingPassword ? 'Đang cập nhật...' : 'Đổi mật khẩu'}
+              {isChangingPassword ? 'Đang cập nhật...' : 'Xác nhận đổi mật khẩu'}
             </button>
           </form>
         </div>
@@ -478,3 +480,4 @@ export const LecturerProfilePage: React.FC = () => {
     </LecturerLayout>
   );
 };
+

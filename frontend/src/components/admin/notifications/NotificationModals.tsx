@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { X, Loader2, Bell, Calendar, Send, Save, AlertCircle } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { X, Loader2, Bell, Calendar, Send, Save, AlertCircle, ChevronDown, Check } from 'lucide-react';
 import ReactQuill from 'react-quill';
+import { motion, AnimatePresence } from 'framer-motion';
 import 'react-quill/dist/quill.snow.css';
 import '../../../styles/quill-custom.css';
 import {
@@ -18,7 +19,77 @@ import {
   getPriorityColor
 } from '../../../types/notification';
 import { notificationService } from '../../../services/api/notificationService';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
+
+// --- Inline Modal Components (Non-portal versions for z-index stability) ---
+
+interface ModalSelectProps {
+    label?: string;
+    value: string | number;
+    options: { value: string | number; label: string }[];
+    onChange: (value: any) => void;
+    placeholder?: string;
+}
+
+const ModalSelect: React.FC<ModalSelectProps> = ({ label, value, options, onChange, placeholder = 'Chọn...' }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const selectedOption = options.find(opt => opt.value === value);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    return (
+        <div className="relative" ref={containerRef}>
+            {label && <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1 ml-1">{label}</label>}
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full flex items-center justify-between px-4 h-[52px] bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 outline-none text-gray-900 dark:text-white"
+            >
+                <span className={selectedOption ? 'font-medium' : 'text-gray-400'}>
+                    {selectedOption ? selectedOption.label : placeholder}
+                </span>
+                <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        className="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-2xl shadow-2xl z-[70] py-2 max-h-60 overflow-y-auto custom-scrollbar"
+                    >
+                        {options.map((opt) => (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => {
+                                    onChange(opt.value);
+                                    setIsOpen(false);
+                                }}
+                                className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-colors hover:bg-orange-50 dark:hover:bg-orange-900/10
+                                    ${value === opt.value ? 'text-fpt-orange bg-orange-50/50 dark:bg-orange-900/5 font-bold' : 'text-gray-700 dark:text-gray-300'}
+                                `}
+                            >
+                                <span>{opt.label}</span>
+                                {value === opt.value && <Check size={16} className="text-fpt-orange" />}
+                            </button>
+                        ))}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
 
 // ========================= View Notification Modal =========================
 interface ViewNotificationModalProps {
@@ -30,12 +101,9 @@ export const ViewNotificationModal: React.FC<ViewNotificationModalProps> = ({ no
   const formatDateTime = (dateStr: string | null) => {
     if (!dateStr) return '---';
     try {
-      // Nếu dateStr không có 'Z' (local time từ backend), parse trực tiếp
-      // Nếu có 'Z' (UTC), Date sẽ tự convert sang local
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return '---';
 
-      // Format theo định dạng Việt Nam
       const day = String(d.getDate()).padStart(2, '0');
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const year = d.getFullYear();
@@ -50,37 +118,37 @@ export const ViewNotificationModal: React.FC<ViewNotificationModalProps> = ({ no
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-2xl border border-gray-100 dark:border-zinc-800 overflow-hidden max-h-[90vh] flex flex-col">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-2xl border border-gray-100 dark:border-zinc-800 max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
           <h3 className="text-xl font-bold text-gray-900 dark:text-white">Chi tiết thông báo</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+          <button onClick={onClose} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all active:scale-95 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
             <X size={20} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6 overflow-y-auto">
+        <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar">
           {/* Title */}
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0 shadow-sm border border-orange-50 dark:border-orange-900/10">
               <Bell size={24} className="text-fpt-orange" />
             </div>
             <div className="flex-1">
-              <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+              <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-2 leading-tight">
                 {notification.title}
               </h4>
               <div className="flex flex-wrap gap-2">
-                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(notification.status)}`}>
+                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold text-white shadow-sm ${getStatusColor(notification.status)}`}>
                   {getStatusLabel(notification.status)}
                 </span>
-                <span className="inline-flex px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300">
+                <span className="inline-flex px-3 py-1 rounded-full text-xs font-bold bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-zinc-700">
                   {getTargetTypeLabel(notification.targetType)}
                 </span>
-                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium text-white ${getPriorityColor(notification.priority)}`}>
+                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold text-white shadow-sm ${getPriorityColor(notification.priority)}`}>
                   {getPriorityLabel(notification.priority)}
                 </span>
-                <span className="inline-flex px-3 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                <span className="inline-flex px-3 py-1 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/20">
                   {getTypeLabel(notification.type)}
                 </span>
               </div>
@@ -89,40 +157,40 @@ export const ViewNotificationModal: React.FC<ViewNotificationModalProps> = ({ no
 
           {/* Content */}
           <div>
-            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Nội dung</label>
+            <label className="block text-xs font-black uppercase text-gray-400 dark:text-zinc-500 mb-3 tracking-widest ml-1">Nội dung</label>
             <div
-              className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-lg prose prose-sm dark:prose-invert max-w-none"
+              className="p-5 bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800 rounded-2xl prose prose-sm dark:prose-invert max-w-none shadow-inner"
               dangerouslySetInnerHTML={{ __html: notification.content }}
             />
           </div>
 
           {/* Meta Info */}
           <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <label className="block text-gray-500 dark:text-gray-400 mb-1">Ngày tạo</label>
-              <span className="text-gray-900 dark:text-white font-medium">
+            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/30 border border-gray-100 dark:border-zinc-800">
+              <label className="block text-xs font-bold text-gray-500 dark:text-zinc-500 mb-1">Ngày tạo</label>
+              <span className="text-gray-900 dark:text-white font-bold">
                 {formatDateTime(notification.createdAt)}
               </span>
             </div>
-            <div>
-              <label className="block text-gray-500 dark:text-gray-400 mb-1">
+            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/30 border border-gray-100 dark:border-zinc-800">
+              <label className="block text-xs font-bold text-gray-500 dark:text-zinc-500 mb-1">
                 {notification.status === NotificationStatus.SCHEDULED ? 'Thời gian lên lịch' : 'Ngày gửi'}
               </label>
-              <span className="text-gray-900 dark:text-white font-medium">
+              <span className="text-gray-900 dark:text-white font-bold">
                 {notification.status === NotificationStatus.SCHEDULED
                   ? formatDateTime(notification.scheduledAt)
                   : formatDateTime(notification.sentAt)}
               </span>
             </div>
-            <div>
-              <label className="block text-gray-500 dark:text-gray-400 mb-1">Cập nhật lần cuối</label>
-              <span className="text-gray-900 dark:text-white font-medium">
+            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/30 border border-gray-100 dark:border-zinc-800">
+              <label className="block text-xs font-bold text-gray-500 dark:text-zinc-500 mb-1">Cập nhật lần cuối</label>
+              <span className="text-gray-900 dark:text-white font-bold">
                 {formatDateTime(notification.updatedAt)}
               </span>
             </div>
-            <div>
-              <label className="block text-gray-500 dark:text-gray-400 mb-1">Người gửi</label>
-              <span className="text-gray-900 dark:text-white font-medium">
+            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/30 border border-gray-100 dark:border-zinc-800">
+              <label className="block text-xs font-bold text-gray-500 dark:text-zinc-500 mb-1">Người gửi</label>
+              <span className="text-gray-900 dark:text-white font-bold">
                 {notification.sender?.fullName || '---'}
               </span>
             </div>
@@ -133,7 +201,7 @@ export const ViewNotificationModal: React.FC<ViewNotificationModalProps> = ({ no
         <div className="p-6 border-t border-gray-100 dark:border-zinc-800 flex justify-end">
           <button
             onClick={onClose}
-            className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+            className="px-6 h-[44px] text-sm font-bold text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-zinc-800 rounded-2xl transition-all active:scale-95"
           >
             Đóng
           </button>
@@ -193,7 +261,6 @@ export const NotificationFormModal: React.FC<NotificationFormModalProps> = ({
     'link'
   ];
 
-  // Get minimum datetime for scheduling (now + 5 minutes)
   const getMinDateTime = () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() + 5);
@@ -226,21 +293,16 @@ export const NotificationFormModal: React.FC<NotificationFormModalProps> = ({
 
     const submitData = { ...formData };
 
-    // Xử lý logic status dựa trên hành động người dùng
     if (sendNow) {
-      // Nút "Gửi ngay" - gửi luôn
       submitData.status = NotificationStatus.SENT;
       submitData.scheduledAt = null;
     } else {
-      // Nút "Lưu nháp" hoặc submit form - giữ nguyên status user đã chọn
-      // Nếu chọn SCHEDULED nhưng không có thời gian, đổi về DRAFT
       if (submitData.status === NotificationStatus.SCHEDULED && !submitData.scheduledAt) {
         submitData.status = NotificationStatus.DRAFT;
         submitData.scheduledAt = null;
       }
     }
 
-    // Update formData for validation
     if (sendNow) {
       setFormData(submitData);
     }
@@ -281,144 +343,125 @@ export const NotificationFormModal: React.FC<NotificationFormModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-2xl border border-gray-100 dark:border-zinc-800 overflow-hidden max-h-[90vh] flex flex-col">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-2xl border border-gray-100 dark:border-zinc-800 max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
           <h3 className="text-xl font-bold text-gray-900 dark:text-white">
             {isEditing ? 'Chỉnh sửa thông báo' : 'Tạo thông báo mới'}
           </h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+          <button onClick={onClose} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all active:scale-95 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
             <X size={20} />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={(e) => handleSubmit(e, false)} className="p-6 space-y-5 overflow-y-auto">
+        <form onSubmit={(e) => handleSubmit(e, false)} className="p-6 space-y-5 overflow-y-auto custom-scrollbar">
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 ml-1">
               Tiêu đề <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
-              className={`w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none transition-all text-gray-900 dark:text-white ${errors.title ? 'border-red-500' : 'border-gray-200 dark:border-zinc-700'
+              className={`w-full h-[52px] px-4 bg-white dark:bg-zinc-900 border-2 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all text-gray-900 dark:text-white outline-none ${errors.title ? 'border-red-500' : 'border-gray-100 dark:border-zinc-800'
                 }`}
               placeholder="Nhập tiêu đề thông báo..."
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             />
             {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
-            <p className="text-xs text-gray-400 mt-1">{formData.title.length}/200 ký tự</p>
+            <p className="text-xs text-gray-400 mt-1 ml-1">{formData.title.length}/200 ký tự</p>
           </div>
 
           {/* Type & Priority in one row */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Loại thông báo
-              </label>
-              <select
-                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none text-gray-900 dark:text-white"
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value as NotificationType })}
-              >
-                <option value={NotificationType.SYSTEM}>Hệ thống</option>
-                <option value={NotificationType.ACADEMIC}>Học vụ</option>
-                <option value={NotificationType.ATTENDANCE}>Điểm danh</option>
-                <option value={NotificationType.GRADE}>Điểm số</option>
-                <option value={NotificationType.CHAT}>Chat</option>
-                <option value={NotificationType.SCHEDULE}>Lịch học</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Độ ưu tiên
-              </label>
-              <select
-                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none text-gray-900 dark:text-white"
-                value={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: e.target.value as NotificationPriority })}
-              >
-                <option value={NotificationPriority.LOW}>Thấp</option>
-                <option value={NotificationPriority.MEDIUM}>Trung bình</option>
-                <option value={NotificationPriority.HIGH}>Cao</option>
-                <option value={NotificationPriority.URGENT}>Khẩn cấp</option>
-              </select>
-            </div>
+            <ModalSelect
+              label="Loại thông báo"
+              value={formData.type}
+              onChange={(val) => setFormData({ ...formData, type: val as NotificationType })}
+              options={[
+                { value: NotificationType.SYSTEM, label: 'Hệ thống' },
+                { value: NotificationType.ACADEMIC, label: 'Học vụ' },
+                { value: NotificationType.ATTENDANCE, label: 'Điểm danh' },
+                { value: NotificationType.GRADE, label: 'Điểm số' },
+                { value: NotificationType.CHAT, label: 'Chat' },
+                { value: NotificationType.SCHEDULE, label: 'Lịch học' }
+              ]}
+            />
+            <ModalSelect
+              label="Độ ưu tiên"
+              value={formData.priority}
+              onChange={(val) => setFormData({ ...formData, priority: val as NotificationPriority })}
+              options={[
+                { value: NotificationPriority.LOW, label: 'Thấp' },
+                { value: NotificationPriority.MEDIUM, label: 'Trung bình' },
+                { value: NotificationPriority.HIGH, label: 'Cao' },
+                { value: NotificationPriority.URGENT, label: 'Khẩn cấp' }
+              ]}
+            />
           </div>
 
           {/* Target Type & Status */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Đối tượng nhận
-              </label>
-              <select
-                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none text-gray-900 dark:text-white"
-                value={formData.targetType}
-                onChange={(e) => setFormData({ ...formData, targetType: e.target.value as TargetType })}
-              >
-                <option value={TargetType.ALL}>Toàn trường</option>
-                <option value={TargetType.STUDENT}>Tất cả sinh viên</option>
-                <option value={TargetType.LECTURER}>Tất cả giảng viên</option>
-                <option value={TargetType.CLASS}>Theo lớp học phần</option>
-                <option value={TargetType.COURSE}>Theo môn học</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Trạng thái
-              </label>
-              <select
-                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none text-gray-900 dark:text-white"
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as NotificationStatus })}
-              >
-                <option value={NotificationStatus.DRAFT}>Lưu nháp</option>
-                <option value={NotificationStatus.SCHEDULED}>Lên lịch gửi</option>
-                <option value={NotificationStatus.SENT}>Đã gửi</option>
-                <option value={NotificationStatus.SENT}>Đã gửi</option>
-              </select>
-            </div>
+            <ModalSelect
+              label="Đối tượng nhận"
+              value={formData.targetType}
+              onChange={(val) => setFormData({ ...formData, targetType: val as TargetType })}
+              options={[
+                { value: TargetType.ALL, label: 'Toàn trường' },
+                { value: TargetType.STUDENT, label: 'Tất cả sinh viên' },
+                { value: TargetType.LECTURER, label: 'Tất cả giảng viên' },
+                { value: TargetType.CLASS, label: 'Theo lớp học phần' },
+                { value: TargetType.COURSE, label: 'Theo môn học' }
+              ]}
+            />
+            <ModalSelect
+              label="Trạng thái"
+              value={formData.status}
+              onChange={(val) => setFormData({ ...formData, status: val as NotificationStatus })}
+              options={[
+                { value: NotificationStatus.DRAFT, label: 'Lưu nháp' },
+                { value: NotificationStatus.SCHEDULED, label: 'Lên lịch gửi' },
+                { value: NotificationStatus.SENT, label: 'Đã gửi' }
+              ]}
+            />
           </div>
 
           {/* Scheduled DateTime - show only when status is SCHEDULED */}
           {formData.status === NotificationStatus.SCHEDULED && (
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-              <label className="flex items-center gap-2 text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">
+            <div className="p-4 bg-orange-50 dark:bg-orange-950/20 rounded-2xl border border-orange-100 dark:border-orange-900/30">
+              <label className="flex items-center gap-2 text-sm font-bold text-fpt-orange mb-2 ml-1">
                 <Calendar size={16} />
                 Thời gian gửi <span className="text-red-500">*</span>
               </label>
               <input
                 type="datetime-local"
-                className={`w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none text-gray-900 dark:text-white ${errors.scheduledAt ? 'border-red-500' : 'border-blue-200 dark:border-zinc-700'
+                className={`w-full h-[52px] px-4 bg-white dark:bg-zinc-900 border-2 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all text-gray-900 dark:text-white outline-none ${errors.scheduledAt ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-100 dark:border-zinc-800'
                   }`}
                 min={getMinDateTime()}
                 value={formData.scheduledAt ? formData.scheduledAt.slice(0, 16) : ''}
                 onChange={(e) => {
                   if (e.target.value) {
-                    // Lưu datetime-local trực tiếp (format: YYYY-MM-DDTHH:mm:ss)
-                    // Không convert sang UTC để giữ đúng giờ local user đã chọn
                     setFormData({ ...formData, scheduledAt: e.target.value + ':00' });
                   } else {
                     setFormData({ ...formData, scheduledAt: null });
                   }
                 }}
               />
-              {errors.scheduledAt && <p className="text-red-500 text-xs mt-1">{errors.scheduledAt}</p>}
-              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                Thông báo sẽ tự động được gửi vào thời gian đã chọn
+              {errors.scheduledAt && <p className="text-red-500 text-xs mt-1 ml-1">{errors.scheduledAt}</p>}
+              <p className="text-xs text-orange-600 dark:text-orange-400 mt-2 ml-1 font-medium italic">
+                💡 Thông báo sẽ tự động được gửi vào thời gian đã chọn
               </p>
             </div>
           )}
 
           {/* Content with Rich Text Editor */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 ml-1">
               Nội dung <span className="text-red-500">*</span>
             </label>
 
-            <div className={`rounded-lg overflow-hidden border ${errors.content ? 'border-red-500' : 'border-gray-200 dark:border-zinc-700'}`}>
+            <div className={`rounded-2xl overflow-hidden border-2 transition-all ${errors.content ? 'border-red-500' : 'border-gray-100 dark:border-zinc-800'}`}>
               <ReactQuill
                 theme="snow"
                 value={formData.content}
@@ -426,21 +469,20 @@ export const NotificationFormModal: React.FC<NotificationFormModalProps> = ({
                 modules={quillModules}
                 formats={quillFormats}
                 placeholder="Nhập nội dung thông báo..."
-                className="bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white"
-                style={{ minHeight: '200px' }}
+                className="bg-white dark:bg-zinc-900 text-gray-900 dark:text-white min-h-[200px]"
               />
             </div>
-            {errors.content && <p className="text-red-500 text-xs mt-1">{errors.content}</p>}
+            {errors.content && <p className="text-red-500 text-xs mt-1 ml-1">{errors.content}</p>}
           </div>
 
           {/* Priority warning for URGENT */}
           {formData.priority === NotificationPriority.URGENT && (
-            <div className="flex items-start gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-              <AlertCircle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-950/20 rounded-2xl border border-red-100 dark:border-red-900/30">
+              <AlertCircle size={20} className="text-red-500 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-red-700 dark:text-red-300">Thông báo khẩn cấp</p>
-                <p className="text-xs text-red-600 dark:text-red-400">
-                  Thông báo sẽ được gửi với độ ưu tiên cao nhất và hiển thị dạng popup cho người nhận.
+                <p className="text-sm font-bold text-red-700 dark:text-red-400">Thông báo khẩn cấp</p>
+                <p className="text-xs text-red-600 dark:text-red-500 font-medium leading-relaxed">
+                  Thông báo sẽ được gửi với độ ưu tiên cao nhất và hiển thị dạng popup nổi bật cho tất cả người nhận ngay khi họ đăng nhập.
                 </p>
               </div>
             </div>
@@ -448,12 +490,12 @@ export const NotificationFormModal: React.FC<NotificationFormModalProps> = ({
         </form>
 
         {/* Footer */}
-        <div className="p-6 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between">
-          <div className="text-xs text-gray-400">
+        <div className="p-6 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between bg-gray-50/50 dark:bg-zinc-900/50">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
             {formData.status === NotificationStatus.SCHEDULED && formData.scheduledAt && (
-              <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+              <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
                 <Calendar size={12} />
-                Sẽ gửi: {(() => {
+                Lịch: {(() => {
                   const d = new Date(formData.scheduledAt!);
                   const day = String(d.getDate()).padStart(2, '0');
                   const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -465,22 +507,21 @@ export const NotificationFormModal: React.FC<NotificationFormModalProps> = ({
               </span>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+              className="px-6 h-[44px] text-sm font-bold text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-zinc-800 rounded-2xl transition-all active:scale-95"
             >
               Hủy
             </button>
 
-            {/* Save button - Lưu theo trạng thái đã chọn */}
             {formData.status !== NotificationStatus.SENT && (
               <button
                 type="button"
                 onClick={(e) => handleSubmit(e, false)}
                 disabled={isSubmitting || isSendingNow}
-                className="px-4 py-2 text-sm font-medium bg-fpt-orange text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2 disabled:opacity-50"
+                className="px-6 h-[44px] text-sm font-bold bg-fpt-orange text-white rounded-2xl hover:bg-orange-600 transition-all flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-fpt-orange/20 active:scale-95"
               >
                 {isSubmitting && <Loader2 size={16} className="animate-spin" />}
                 <Save size={16} />
@@ -488,13 +529,12 @@ export const NotificationFormModal: React.FC<NotificationFormModalProps> = ({
               </button>
             )}
 
-            {/* Send Now button - chỉ hiện khi tạo mới */}
             {!isEditing && formData.status !== NotificationStatus.SENT && (
               <button
                 type="button"
                 onClick={(e) => handleSubmit(e, true)}
                 disabled={isSubmitting || isSendingNow}
-                className="px-4 py-2 text-sm font-medium bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2 disabled:opacity-50"
+                className="px-6 h-[44px] text-sm font-bold bg-green-500 text-white rounded-2xl hover:bg-green-600 transition-all flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-green-500/20 active:scale-95"
               >
                 {isSendingNow && <Loader2 size={16} className="animate-spin" />}
                 <Send size={16} />
@@ -541,26 +581,26 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       case 'danger':
         return {
           icon: <AlertCircle className="w-6 h-6 text-red-600" />,
-          button: 'bg-red-600 hover:bg-red-700 text-white',
+          button: 'bg-red-600 hover:bg-red-700 text-white shadow-red-500/20',
           iconBg: 'bg-red-100 dark:bg-red-900/20'
         };
       case 'warning':
         return {
           icon: <AlertCircle className="w-6 h-6 text-orange-600" />,
-          button: 'bg-orange-600 hover:bg-orange-700 text-white',
+          button: 'bg-orange-600 hover:bg-orange-700 text-white shadow-orange-500/20',
           iconBg: 'bg-orange-100 dark:bg-orange-900/20'
         };
       case 'success':
         return {
           icon: <Send className="w-6 h-6 text-white" />,
-          button: 'bg-fpt-orange hover:bg-orange-600 text-white',
+          button: 'bg-fpt-orange hover:bg-orange-600 text-white shadow-fpt-orange/20',
           iconBg: 'bg-fpt-orange/10 dark:bg-orange-900/20'
         };
       case 'info':
       default:
         return {
           icon: <AlertCircle className="w-6 h-6 text-blue-600" />,
-          button: 'bg-blue-600 hover:bg-blue-700 text-white',
+          button: 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20',
           iconBg: 'bg-blue-100 dark:bg-blue-900/20'
         };
     }
@@ -569,44 +609,49 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   const styles = getVariantStyles();
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl w-full max-w-md border border-gray-100 dark:border-zinc-800 overflow-hidden transform transition-all scale-100">
+    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100 dark:border-zinc-800 overflow-hidden"
+      >
         <div className="p-6">
           <div className="flex items-start gap-4">
             {!hideIcon && (
-              <div className={`p-3 rounded-full flex-shrink-0 ${styles.iconBg}`}>
+              <div className={`p-4 rounded-2xl flex-shrink-0 ${styles.iconBg} shadow-inner`}>
                 {styles.icon}
               </div>
             )}
             <div className="flex-1">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                 {title}
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-500 dark:text-zinc-400 leading-relaxed">
                 {message}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="px-6 py-4 bg-gray-50 dark:bg-zinc-800/50 flex justify-end gap-3 border-t border-gray-100 dark:border-zinc-800">
+        <div className="px-6 py-5 bg-gray-50/50 dark:bg-zinc-900/50 flex justify-end gap-3 border-t border-gray-100 dark:border-zinc-800">
           <button
             onClick={onClose}
             disabled={isProcessing}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-fpt-orange dark:bg-zinc-800 dark:text-gray-300 dark:border-zinc-700 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
+            className="px-6 h-[44px] text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-2xl transition-all active:scale-95"
           >
             {cancelLabel}
           </button>
           <button
             onClick={onConfirm}
             disabled={isProcessing}
-            className={`px-4 py-2 text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-fpt-orange transition-all flex items-center gap-2 disabled:opacity-50 ${styles.button}`}
+            className={`px-8 h-[44px] text-sm font-bold rounded-2xl shadow-lg transition-all flex items-center gap-2 disabled:opacity-50 active:scale-95 ${styles.button}`}
           >
             {isProcessing && <Loader2 className="w-4 h-4 animate-spin" />}
             {confirmLabel}
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };
+

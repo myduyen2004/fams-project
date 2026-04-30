@@ -9,10 +9,12 @@ import { uploadFile } from '../../services/utils/fileUploadService';
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import { Pagination } from '../../components/common/Pagination';
 import {
-    ChevronDown, Check, Users, Clock, Search,
-    FileText, Loader2, Plus, X, BookOpen, Lock, Edit3, AlertCircle, Trash2, Download
+    Clock, Search, FileText, Loader2, Plus, X, BookOpen, Edit3, Trash2, Download
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
+import { CustomSelect } from '../../components/common/CustomSelect';
+import { StaticDateTimePicker } from '../../components/common/StaticDateTimePicker';
+import { SelectionActionBar } from '../../components/academic-staff/SelectionActionBar';
 
 export const LecturerAssignmentPage: React.FC = () => {
     const user = authService.getUser();
@@ -24,20 +26,13 @@ export const LecturerAssignmentPage: React.FC = () => {
     const [selectedSemester, setSelectedSemester] = useState<string>('');
     const [selectedClass, setSelectedClass] = useState<string>('');
 
-    // Dropdown open state
-    const [isSemesterOpen, setIsSemesterOpen] = useState(false);
-    const [isClassOpen, setIsClassOpen] = useState(false);
-    const [isStatusOpen, setIsStatusOpen] = useState(false);
     const [statusFilter, setStatusFilter] = useState<'ALL' | 'OPEN' | 'CLOSED'>('ALL');
-    const semesterDropdownRef = useRef<HTMLDivElement>(null);
-    const classDropdownRef = useRef<HTMLDivElement>(null);
-    const statusDropdownRef = useRef<HTMLDivElement>(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Assignments & Slots
     const [assignments, setAssignments] = useState<AssignmentDTO[]>([]);
     const [slots, setSlots] = useState<TimetableSlotDTO[]>([]);
     const [loadingAssignments, setLoadingAssignments] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(0);
     const PAGE_SIZE = 10;
 
@@ -45,7 +40,6 @@ export const LecturerAssignmentPage: React.FC = () => {
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [showBatchEditDialog, setShowBatchEditDialog] = useState(false);
     const [batchEditing, setBatchEditing] = useState(false);
-    const [batchWarning, setBatchWarning] = useState('');
     const [editAssignmentId, setEditAssignmentId] = useState<number | null>(null);
     const [editTitle, setEditTitle] = useState('');
     const [editDescription, setEditDescription] = useState('');
@@ -71,10 +65,6 @@ export const LecturerAssignmentPage: React.FC = () => {
     const [createClassSlots, setCreateClassSlots] = useState<TimetableSlotDTO[]>([]);
     const [loadingClassSlots, setLoadingClassSlots] = useState(false);
     const [selectedSessionNumber, setSelectedSessionNumber] = useState<number | null>(null);
-    const [isCreateClassOpen, setIsCreateClassOpen] = useState(false);
-    const [isCreateSlotOpen, setIsCreateSlotOpen] = useState(false);
-    const createClassDropdownRef = useRef<HTMLDivElement>(null);
-    const createSlotDropdownRef = useRef<HTMLDivElement>(null);
 
     // Download dialog state
     const [showDownloadDialog, setShowDownloadDialog] = useState(false);
@@ -88,30 +78,7 @@ export const LecturerAssignmentPage: React.FC = () => {
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
-    // Close dropdowns when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (semesterDropdownRef.current && !semesterDropdownRef.current.contains(event.target as Node)) {
-                setIsSemesterOpen(false);
-            }
-            if (classDropdownRef.current && !classDropdownRef.current.contains(event.target as Node)) {
-                setIsClassOpen(false);
-            }
-            if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target as Node)) {
-                setIsStatusOpen(false);
-            }
-            if (createClassDropdownRef.current && !createClassDropdownRef.current.contains(event.target as Node)) {
-                setIsCreateClassOpen(false);
-            }
-            if (createSlotDropdownRef.current && !createSlotDropdownRef.current.contains(event.target as Node)) {
-                setIsCreateSlotOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    // Load semesters & auto-select ongoing
+    // useEffects for data fetching
     useEffect(() => {
         const fetchSemesters = async () => {
             try {
@@ -131,24 +98,7 @@ export const LecturerAssignmentPage: React.FC = () => {
         fetchSemesters();
     }, []);
 
-    // Load classes when semester changes
-    useEffect(() => {
-        if (selectedSemester && user?.id) {
-            fetchClasses();
-        }
-    }, [selectedSemester, user?.id]);
-
-    // Load ALL slots + assignments when classes are loaded (auto-load on semester change)
-    useEffect(() => {
-        if (selectedSemester && user?.id && classes.length > 0) {
-            fetchAllData();
-        } else if (classes.length === 0 && selectedSemester) {
-            setSlots([]);
-            setAssignments([]);
-        }
-    }, [classes, selectedSemester, user?.id]);
-
-    const fetchClasses = async () => {
+    const fetchClasses = useCallback(async () => {
         try {
             const data = await lecturerClassService.getTeachingClasses(selectedSemester, {
                 lecturerId: user?.id,
@@ -159,7 +109,7 @@ export const LecturerAssignmentPage: React.FC = () => {
         } catch (error) {
             console.error("Failed to fetch classes", error);
         }
-    };
+    }, [selectedSemester, user?.id]);
 
     // Fetch ALL slots and assignments across all classes for the selected semester
     const fetchAllData = useCallback(async () => {
@@ -197,6 +147,24 @@ export const LecturerAssignmentPage: React.FC = () => {
             setLoadingAssignments(false);
         }
     }, [selectedSemester, user?.id, classes]);
+
+    // Load classes when semester changes
+    useEffect(() => {
+        if (selectedSemester && user?.id) {
+            fetchClasses();
+        }
+    }, [fetchClasses]);
+
+    // Load ALL slots + assignments when classes are loaded (auto-load on semester change)
+    useEffect(() => {
+        if (selectedSemester && user?.id && classes.length > 0) {
+            fetchAllData();
+        } else if (classes.length === 0 && selectedSemester) {
+            setSlots([]);
+            setAssignments([]);
+        }
+    }, [classes, selectedSemester, user?.id, fetchAllData]);
+
 
     // Fetch slots for selected class in create modal
     useEffect(() => {
@@ -322,16 +290,7 @@ export const LecturerAssignmentPage: React.FC = () => {
         setNewRefNames(prev => prev.filter((_, i) => i !== index));
     };
 
-    const getSelectedSemesterName = () => {
-        const semester = semesters.find(s => s.code === selectedSemester);
-        return semester ? semester.name : 'Chọn học kỳ';
-    };
 
-    const getSelectedClassName = () => {
-        if (!selectedClass) return 'Tất cả lớp';
-        const cls = classes.find(c => c.className === selectedClass);
-        return cls ? `${cls.className} - ${cls.courseName}` : selectedClass;
-    };
 
     const formatDate = (dateStr?: string) => {
         if (!dateStr) return '—';
@@ -345,49 +304,45 @@ export const LecturerAssignmentPage: React.FC = () => {
         return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
     };
 
-    // Build a merged list: each assignment + its linked slot (if any)
-    const slotById = new Map<number, TimetableSlotDTO>();
-    slots.forEach(s => slotById.set(s.id, s));
+    // Build a merged list: each assignment + its linked slot (if any) — memoized
+    const { filteredRows, totalPages, paginatedRows, assignmentIdsOnPage, allOnPageSelected } = React.useMemo(() => {
+        const slotById = new Map<number, TimetableSlotDTO>();
+        slots.forEach(s => slotById.set(s.id, s));
 
-    const assignmentRows = assignments.map(assignment => ({
-        assignment,
-        slot: assignment.timetableSlotId ? slotById.get(assignment.timetableSlotId) || null : null
-    }));
+        const assignmentRows = assignments.map(assignment => ({
+            assignment,
+            slot: assignment.timetableSlotId ? slotById.get(assignment.timetableSlotId) || null : null
+        }));
 
-    // Filter: class + status + search
-    const filteredRows = assignmentRows.filter(row => {
-        // Class filter (optional)
-        if (selectedClass && row.slot?.className !== selectedClass) return false;
-        // Status filter
-        if (statusFilter === 'OPEN' && row.assignment.status !== 'OPEN') return false;
-        if (statusFilter === 'CLOSED' && row.assignment.status !== 'CLOSED') return false;
-        // Search filter
-        if (searchTerm) {
-            const term = searchTerm.toLowerCase();
-            const matchSlot = (row.slot?.courseName || '').toLowerCase().includes(term)
-                || (row.slot?.roomCode || '').toLowerCase().includes(term)
-                || (row.slot?.className || '').toLowerCase().includes(term);
-            const matchAssignment = row.assignment.title.toLowerCase().includes(term)
-                || (row.assignment.description || '').toLowerCase().includes(term);
-            return matchSlot || matchAssignment;
-        }
-        return true;
-    });
+        const filteredRows = assignmentRows.filter(row => {
+            if (selectedClass && row.slot?.className !== selectedClass) return false;
+            if (statusFilter === 'OPEN' && row.assignment.status !== 'OPEN') return false;
+            if (statusFilter === 'CLOSED' && row.assignment.status !== 'CLOSED') return false;
+            if (searchTerm) {
+                const term = searchTerm.toLowerCase();
+                const matchSlot = (row.slot?.courseName || '').toLowerCase().includes(term)
+                    || (row.slot?.roomCode || '').toLowerCase().includes(term)
+                    || (row.slot?.className || '').toLowerCase().includes(term);
+                const matchAssignment = row.assignment.title.toLowerCase().includes(term)
+                    || (row.assignment.description || '').toLowerCase().includes(term);
+                return matchSlot || matchAssignment;
+            }
+            return true;
+        });
+
+        const totalPages = Math.ceil(filteredRows.length / PAGE_SIZE);
+        const paginatedRows = filteredRows.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+        const assignmentIdsOnPage = paginatedRows.map(r => r.assignment.id);
+        const allOnPageSelected = assignmentIdsOnPage.length > 0 && assignmentIdsOnPage.every(id => selectedIds.has(id));
+
+        return { filteredRows, totalPages, paginatedRows, assignmentIdsOnPage, allOnPageSelected };
+    }, [slots, assignments, selectedClass, statusFilter, searchTerm, currentPage, selectedIds]);
 
     // Reset page & selection when filters change
     useEffect(() => {
         setCurrentPage(0);
         setSelectedIds(new Set());
-        setBatchWarning('');
     }, [selectedClass, statusFilter, searchTerm]);
-
-    // Paginate filtered rows
-    const totalPages = Math.ceil(filteredRows.length / PAGE_SIZE);
-    const paginatedRows = filteredRows.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
-
-    // Multi-select helpers
-    const assignmentIdsOnPage = paginatedRows.map(r => r.assignment.id);
-    const allOnPageSelected = assignmentIdsOnPage.length > 0 && assignmentIdsOnPage.every(id => selectedIds.has(id));
 
     const toggleSelect = (assignmentId: number) => {
         setSelectedIds(prev => {
@@ -396,7 +351,6 @@ export const LecturerAssignmentPage: React.FC = () => {
             else next.add(assignmentId);
             return next;
         });
-        setBatchWarning('');
     };
 
     const toggleSelectAll = () => {
@@ -406,19 +360,12 @@ export const LecturerAssignmentPage: React.FC = () => {
                 assignmentIdsOnPage.forEach(id => next.delete(id));
                 return next;
             });
-            setBatchWarning('');
         } else {
             setSelectedIds(prev => {
                 const next = new Set(prev);
                 assignmentIdsOnPage.forEach(id => next.add(id));
                 return next;
             });
-            const hasClosedOnPage = paginatedRows.some(r => r.assignment && r.assignment.status === 'CLOSED');
-            if (hasClosedOnPage) {
-                setBatchWarning('Lưu ý: Không thể xóa bài tập đã đóng. Bạn vẫn có thể chỉnh sửa.');
-            } else {
-                setBatchWarning('');
-            }
         }
     };
 
@@ -503,11 +450,6 @@ export const LecturerAssignmentPage: React.FC = () => {
 
     const handleBatchDeleteClick = () => {
         if (selectedIds.size === 0) { toast.error('Vui lòng chọn ít nhất một bài tập'); return; }
-        const hasClosedAssignment = assignments.some(a => selectedIds.has(a.id) && a.status === 'CLOSED');
-        if (hasClosedAssignment) {
-            setBatchWarning('Không thể xóa bài tập đã đóng. Vui lòng chỉ chọn bài tập đang mở để xóa.');
-            return;
-        }
         setShowDeleteDialog(true);
     };
 
@@ -593,203 +535,153 @@ export const LecturerAssignmentPage: React.FC = () => {
 
     return (
         <LecturerLayout pageTitle="Quản lý bài tập">
-            <div className="mt-5 ml-10 mr-10 space-y-6">
+            <div className="space-y-6 pb-8">
 
-                {/* Filter Section — Semester + Class + Status dropdowns */}
-                <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-6 shadow-sm">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Semester Selector */}
-                        <div ref={semesterDropdownRef}>
-                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Học kỳ</label>
+                {/* Header & Filter Card */}
+                <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-zinc-800 p-8 shadow-sm animate-in fade-in duration-500">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
+                        <div>
+                            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Quản lý Bài tập</h1>
+                            <p className="text-sm text-gray-500 dark:text-zinc-400 mt-1 font-medium">Quản lý danh sách bài tập, thời hạn và tài liệu hướng dẫn cho sinh viên</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleOpenDownloadDialog}
+                                className="flex h-[52px] items-center gap-2 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 px-6 text-sm font-bold text-gray-700 dark:text-white hover:border-fpt-orange/40 hover:text-fpt-orange transition-all whitespace-nowrap active:scale-95 shadow-sm"
+                            >
+                                <Download className="h-[20px] w-[20px]" />
+                                Tải bài nộp
+                            </button>
+                            <button
+                                onClick={() => { resetCreateForm(); setShowCreateDialog(true); }}
+                                className="flex h-[52px] items-center gap-2 rounded-2xl bg-fpt-orange px-8 text-sm font-bold text-white hover:bg-orange-600 hover:shadow-lg hover:shadow-fpt-orange/20 transition-all whitespace-nowrap active:scale-95"
+                            >
+                                <Plus className="h-[20px] w-[20px]" strokeWidth={3} />
+                                Tạo bài tập mới
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {/* Search Bar */}
+                        <div className="relative group">
+                            <label className="text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-2.5 ml-1 block">Tìm kiếm</label>
                             <div className="relative">
-                                <button onClick={() => setIsSemesterOpen(!isSemesterOpen)}
-                                    className="flex items-center justify-between w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 px-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-fpt-orange transition-all">
-                                    <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{getSelectedSemesterName()}</span>
-                                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isSemesterOpen ? 'rotate-180' : ''}`} />
-                                </button>
-                                {isSemesterOpen && (
-                                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg max-h-60 overflow-y-auto">
-                                        {semesters.map(semester => (
-                                            <button key={semester.id} onClick={() => { setSelectedSemester(semester.code); setIsSemesterOpen(false); }}
-                                                className={`flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors ${selectedSemester === semester.code ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange' : 'text-gray-900 dark:text-white'}`}>
-                                                <span className="text-sm font-medium">{semester.name}</span>
-                                                {selectedSemester === semester.code && <Check size={16} />}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-fpt-orange transition-colors" />
+                                <input
+                                    type="text"
+                                    placeholder="Tìm theo tên bài, lớp..."
+                                    value={searchTerm}
+                                    onChange={e => setSearchTerm(e.target.value)}
+                                    className="w-full h-[52px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 text-gray-900 dark:text-white shadow-sm"
+                                />
                             </div>
                         </div>
+
+                        {/* Semester Selector */}
+                        <CustomSelect
+                            label="Học kỳ"
+                            value={selectedSemester}
+                            onChange={(value) => setSelectedSemester(value)}
+                            options={semesters.map(s => ({ value: s.code, label: s.name }))}
+                        />
 
                         {/* Class Selector */}
-                        <div ref={classDropdownRef}>
-                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Lớp học</label>
-                            <div className="relative">
-                                <button onClick={() => !classes.length ? null : setIsClassOpen(!isClassOpen)}
-                                    disabled={classes.length === 0}
-                                    className={`flex items-center justify-between w-full rounded-lg border border-gray-200 dark:border-zinc-700 px-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-fpt-orange transition-all ${classes.length === 0 ? 'bg-gray-100 dark:bg-zinc-800 text-gray-400 cursor-not-allowed' : 'bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white'}`}>
-                                    <span className="text-sm font-medium truncate">{getSelectedClassName()}</span>
-                                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isClassOpen ? 'rotate-180' : ''}`} />
-                                </button>
-                                {isClassOpen && (
-                                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg max-h-60 overflow-y-auto">
-                                        <button onClick={() => { setSelectedClass(''); setIsClassOpen(false); }}
-                                            className={`flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 ${!selectedClass ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange' : 'text-gray-900 dark:text-white'}`}>
-                                            <span className="text-sm font-medium">Tất cả lớp</span>
-                                            {!selectedClass && <Check size={16} />}
-                                        </button>
-                                        {classes.map(cls => (
-                                            <button key={cls.className} onClick={() => { setSelectedClass(cls.className); setIsClassOpen(false); }}
-                                                className={`flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 ${selectedClass === cls.className ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange' : 'text-gray-900 dark:text-white'}`}>
-                                                <span className="text-sm font-medium">{cls.className} - {cls.courseName}</span>
-                                                {selectedClass === cls.className && <Check size={16} />}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                        <CustomSelect
+                            label="Lớp học"
+                            value={selectedClass}
+                            disabled={classes.length === 0}
+                            onChange={(value) => setSelectedClass(value)}
+                            options={[
+                                { value: '', label: 'Tất cả lớp' },
+                                ...classes.map(cls => ({ value: cls.className, label: `${cls.className} - ${cls.courseName}` }))
+                            ]}
+                        />
 
                         {/* Status Filter */}
-                        <div ref={statusDropdownRef}>
-                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Trạng thái</label>
-                            <div className="relative">
-                                <button onClick={() => setIsStatusOpen(!isStatusOpen)}
-                                    className="flex items-center justify-between w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 px-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-fpt-orange transition-all">
-                                    <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                        {statusFilter === 'ALL' ? 'Tất cả trạng thái' : statusFilter === 'OPEN' ? 'Đang mở' : 'Đã đóng'}
-                                    </span>
-                                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isStatusOpen ? 'rotate-180' : ''}`} />
-                                </button>
-                                {isStatusOpen && (
-                                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg">
-                                        {[
-                                            { value: 'ALL', label: 'Tất cả trạng thái' },
-                                            { value: 'OPEN', label: 'Đang mở' },
-                                            { value: 'CLOSED', label: 'Đã đóng' }
-                                        ].map((option) => (
-                                            <button key={option.value} onClick={() => { setStatusFilter(option.value as any); setIsStatusOpen(false); }}
-                                                className={`flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors ${statusFilter === option.value ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange' : 'text-gray-900 dark:text-white'}`}>
-                                                <span className="text-sm font-medium">{option.label}</span>
-                                                {statusFilter === option.value && <Check size={16} />}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Search bar + Create button */}
-                <div className="flex gap-3 items-center">
-                    <div className="relative flex-1">
-                        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input type="text" placeholder="Tìm kiếm theo tên bài tập, phòng, lớp..."
-                            value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange focus:border-transparent outline-none" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={handleOpenDownloadDialog}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-fpt-orange hover:bg-orange-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm whitespace-nowrap">
-                            <Download className="w-4 h-4" /> Tải bài nộp theo slot
-                        </button>
-                        <button
-                            onClick={() => { resetCreateForm(); setShowCreateDialog(true); }}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-fpt-orange hover:bg-orange-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm whitespace-nowrap">
-                            <Plus className="w-4 h-4" /> Tạo bài tập mới
-                        </button>
+                        <CustomSelect
+                            label="Trạng thái"
+                            value={statusFilter}
+                            onChange={(value) => setStatusFilter(value as any)}
+                            options={[
+                                { value: 'ALL', label: 'Tất cả trạng thái' },
+                                { value: 'OPEN', label: 'Đang mở' },
+                                { value: 'CLOSED', label: 'Đã đóng' }
+                            ]}
+                        />
                     </div>
                 </div>
 
                 {/* Slot-Based Assignment Table */}
                 {loadingAssignments ? (
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-12 text-center">
-                        <Loader2 size={32} className="animate-spin mx-auto text-fpt-orange mb-4" />
-                        <p className="text-gray-500">Đang tải dữ liệu...</p>
+                    <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-zinc-800 p-20 text-center shadow-xl animate-in fade-in duration-700">
+                        <Loader2 className="h-10 w-10 animate-spin text-fpt-orange mx-auto mb-3" />
+                        <p className="text-sm font-bold text-gray-500 uppercase tracking-widest">Đang tải dữ liệu...</p>
                     </div>
                 ) : filteredRows.length === 0 ? (
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-16 text-center">
-                        <div className="w-24 h-24 rounded-full bg-orange-50 dark:bg-zinc-800 mx-auto mb-6 flex items-center justify-center">
+                    <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-zinc-800 p-20 text-center shadow-xl animate-in fade-in duration-700">
+                        <div className="w-24 h-24 rounded-3xl bg-orange-50 dark:bg-zinc-800/50 mx-auto mb-8 flex items-center justify-center">
                             <FileText size={48} className="text-fpt-orange" />
                         </div>
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                        <h3 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight mb-2">
                             Không có bài tập nào
                         </h3>
-                        <p className="text-gray-500 dark:text-zinc-400">
+                        <p className="text-sm text-gray-500 dark:text-zinc-400 font-medium max-w-md mx-auto">
                             Chưa có bài tập phù hợp với bộ lọc hiện tại. Hãy thử thay đổi bộ lọc hoặc tạo bài tập mới.
                         </p>
                     </div>
                 ) : (
                     <>
-                        {/* Batch warning */}
-                        {batchWarning && (
-                            <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-sm text-amber-700 dark:text-amber-400">
-                                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                                {batchWarning}
-                            </div>
-                        )}
+                        {/* Selection Action Bar - Standard pattern */}
+                        <SelectionActionBar
+                            selectedCount={selectedIds.size}
+                            showDeactivate={Array.from(selectedIds).some(id => {
+                                const row = filteredRows.find(r => r.assignment.id === id);
+                                return row?.assignment.status === 'OPEN';
+                            })}
+                            itemLabel="bài tập"
+                            deactivateLabel="Đóng bài tập"
+                            activateLabel="Mở bài tập"
+                            onUpdate={selectedIds.size === 1 ? handleBatchEditOpen : undefined}
+                            onDelete={handleBatchDeleteClick}
+                            onStatusChange={(status) => {
+                                if (status === 'ACTIVE') return; // Open not supported by API yet
 
-                        {/* Batch toolbar */}
-                        {selectedIds.size > 0 && (
-                            <div className="flex items-center justify-between px-4 py-2.5 bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800 rounded-xl">
-                                <span className="text-sm text-orange-700 dark:text-orange-400 font-medium">
-                                    Đã chọn {selectedIds.size} bài tập
-                                </span>
-                                <div className="flex items-center gap-2">
-                                    {selectedIds.size === 1 && (
-                                        <button onClick={handleBatchEditOpen}
-                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-medium transition-colors">
-                                            <Edit3 className="w-3.5 h-3.5" /> Chỉnh sửa bài tập
-                                        </button>
-                                    )}
-                                    {Array.from(selectedIds).some(id => {
-                                        const row = filteredRows.find(r => r.assignment.id === id);
-                                        return row?.assignment.status === 'OPEN';
-                                    }) && (
-                                            <button onClick={() => {
-                                                const openIds = Array.from(selectedIds).filter(id => {
-                                                    const row = filteredRows.find(r => r.assignment.id === id);
-                                                    return row?.assignment.status === 'OPEN';
-                                                });
-                                                Promise.all(openIds.map(id => assignmentService.closeAssignment(id)))
-                                                    .then(() => {
-                                                        toast.success(`Đã đóng ${openIds.length} bài tập`);
-                                                        setSelectedIds(new Set());
-                                                        fetchAllData();
-                                                    })
-                                                    .catch((err: any) => toast.error(err.response?.data?.message || 'Không thể đóng bài tập'));
-                                            }}
-                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors">
-                                                <Lock className="w-3.5 h-3.5" /> Đóng
-                                            </button>
-                                        )}
-                                    <button onClick={handleBatchDeleteClick}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-medium transition-colors">
-                                        <Trash2 className="w-3.5 h-3.5" /> Xóa
-                                    </button>
-                                </div>
-                            </div>
-                        )}
+                                const targetIds = Array.from(selectedIds).filter(id => {
+                                    const row = filteredRows.find(r => r.assignment.id === id);
+                                    return row?.assignment.status === 'OPEN';
+                                });
 
-                        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 overflow-hidden shadow-sm">
+                                if (targetIds.length === 0) return;
+
+                                Promise.all(targetIds.map(id => assignmentService.closeAssignment(id)))
+                                    .then(() => {
+                                        toast.success(`Đã đóng ${targetIds.length} bài tập`);
+                                        setSelectedIds(new Set());
+                                        fetchAllData();
+                                    })
+                                    .catch((err: any) => toast.error(err.response?.data?.message || 'Không thể đóng bài tập'));
+                            }}
+                        />
+
+                        <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-zinc-800 shadow-xl overflow-hidden animate-in fade-in duration-700">
                             <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
+                                <table className="w-full border-collapse">
                                     <thead>
-                                        <tr className="bg-orange-500 dark:bg-orange-600">
-                                            <th className="px-4 py-3 w-10">
+                                        <tr className="bg-fpt-orange text-white">
+                                            <th className="px-4 py-5 w-10 rounded-tl-2xl">
                                                 <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAll}
-                                                    className="w-4 h-4 rounded border-white/50 text-orange-600 focus:ring-orange-500 accent-orange-600" />
+                                                    className="w-4 h-4 rounded border-white/50 text-fpt-orange focus:ring-fpt-orange accent-white" />
                                             </th>
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Lớp</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Ngày</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Slot</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Phòng</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Bài tập</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Trạng thái</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Nộp</th>
-
+                                            <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Lớp</th>
+                                            <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Ngày Slot</th>
+                                            <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Slot</th>
+                                            <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Phòng</th>
+                                            <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Bài tập</th>
+                                            <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Hạn nộp</th>
+                                            <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                                            <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Bài nộp</th>
+                                            <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap rounded-tr-2xl">Thao tác</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
@@ -797,41 +689,50 @@ export const LecturerAssignmentPage: React.FC = () => {
                                             <React.Fragment key={assignment.id}>
                                                 <tr onClick={() => navigate(`/lecturer/assignments/${assignment.id}`)}
                                                     className="hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition-colors cursor-pointer">
-                                                    <td className="px-4 py-3 w-10" onClick={e => e.stopPropagation()}>
+                                                    <td className="px-6 py-5 w-10" onClick={e => e.stopPropagation()}>
                                                         <input type="checkbox" checked={selectedIds.has(assignment.id)}
                                                             onChange={() => toggleSelect(assignment.id)}
-                                                            className="w-4 h-4 rounded border-gray-300 dark:border-zinc-600 text-orange-500 focus:ring-orange-500 accent-orange-500" />
+                                                            className="w-4 h-4 rounded border-gray-300 dark:border-zinc-600 text-fpt-orange focus:ring-fpt-orange accent-fpt-orange" />
                                                     </td>
-                                                    <td className="px-4 py-3 text-gray-700 dark:text-zinc-300 whitespace-nowrap">
-                                                        {slot?.className || assignment.className || '—'}
+                                                    <td className="px-6 py-5">
+                                                        <div className="font-bold text-gray-800 dark:text-white text-sm uppercase tracking-tight group-hover:text-fpt-orange transition-colors">
+                                                            {slot?.className || assignment.className || '—'}
+                                                        </div>
                                                     </td>
-                                                    <td className="px-4 py-3 text-gray-900 dark:text-white whitespace-nowrap">
-                                                        {(slot?.date && formatSlotDate(slot.date)) || '—'}
+                                                    <td className="px-6 py-5">
+                                                        <div className="text-sm font-medium text-gray-600 dark:text-zinc-400 whitespace-nowrap">
+                                                            {(slot?.date && formatSlotDate(slot.date)) || '—'}
+                                                        </div>
                                                     </td>
-                                                    <td className="px-4 py-3 text-gray-700 dark:text-zinc-300 whitespace-nowrap">
-                                                        {slot?.slotNumber ? `Slot ${slot.slotNumber}` : '—'}
+                                                    <td className="px-6 py-5">
+                                                        <div className="text-sm font-medium text-gray-700 dark:text-zinc-300 whitespace-nowrap">
+                                                            {slot?.slotNumber ? `Slot ${slot.slotNumber}` : '—'}
+                                                        </div>
                                                     </td>
-                                                    <td className="px-4 py-3 text-gray-700 dark:text-zinc-300">
-                                                        {slot?.roomCode || '—'}
+                                                    <td className="px-6 py-5">
+                                                        <div className="text-sm font-medium text-gray-600 dark:text-zinc-400">
+                                                            {slot?.roomCode || '—'}
+                                                        </div>
                                                     </td>
-                                                    <td className="px-4 py-3">
+                                                    <td className="px-6 py-5">
                                                         <div>
-                                                            <div className="font-medium text-gray-900 dark:text-white">{assignment.title}</div>
+                                                            <div className="font-semibold text-gray-900 dark:text-white text-sm group-hover:text-fpt-orange transition-colors tracking-tight uppercase">{assignment.title}</div>
                                                             {assignment.dueDate && (
-                                                                <div className="text-xs text-gray-400 mt-0.5">
-                                                                    <Clock className="w-3 h-3 inline mr-1" />Hạn: {formatDate(assignment.dueDate)}
+                                                                <div className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 mt-1 uppercase tracking-wider flex items-center gap-1.5">
+                                                                    <Clock className="w-3 h-3" /> Hạn: {formatDate(assignment.dueDate)}
                                                                 </div>
                                                             )}
                                                             {(() => {
                                                                 const urls = assignment.referenceUrls?.length ? assignment.referenceUrls : (assignment.referenceUrl ? assignment.referenceUrl.split('|||') : []);
                                                                 const names = assignment.referenceNames?.length ? assignment.referenceNames : (assignment.referenceName ? assignment.referenceName.split('|||') : []);
                                                                 return urls.length > 0 && (
-                                                                    <div className="flex flex-col gap-0.5 mt-0.5">
+                                                                    <div className="flex flex-col gap-1 mt-2">
                                                                         {urls.map((url, idx) => (
                                                                             <a key={idx} href={getViewableFileUrl(url)} target="_blank" rel="noopener noreferrer"
                                                                                 onClick={e => e.stopPropagation()}
-                                                                                className="inline-flex items-center gap-1 text-xs text-fpt-orange hover:text-orange-600 truncate break-all max-w-[200px]" title={names[idx] || `Tài liệu ${idx + 1}`}>
-                                                                                <BookOpen className="w-3 h-3 flex-shrink-0" /> <span className="truncate">{names[idx] || `Tài liệu ${idx + 1}`}</span>
+                                                                                className="inline-flex items-center gap-1.5 text-xs font-bold text-fpt-orange hover:text-orange-600 transition-colors max-w-[240px]" title={names[idx] || `Tài liệu ${idx + 1}`}>
+                                                                                <BookOpen className="w-3.5 h-3.5 flex-shrink-0" />
+                                                                                <span className="truncate border-b border-fpt-orange/20">{names[idx] || `Tài liệu ${idx + 1}`}</span>
                                                                             </a>
                                                                         ))}
                                                                     </div>
@@ -839,16 +740,21 @@ export const LecturerAssignmentPage: React.FC = () => {
                                                             })()}
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-3">
-                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${assignment.status === 'OPEN'
-                                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                            : 'bg-gray-100 text-gray-500 dark:bg-zinc-800 dark:text-zinc-400'
+                                                    <td className="px-6 py-5 text-center">
+                                                        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold border ${assignment.status === 'OPEN'
+                                                            ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/50'
+                                                            : 'bg-gray-50 text-gray-500 border-gray-200 dark:bg-zinc-800/50 dark:text-zinc-500 dark:border-zinc-700/50'
                                                             }`}>
+                                                            <span className={`w-1.5 h-1.5 rounded-full ${assignment.status === 'OPEN' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
                                                             {assignment.status === 'OPEN' ? 'Đang mở' : 'Đã đóng'}
                                                         </span>
                                                     </td>
-                                                    <td className="px-4 py-3 text-gray-700 dark:text-zinc-300">
-                                                        {`${assignment.totalSubmissions}/${assignment.totalStudents}`}
+                                                    <td className="px-6 py-5 text-center">
+                                                        <div className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-50 dark:bg-zinc-800/50 rounded-xl border border-gray-100 dark:border-zinc-800 font-black text-gray-900 dark:text-white text-xs tracking-tight">
+                                                            <span className="text-fpt-orange">{assignment.totalSubmissions}</span>
+                                                            <span className="text-gray-400">/</span>
+                                                            <span>{assignment.totalStudents}</span>
+                                                        </div>
                                                     </td>
 
                                                 </tr>
@@ -858,7 +764,7 @@ export const LecturerAssignmentPage: React.FC = () => {
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="px-4 pb-4">
+                            <div className="px-8 py-8 border-t border-gray-50 dark:border-zinc-800/50 bg-gray-50/30">
                                 <Pagination
                                     currentPage={currentPage}
                                     totalPages={totalPages}
@@ -874,252 +780,234 @@ export const LecturerAssignmentPage: React.FC = () => {
 
             {/* Batch Edit Due Date Dialog */}
             {showBatchEditDialog && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-zinc-800">
-                        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
-                            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                <Edit3 className="w-5 h-5 text-orange-500" />
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
+                    <div className="bg-white dark:bg-zinc-900 rounded-[32px] shadow-2xl w-full max-w-4xl border border-gray-100 dark:border-zinc-800 overflow-hidden transform animate-in zoom-in-95 duration-300">
+                        <div className="flex items-center justify-between p-8 border-b border-gray-50 dark:border-zinc-800/50">
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                                <div className="p-2 bg-orange-50 dark:bg-orange-950/30 rounded-xl">
+                                    <Edit3 className="w-5 h-5 text-fpt-orange" />
+                                </div>
                                 Chỉnh sửa bài tập
                             </h2>
                             <button onClick={() => setShowBatchEditDialog(false)}
-                                className="text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300">
+                                className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all text-gray-400 hover:text-gray-600">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-                        <div className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
-                                    Tiêu đề <span className="text-red-500">*</span>
-                                </label>
-                                <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)} placeholder="VD: Bài tập tuần 3"
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange outline-none" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Mô tả</label>
-                                <textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} placeholder="Mô tả chi tiết bài tập..." rows={3}
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange outline-none resize-none" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
-                                    <Clock className="w-3.5 h-3.5 inline mr-1" /> Hạn nộp bài
-                                </label>
-                                <input type="datetime-local" value={editDueDate} onChange={e => setEditDueDate(e.target.value)}
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange outline-none" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
-                                    <BookOpen className="w-3.5 h-3.5 inline mr-1" /> Tài liệu tham khảo
-                                </label>
-                                <input type="file" ref={editFileInputRef} onChange={handleEditFileSelect} accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.jpg,.png"
-                                    multiple className="hidden" />
-                                <button type="button" onClick={() => editFileInputRef.current?.click()} disabled={uploadingEditFile}
-                                    className="w-full px-3 py-2.5 rounded-lg border border-dashed border-gray-300 dark:border-zinc-600 bg-gray-50 dark:bg-zinc-800 text-sm text-gray-500 hover:border-fpt-orange hover:text-fpt-orange transition-colors flex items-center justify-center gap-2">
-                                    {uploadingEditFile ? <><Loader2 size={14} className="animate-spin" /> Đang upload...</> : <><Plus size={14} /> Thêm tài liệu (tối đa 10MB)</>}
-                                </button>
-
-                                {editRefUrls.length > 0 && (
-                                    <div className="mt-3 space-y-2">
-                                        {editRefUrls.map((url, idx) => (
-                                            <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700">
-                                                <div className="flex items-center gap-2 min-w-0">
-                                                    <FileText size={14} className="text-blue-500 flex-shrink-0" />
-                                                    <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-700 dark:text-zinc-300 hover:text-fpt-orange underline truncate">
-                                                        {editRefNames[idx] || `Tài liệu ${idx + 1}`}
-                                                    </a>
-                                                </div>
-                                                <button type="button" onClick={() => removeEditFile(idx)} className="p-1 hover:bg-red-50 dark:hover:bg-red-900/10 text-gray-400 hover:text-red-500 transition-colors rounded">
-                                                    <X size={14} />
-                                                </button>
-                                            </div>
-                                        ))}
+                        <div className="p-8 overflow-y-auto custom-scrollbar">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                                <div className="space-y-6">
+                                    <div>
+                                        <label className="block text-[10px] uppercase font-bold tracking-widest text-gray-400 mb-2 ml-1">
+                                            Tiêu đề <span className="text-red-500">*</span>
+                                        </label>
+                                        <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)} placeholder="VD: Bài tập tuần 3"
+                                            className="w-full px-4 h-[52px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white text-sm font-bold focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40" />
                                     </div>
-                                )}
+                                    <div>
+                                        <label className="block text-[10px] uppercase font-bold tracking-widest text-gray-400 mb-2 ml-1">Mô tả</label>
+                                        <textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} placeholder="Mô tả chi tiết bài tập..." rows={4}
+                                            className="w-full px-4 py-3 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white text-sm font-medium focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 resize-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] uppercase font-bold tracking-widest text-gray-400 mb-2 ml-1">
+                                            <BookOpen className="w-3.5 h-3.5 inline mr-1 mb-0.5" /> Tài liệu tham khảo
+                                        </label>
+                                        <input type="file" ref={editFileInputRef} onChange={handleEditFileSelect} accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.jpg,.png"
+                                            multiple className="hidden" />
+                                        <button type="button" onClick={() => editFileInputRef.current?.click()} disabled={uploadingEditFile}
+                                            className="w-full px-4 h-[52px] rounded-2xl border-2 border-dashed border-gray-200 dark:border-zinc-700 bg-gray-50/50 dark:bg-zinc-800/50 text-sm font-bold text-gray-500 hover:border-fpt-orange hover:text-fpt-orange transition-all flex items-center justify-center gap-2">
+                                            {uploadingEditFile ? <><Loader2 size={16} className="animate-spin" /> Đang upload...</> : <><Plus size={16} /> Thêm tài liệu</>}
+                                        </button>
+
+                                        {editRefUrls.length > 0 && (
+                                            <div className="mt-4 space-y-2">
+                                                {editRefUrls.map((url, idx) => (
+                                                    <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-orange-50/50 dark:bg-orange-950/10 border border-orange-100/50 dark:border-orange-900/20 group">
+                                                        <div className="flex items-center gap-3 min-w-0">
+                                                            <div className="p-2 bg-white dark:bg-zinc-800 rounded-lg shadow-sm">
+                                                                <FileText size={14} className="text-blue-500" />
+                                                            </div>
+                                                            <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-gray-700 dark:text-zinc-300 hover:text-fpt-orange underline truncate">
+                                                                {editRefNames[idx] || `Tài liệu ${idx + 1}`}
+                                                            </a>
+                                                        </div>
+                                                        <button type="button" onClick={() => removeEditFile(idx)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 transition-colors rounded-lg">
+                                                            <X size={16} />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="sticky top-0">
+                                    <StaticDateTimePicker
+                                        label="Hạn nộp bài *"
+                                        value={editDueDate}
+                                        onChange={setEditDueDate}
+                                    />
+                                </div>
                             </div>
                         </div>
-                        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 dark:border-zinc-800">
+                        <div className="flex items-center justify-end gap-3 px-8 py-6 border-t border-gray-50 dark:border-zinc-800/50 bg-gray-50/30 dark:bg-zinc-800/20">
                             <button onClick={() => setShowBatchEditDialog(false)}
-                                className="px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-zinc-400 hover:text-gray-800 transition-colors">
+                                className="px-6 h-[48px] text-sm font-bold text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors">
                                 Hủy
                             </button>
                             <button onClick={handleBatchEditSubmit} disabled={batchEditing || !editTitle.trim() || uploadingEditFile}
-                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-fpt-orange hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
-                                {batchEditing ? <><Loader2 size={16} className="animate-spin" /> Đang cập nhật...</> : 'Lưu thay đổi'}
+                                className="inline-flex items-center gap-2 px-8 h-[48px] bg-fpt-orange hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-lg shadow-orange-500/20 active:scale-95">
+                                {batchEditing ? <><Loader2 size={18} className="animate-spin" /> Đang lưu...</> : 'Lưu thay đổi'}
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
+
             {/* Create Assignment Dialog - Centralized */}
             {showCreateDialog && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-lg border border-gray-200 dark:border-zinc-800 max-h-[90vh] overflow-y-auto">
-                        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800 sticky top-0 bg-white dark:bg-zinc-900 z-10 rounded-t-2xl">
-                            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                <Plus className="w-5 h-5 text-fpt-orange" /> Tạo bài tập mới
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
+                    <div className="bg-white dark:bg-zinc-900 rounded-[32px] shadow-2xl w-full max-w-4xl border border-gray-100 dark:border-zinc-800 max-h-[90vh] overflow-hidden flex flex-col transform animate-in zoom-in-95 duration-300">
+                        <div className="flex items-center justify-between p-8 border-b border-gray-50 dark:border-zinc-800/50 sticky top-0 bg-white dark:bg-zinc-900 z-10">
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                                <div className="p-2 bg-orange-50 dark:bg-orange-950/30 rounded-xl">
+                                    <Plus className="w-5 h-5 text-fpt-orange" />
+                                </div>
+                                Tạo bài tập mới
                             </h2>
                             <button onClick={() => { setShowCreateDialog(false); resetCreateForm(); }}
-                                className="text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300">
+                                className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all text-gray-400 hover:text-gray-600">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-                        <div className="p-6 space-y-4">
-                            {/* Class Dropdown */}
-                            <div ref={createClassDropdownRef}>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
-                                    <Users className="w-3.5 h-3.5 inline mr-1" /> Lớp học <span className="text-red-500">*</span>
-                                </label>
-                                <div className="relative">
-                                    <button onClick={() => setIsCreateClassOpen(!isCreateClassOpen)}
-                                        className="flex items-center justify-between w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 px-3 py-2.5 text-left focus:outline-none focus:ring-2 focus:ring-fpt-orange transition-all">
-                                        <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                            {createClassName ? `${createClassName} - ${classes.find(c => c.className === createClassName)?.courseName || ''}` : 'Chọn lớp học'}
-                                        </span>
-                                        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isCreateClassOpen ? 'rotate-180' : ''}`} />
-                                    </button>
-                                    {isCreateClassOpen && (
-                                        <div className="absolute z-20 mt-1 w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg max-h-48 overflow-y-auto">
-                                            {classes.map(cls => (
-                                                <button key={cls.className} onClick={() => {
-                                                    setCreateClassName(cls.className);
-                                                    setSelectedSessionNumber(null);
-                                                    setIsCreateClassOpen(false);
-                                                }}
-                                                    className={`flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors ${createClassName === cls.className ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange' : 'text-gray-900 dark:text-white'}`}>
-                                                    <span className="text-sm font-medium">{cls.className} - {cls.courseName}</span>
-                                                    {createClassName === cls.className && <Check size={16} />}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
+                        <div className="p-8 overflow-y-auto custom-scrollbar">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                                <div className="space-y-6">
+                                    {/* Class Selector using CustomSelect */}
+                                    <div>
+                                        <CustomSelect
+                                            label="Lớp học *"
+                                            value={createClassName}
+                                            onChange={(val) => {
+                                                setCreateClassName(val);
+                                                setSelectedSessionNumber(null);
+                                            }}
+                                            placeholder="Chọn lớp học"
+                                            options={classes.map(cls => ({
+                                                value: cls.className,
+                                                label: `${cls.className} - ${cls.courseName}`
+                                            }))}
+                                            isSearchable={true}
+                                        />
+                                    </div>
 
-                            {/* Slot (Session) Dropdown */}
-                            <div ref={createSlotDropdownRef}>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
-                                    <Clock className="w-3.5 h-3.5 inline mr-1" /> Slot thứ <span className="text-red-500">*</span>
-                                </label>
-                                <div className="relative">
-                                    <button
-                                        onClick={() => createClassName && !loadingClassSlots && setIsCreateSlotOpen(!isCreateSlotOpen)}
-                                        disabled={!createClassName || loadingClassSlots}
-                                        className={`flex items-center justify-between w-full rounded-lg border border-gray-200 dark:border-zinc-700 px-3 py-2.5 text-left focus:outline-none focus:ring-2 focus:ring-fpt-orange transition-all ${!createClassName || loadingClassSlots ? 'bg-gray-100 dark:bg-zinc-800 text-gray-400 cursor-not-allowed' : 'bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white'}`}>
-                                        <span className="text-sm font-medium truncate">
-                                            {loadingClassSlots ? 'Đang tải...' : selectedSessionNumber !== null ? `Buổi ${selectedSessionNumber}` : 'Chọn buổi học'}
-                                        </span>
-                                        {loadingClassSlots ? <Loader2 className="h-4 w-4 animate-spin text-gray-400" /> : <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isCreateSlotOpen ? 'rotate-180' : ''}`} />}
-                                    </button>
-                                    {isCreateSlotOpen && createClassSlots.length > 0 && (
-                                        <div className="absolute z-20 mt-1 w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg max-h-48 overflow-y-auto">
-                                            {createClassSlots.map((s, idx) => {
+                                    {/* Slot Selector using CustomSelect */}
+                                    <div>
+                                        <CustomSelect
+                                            label="Slot học *"
+                                            value={selectedSessionNumber?.toString() || ''}
+                                            disabled={!createClassName || loadingClassSlots}
+                                            placeholder={loadingClassSlots ? 'Đang tải...' : 'Chọn buổi học'}
+                                            onChange={(val) => setSelectedSessionNumber(Number(val))}
+                                            options={createClassSlots.map((s, idx) => {
                                                 const sessionNum = idx + 1;
                                                 const hasAssignment = assignments.some(a => a.timetableSlotId === s.id);
-                                                return (
-                                                    <button key={s.id}
-                                                        onClick={() => {
-                                                            if (!hasAssignment) {
-                                                                setSelectedSessionNumber(sessionNum);
-                                                                setIsCreateSlotOpen(false);
-                                                            }
-                                                        }}
-                                                        disabled={hasAssignment}
-                                                        className={`flex w-full items-center justify-between px-3 py-2 text-left transition-colors ${hasAssignment ? 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-zinc-800' : 'hover:bg-gray-50 dark:hover:bg-zinc-700/50'} ${selectedSessionNumber === sessionNum ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange' : 'text-gray-900 dark:text-white'}`}>
-                                                        <div className="flex flex-col">
-                                                            <span className="text-sm font-medium">Buổi {sessionNum} — {formatSlotDate(s.date)} — Slot {s.slotNumber}</span>
-                                                            <span className="text-xs text-gray-400">Phòng: {s.roomCode || '—'}{hasAssignment ? ' (Đã có bài tập)' : ''}</span>
-                                                        </div>
-                                                        {selectedSessionNumber === sessionNum && <Check size={16} />}
-                                                    </button>
-                                                );
+                                                return {
+                                                    value: sessionNum.toString(),
+                                                    label: `Buổi ${sessionNum} — ${formatSlotDate(s.date)} — Slot ${s.slotNumber}`,
+                                                    disabled: hasAssignment
+                                                };
                                             })}
+                                        />
+                                    </div>
+
+                                    {/* Auto-populated slot info - Enhanced view */}
+                                    {selectedSessionSlot && (
+                                        <div className="grid grid-cols-3 gap-3 p-4 bg-orange-50/30 dark:bg-orange-950/5 border border-orange-100/50 dark:border-orange-900/20 rounded-2xl">
+                                            <div className="text-center">
+                                                <div className="text-[9px] uppercase font-black tracking-widest text-orange-400 dark:text-orange-500 mb-1">Ngày</div>
+                                                <div className="text-sm font-bold text-gray-900 dark:text-white">{formatSlotDate(selectedSessionSlot.date)}</div>
+                                            </div>
+                                            <div className="text-center border-x border-orange-100 dark:border-orange-900/20">
+                                                <div className="text-[9px] uppercase font-black tracking-widest text-orange-400 dark:text-orange-500 mb-1">Slot</div>
+                                                <div className="text-sm font-bold text-gray-900 dark:text-white">{selectedSessionSlot.slotNumber}</div>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className="text-[9px] uppercase font-black tracking-widest text-orange-400 dark:text-orange-500 mb-1">Phòng</div>
+                                                <div className="text-sm font-bold text-gray-900 dark:text-white">{selectedSessionSlot.roomCode || '—'}</div>
+                                            </div>
                                         </div>
                                     )}
-                                </div>
-                            </div>
 
-                            {/* Auto-populated slot info */}
-                            {selectedSessionSlot && (
-                                <div className="grid grid-cols-3 gap-3 p-3 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg">
-                                    <div className="text-center">
-                                        <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-zinc-400 font-semibold">Ngày</div>
-                                        <div className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">{formatSlotDate(selectedSessionSlot.date)}</div>
+                                    {/* Title */}
+                                    <div>
+                                        <label className="block text-[10px] uppercase font-bold tracking-widest text-gray-400 mb-2 ml-1">
+                                            Tiêu đề <span className="text-red-500">*</span>
+                                        </label>
+                                        <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="VD: Bài tập tuần 3"
+                                            className="w-full px-4 h-[52px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white text-sm font-bold focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40" />
                                     </div>
-                                    <div className="text-center">
-                                        <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-zinc-400 font-semibold">Slot</div>
-                                        <div className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">{selectedSessionSlot.slotNumber}</div>
+
+                                    {/* Description */}
+                                    <div>
+                                        <label className="block text-[10px] uppercase font-bold tracking-widest text-gray-400 mb-2 ml-1">Mô tả</label>
+                                        <textarea value={newDescription} onChange={e => setNewDescription(e.target.value)} placeholder="Mô tả chi tiết bài tập..." rows={3}
+                                            className="w-full px-4 py-3 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white text-sm font-medium focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 resize-none" />
                                     </div>
-                                    <div className="text-center">
-                                        <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-zinc-400 font-semibold">Phòng</div>
-                                        <div className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">{selectedSessionSlot.roomCode || '—'}</div>
-                                    </div>
-                                </div>
-                            )}
 
-                            {/* Title */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
-                                    Tiêu đề <span className="text-red-500">*</span>
-                                </label>
-                                <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="VD: Bài tập tuần 3"
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange outline-none" />
-                            </div>
+                                    {/* Reference File */}
+                                    <div>
+                                        <label className="block text-[10px] uppercase font-bold tracking-widest text-gray-400 mb-2 ml-1">
+                                            <BookOpen className="w-3.5 h-3.5 inline mr-1 mb-0.5" /> Tài liệu tham khảo
+                                        </label>
+                                        <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.jpg,.png"
+                                            multiple className="hidden" />
+                                        <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingFile}
+                                            className="w-full px-4 h-[52px] rounded-2xl border-2 border-dashed border-gray-200 dark:border-zinc-700 bg-gray-50/50 dark:bg-zinc-800/50 text-sm font-bold text-gray-500 hover:border-fpt-orange hover:text-fpt-orange transition-all flex items-center justify-center gap-2">
+                                            {uploadingFile ? <><Loader2 size={16} className="animate-spin" /> Đang upload...</> : <><Plus size={16} /> Thêm tài liệu</>}
+                                        </button>
 
-                            {/* Description */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Mô tả</label>
-                                <textarea value={newDescription} onChange={e => setNewDescription(e.target.value)} placeholder="Mô tả chi tiết bài tập..." rows={3}
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange outline-none resize-none" />
-                            </div>
-
-                            {/* Deadline */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
-                                    <Clock className="w-3.5 h-3.5 inline mr-1" /> Hạn nộp bài <span className="text-red-500">*</span>
-                                </label>
-                                <input type="datetime-local" value={newDueDate} onChange={e => setNewDueDate(e.target.value)}
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange outline-none" />
-                            </div>
-
-                            {/* Reference File */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
-                                    <BookOpen className="w-3.5 h-3.5 inline mr-1" /> Tài liệu tham khảo
-                                </label>
-                                <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.jpg,.png"
-                                    multiple className="hidden" />
-                                <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingFile}
-                                    className="w-full px-3 py-2.5 rounded-lg border border-dashed border-gray-300 dark:border-zinc-600 bg-gray-50 dark:bg-zinc-800 text-sm text-gray-500 hover:border-fpt-orange hover:text-fpt-orange transition-colors flex items-center justify-center gap-2">
-                                    {uploadingFile ? <><Loader2 size={14} className="animate-spin" /> Đang upload...</> : <><Plus size={14} /> Thêm tài liệu (tối đa 10MB)</>}
-                                </button>
-
-                                {newRefUrls.length > 0 && (
-                                    <div className="mt-3 space-y-2">
-                                        {newRefUrls.map((url, idx) => (
-                                            <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700">
-                                                <div className="flex items-center gap-2 min-w-0">
-                                                    <FileText size={14} className="text-blue-500 flex-shrink-0" />
-                                                    <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-700 dark:text-zinc-300 hover:text-fpt-orange underline truncate">
-                                                        {newRefNames[idx] || `Tài liệu ${idx + 1}`}
-                                                    </a>
-                                                </div>
-                                                <button type="button" onClick={() => removeNewFile(idx)} className="p-1 hover:bg-red-50 dark:hover:bg-red-900/10 text-gray-400 hover:text-red-500 transition-colors rounded">
-                                                    <X size={14} />
-                                                </button>
+                                        {newRefUrls.length > 0 && (
+                                            <div className="mt-4 space-y-2">
+                                                {newRefUrls.map((url, idx) => (
+                                                    <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-orange-50/50 dark:bg-orange-950/10 border border-orange-100/50 dark:border-orange-900/20 group">
+                                                        <div className="flex items-center gap-3 min-w-0">
+                                                            <div className="p-2 bg-white dark:bg-zinc-800 rounded-lg shadow-sm">
+                                                                <FileText size={14} className="text-blue-500" />
+                                                            </div>
+                                                            <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-gray-700 dark:text-zinc-300 hover:text-fpt-orange underline truncate">
+                                                                {newRefNames[idx] || `Tài liệu ${idx + 1}`}
+                                                            </a>
+                                                        </div>
+                                                        <button type="button" onClick={() => removeNewFile(idx)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 transition-colors rounded-lg">
+                                                            <X size={16} />
+                                                        </button>
+                                                    </div>
+                                                ))}
                                             </div>
-                                        ))}
+                                        )}
                                     </div>
-                                )}
+                                </div>
+
+                                <div className="sticky top-0">
+                                    <StaticDateTimePicker
+                                        label="Hạn nộp bài *"
+                                        value={newDueDate}
+                                        onChange={setNewDueDate}
+                                    />
+                                </div>
                             </div>
                         </div>
-                        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 dark:border-zinc-800 sticky bottom-0 bg-white dark:bg-zinc-900 rounded-b-2xl">
+                        <div className="flex items-center justify-end gap-3 px-8 py-6 border-t border-gray-50 dark:border-zinc-800/50 bg-gray-50/30 dark:bg-zinc-800/20 sticky bottom-0 z-10">
                             <button onClick={() => { setShowCreateDialog(false); resetCreateForm(); }}
-                                className="px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-zinc-400 hover:text-gray-800 transition-colors">
+                                className="px-6 h-[48px] text-sm font-bold text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors">
                                 Hủy
                             </button>
                             <button onClick={handleCreate} disabled={creating || !newTitle.trim() || !createClassName || selectedSessionNumber === null || !newDueDate || uploadingFile}
-                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-fpt-orange hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
-                                {creating ? <><Loader2 size={16} className="animate-spin" /> Đang tạo...</> : <><Plus className="w-4 h-4" /> Tạo bài tập</>}
+                                className="inline-flex items-center gap-2 px-8 h-[48px] bg-fpt-orange hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-sm font-black tracking-widest transition-all shadow-lg shadow-orange-500/20 active:scale-95">
+                                {creating ? <><Loader2 size={18} className="animate-spin" /> Đang tạo...</> : <><Plus className="w-4 h-4" /> Tạo bài tập</>}
                             </button>
                         </div>
                     </div>
@@ -1128,50 +1016,52 @@ export const LecturerAssignmentPage: React.FC = () => {
 
             {/* Download Submissions Dialog */}
             {showDownloadDialog && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-md shadow-xl border border-gray-100 dark:border-zinc-800">
-                        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
-                            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                <Download className="w-5 h-5 text-fpt-orange" /> Tải bài nộp theo slot
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-white dark:bg-zinc-900 rounded-[32px] w-full max-w-md shadow-2xl border border-gray-100 dark:border-zinc-800 overflow-hidden transform animate-in zoom-in-95 duration-300">
+                        <div className="flex items-center justify-between p-8 border-b border-gray-50 dark:border-zinc-800/50">
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                                <div className="p-2 bg-orange-50 dark:bg-orange-950/30 rounded-xl">
+                                    <Download className="w-5 h-5 text-fpt-orange" />
+                                </div>
+                                Tải bài nộp
                             </h2>
-                            <button onClick={() => setShowDownloadDialog(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300">
+                            <button onClick={() => setShowDownloadDialog(false)} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all text-gray-400 hover:text-gray-600">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-                        <div className="p-6 space-y-4">
+                        <div className="p-8 space-y-6">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Lớp học <span className="text-red-500">*</span></label>
-                                <select value={dlClassName} onChange={e => handleDlClassChange(e.target.value)}
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                                    <option value="">-- Chọn lớp --</option>
-                                    {classes.map(c => (
-                                        <option key={c.className} value={c.className}>{c.className}</option>
-                                    ))}
-                                </select>
+                                <CustomSelect
+                                    label="Lớp học *"
+                                    value={dlClassName}
+                                    onChange={handleDlClassChange}
+                                    options={[
+                                        ...classes.map(c => ({ value: c.className, label: c.className }))
+                                    ]}
+                                    placeholder="Chọn lớp học"
+                                    isSearchable={true}
+                                />
                             </div>
                             {dlClassName && (
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Bài tập <span className="text-red-500">*</span></label>
-                                    <select value={dlAssignmentId?.toString() || ''} onChange={e => handleDlAssignmentChange(e.target.value)}
-                                        className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                                        <option value="">-- Chọn bài tập --</option>
-                                        {loadingDlAssignments ? (
-                                            <option disabled>Đang tải...</option>
-                                        ) : dlAssignments.map(a => (
-                                            <option key={a.id} value={a.id.toString()}>
-                                                {a.title}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <CustomSelect
+                                        label="Bài tập *"
+                                        value={dlAssignmentId?.toString() || ''}
+                                        onChange={handleDlAssignmentChange}
+                                        placeholder={loadingDlAssignments ? 'Đang tải...' : 'Chọn bài tập'}
+                                        options={[
+                                            ...(loadingDlAssignments ? [] : dlAssignments.map(a => ({ value: a.id.toString(), label: a.title })))
+                                        ]}
+                                    />
                                 </div>
                             )}
 
                         </div>
-                        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 dark:border-zinc-800">
-                            <button onClick={() => setShowDownloadDialog(false)} className="px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-zinc-400 hover:text-gray-800 transition-colors">Hủy</button>
+                        <div className="flex items-center justify-end gap-3 px-8 py-6 border-t border-gray-50 dark:border-zinc-800/50 bg-gray-50/30 dark:bg-zinc-800/20">
+                            <button onClick={() => setShowDownloadDialog(false)} className="px-6 h-[48px] text-sm font-bold text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors">Hủy</button>
                             <button onClick={handleDownloadSubmissions} disabled={!dlAssignmentId || downloadingZip}
-                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-fpt-orange hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
-                                {downloadingZip ? <><Loader2 size={16} className="animate-spin" /> Đang tải...</> : <><Download className="w-4 h-4" /> Tải xuống</>}
+                                className="inline-flex items-center gap-2 px-8 h-[48px] bg-fpt-orange hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-lg shadow-orange-500/20 active:scale-95">
+                                {downloadingZip ? <><Loader2 size={18} className="animate-spin" /> Đang tải...</> : <><Download className="w-4 h-4" /> Tải xuống</>}
                             </button>
                         </div>
                     </div>
@@ -1180,34 +1070,39 @@ export const LecturerAssignmentPage: React.FC = () => {
 
             {/* Delete Confirmation Modal */}
             {showDeleteDialog && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="bg-white dark:bg-zinc-800 rounded-2xl p-6 w-full max-w-sm shadow-xl relative animate-in fade-in zoom-in duration-200">
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Xác nhận xóa</h3>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm mb-6">
-                            Bạn có chắc muốn xóa <span className="font-bold text-red-500">{selectedIds.size}</span> bài tập? Hành động này không thể hoàn tác.
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
+                    <div className="bg-white dark:bg-zinc-800 rounded-[32px] p-8 w-full max-w-sm shadow-2xl border border-gray-100 dark:border-zinc-800 transform animate-in zoom-in-95 duration-300">
+                        <div className="w-16 h-16 bg-red-50 dark:bg-red-950/30 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+                            <Trash2 className="w-8 h-8 text-red-500" />
+                        </div>
+                        <h3 className="text-xl font-bold text-center text-gray-900 dark:text-white mb-3">Xác nhận xóa</h3>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm text-center mb-8 leading-relaxed">
+                            Bạn có chắc muốn xóa <span className="font-black text-red-500 px-1">{selectedIds.size}</span> bài tập đã chọn? Hành động này không thể hoàn tác.
                         </p>
-                        <div className="flex justify-end gap-3">
-                            <button
-                                onClick={() => setShowDeleteDialog(false)}
-                                disabled={deleting}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-zinc-700 rounded-lg hover:bg-gray-200 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50"
-                            >
-                                Hủy
-                            </button>
+                        <div className="flex flex-col gap-3">
                             <button
                                 onClick={confirmBatchDelete}
                                 disabled={deleting}
-                                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
+                                className="w-full h-[52px] bg-red-500 hover:bg-red-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-lg shadow-red-500/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                             >
-                                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                                {deleting ? 'Đang xóa...' : 'Xóa'}
+                                {deleting ? <Loader2 size={18} className="w-5 h-5 animate-spin" /> : <Trash2 size={18} className="w-5 h-5" />}
+                                {deleting ? 'Đang xóa...' : 'Xóa bài tập'}
+                            </button>
+                            <button
+                                onClick={() => setShowDeleteDialog(false)}
+                                disabled={deleting}
+                                className="w-full h-[52px] bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 rounded-2xl font-bold text-sm transition-all hover:bg-gray-200 dark:hover:bg-zinc-700 active:scale-95 disabled:opacity-50"
+                            >
+                                Hủy
                             </button>
                         </div>
                     </div>
                 </div>
             )}
+
         </LecturerLayout>
     );
 };
 
 export default LecturerAssignmentPage;
+

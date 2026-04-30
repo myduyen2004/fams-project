@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Loader2, Trash2, Plus, Search, UserPlus, ArrowRightLeft } from 'lucide-react';
 import { ConfirmModal } from '../common/ConfirmModal';
 import apiClient from '../../services/api/authService';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 
 interface Enrollment {
   id: number;
@@ -346,11 +346,11 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl border border-gray-100 overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-5xl border border-gray-100 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-100 shrink-0">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800 shrink-0">
           <div>
-            <h3 className="text-xl font-bold text-gray-900">Danh sách sinh viên đăng ký</h3>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Danh sách sinh viên đăng ký</h3>
             <p className="text-sm text-gray-500 mt-1">
               Lớp học phần: <span className="font-medium text-orange-600">{className}</span>
               {!loading && (
@@ -362,12 +362,12 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
             {canEdit && (
               <button
                 onClick={() => setShowAddStudent(true)}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-2"
+                className="h-[44px] px-6 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-2xl transition-all active:scale-95 shadow-lg shadow-green-600/20 flex items-center gap-2"
               >
                 <UserPlus className="w-4 h-4" /> Thêm sinh viên
               </button>
             )}
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <button onClick={onClose} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all active:scale-95">
               <X size={20} className="text-gray-400 hover:text-gray-600" />
             </button>
           </div>
@@ -385,15 +385,15 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
 
         {/* Bulk Actions */}
         {selectedRows.size > 0 && canEdit && (
-          <div className="px-6 py-3 bg-orange-50 border-b border-orange-100 flex items-center justify-between shrink-0">
-            <span className="text-sm font-medium text-orange-700">
-              Đã chọn <span className="font-bold">{selectedRows.size}</span> sinh viên
+          <div className="px-6 py-4 bg-orange-50 dark:bg-orange-900/10 border-b border-orange-100 dark:border-orange-900/20 flex items-center justify-between shrink-0">
+            <span className="text-sm font-bold text-orange-700 dark:text-orange-400">
+              Đã chọn <span className="font-black underline">{selectedRows.size}</span> sinh viên
             </span>
             <div className="flex gap-2">
               <button
                 onClick={handleOpenTransfer}
                 disabled={transferring}
-                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1 disabled:opacity-50"
+                className="h-[40px] px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-2xl transition-all active:scale-95 shadow-lg shadow-blue-600/20 flex items-center gap-2 disabled:opacity-50"
               >
                 {transferring ? (
                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -405,7 +405,7 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
               <button
                 onClick={handleBulkDelete}
                 disabled={deleting}
-                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1 disabled:opacity-50"
+                className="h-[40px] px-4 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-2xl transition-all active:scale-95 shadow-lg shadow-red-600/20 flex items-center gap-2 disabled:opacity-50"
               >
                 {deleting ? (
                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -434,11 +434,11 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
                     />
                   </th>
                 )}
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Mã SV</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Họ tên</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Email</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Chuyên ngành</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Trạng thái</th>
+                <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã SV</th>
+                <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Họ tên</th>
+                <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Email</th>
+                <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Chuyên ngành</th>
+                <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -496,10 +496,10 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex justify-end shrink-0">
+        <div className="px-6 py-4 border-t border-gray-100 dark:border-zinc-800 flex justify-end shrink-0 bg-gray-50/50 dark:bg-zinc-900/50">
           <button
             onClick={onClose}
-            className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="h-[44px] px-8 text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-2xl transition-all active:scale-95"
           >
             Đóng
           </button>
@@ -508,19 +508,19 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
 
       {/* Add Student Modal */}
       {showAddStudent && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/30">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl border border-gray-100 overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+        <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-100 dark:border-zinc-800 overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
               <div>
-                <h4 className="text-lg font-bold text-gray-900">Thêm sinh viên</h4>
+                <h4 className="text-xl font-bold text-gray-900 dark:text-white">Thêm sinh viên</h4>
                 {selectedStudents.size > 0 && (
-                  <span className="text-sm text-orange-600 font-medium">
+                  <span className="text-sm text-fpt-orange font-bold mt-1 block">
                     Đã chọn {selectedStudents.size} sinh viên
                   </span>
                 )}
               </div>
-              <button onClick={() => { setShowAddStudent(false); setSelectedStudents(new Set()); setStudentSearch(''); }} className="p-1 hover:bg-gray-100 rounded-lg">
-                <X size={18} className="text-gray-400" />
+              <button onClick={() => { setShowAddStudent(false); setSelectedStudents(new Set()); setStudentSearch(''); }} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all active:scale-95">
+                <X size={20} className="text-gray-400 hover:text-gray-600" />
               </button>
             </div>
 
@@ -528,19 +528,19 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
               {/* Search & Select All */}
               <div className="flex gap-3">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Tìm kiếm theo mã SV, tên, email..."
                     value={studentSearch}
                     onChange={(e) => setStudentSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-orange-500"
+                    className="w-full h-[52px] pl-12 pr-4 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 outline-none text-gray-900 dark:text-white"
                   />
                 </div>
                 {filteredStudents.length > 0 && (
                   <button
                     onClick={selectAllStudents}
-                    className="px-3 py-2 text-sm font-medium text-orange-600 hover:bg-orange-50 rounded-lg border border-orange-200 whitespace-nowrap"
+                    className="h-[52px] px-6 text-sm font-bold text-fpt-orange hover:bg-orange-50 dark:hover:bg-orange-900/10 rounded-2xl border-2 border-fpt-orange/20 whitespace-nowrap transition-all active:scale-95"
                   >
                     {selectedStudents.size === filteredStudents.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
                   </button>
@@ -604,17 +604,17 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
               )}
             </div>
 
-            <div className="flex justify-end gap-3 p-4 border-t border-gray-100">
+            <div className="flex justify-end gap-3 p-6 border-t border-gray-100 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50">
               <button
                 onClick={() => { setShowAddStudent(false); setSelectedStudents(new Set()); setStudentSearch(''); }}
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"
+                className="h-[44px] px-6 text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-2xl transition-all active:scale-95"
               >
                 Hủy
               </button>
               <button
                 onClick={handleAddStudent}
                 disabled={selectedStudents.size === 0 || addingStudent}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-lg flex items-center gap-2 disabled:opacity-50"
+                className="h-[44px] px-8 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-2xl shadow-lg shadow-green-600/20 flex items-center gap-2 disabled:opacity-50 transition-all active:scale-95"
               >
                 {addingStudent ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -642,20 +642,20 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
 
       {/* Transfer Modal */}
       {showTransferModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/30">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg border border-gray-100 overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+        <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-lg border border-gray-100 dark:border-zinc-800 overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
               <div>
-                <h4 className="text-lg font-bold text-gray-900">Chuyển sinh viên sang lớp khác</h4>
-                <p className="text-sm text-gray-500">
+                <h4 className="text-xl font-bold text-gray-900 dark:text-white">Chuyển lớp</h4>
+                <p className="text-sm text-gray-500 mt-1">
                   Chuyển <span className="font-bold text-orange-600">{selectedRows.size}</span> sinh viên
                 </p>
               </div>
               <button
                 onClick={() => { setShowTransferModal(false); setSelectedTransferTarget(''); }}
-                className="p-1 hover:bg-gray-100 rounded-lg"
+                className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all active:scale-95"
               >
-                <X size={18} className="text-gray-400" />
+                <X size={20} className="text-gray-400 hover:text-gray-600" />
               </button>
             </div>
 
@@ -703,17 +703,17 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
               )}
             </div>
 
-            <div className="flex justify-end gap-3 p-4 border-t border-gray-100">
+            <div className="flex justify-end gap-3 p-6 border-t border-gray-100 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50">
               <button
                 onClick={() => { setShowTransferModal(false); setSelectedTransferTarget(''); }}
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"
+                className="h-[44px] px-6 text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-2xl transition-all active:scale-95"
               >
                 Hủy
               </button>
               <button
                 onClick={handleTransfer}
                 disabled={!selectedTransferTarget || transferring}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg flex items-center gap-2 disabled:opacity-50"
+                className="h-[44px] px-8 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-2xl shadow-lg shadow-blue-600/20 flex items-center gap-2 disabled:opacity-50 transition-all active:scale-95"
               >
                 {transferring ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -729,3 +729,5 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
     </div>
   );
 };
+
+

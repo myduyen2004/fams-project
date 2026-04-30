@@ -9,7 +9,7 @@ import {
     ArrowLeft, BookOpen, FileText, Upload,
     Loader2, Trash2, Paperclip, Calendar, MessageSquare, Download
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
 
 export const StudentAssignmentDetailPage: React.FC = () => {
@@ -437,7 +437,7 @@ export const StudentAssignmentDetailPage: React.FC = () => {
 
             {/* Upload Dialog - Portal */}
             {showUploadDialog && createPortal(
-                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-zinc-800">
                         <div className="p-6">
                             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -551,3 +551,4 @@ export const StudentAssignmentDetailPage: React.FC = () => {
 };
 
 export default StudentAssignmentDetailPage;
+

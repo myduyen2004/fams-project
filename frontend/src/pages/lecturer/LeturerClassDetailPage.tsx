@@ -12,7 +12,7 @@ import { Users, Clock, ArrowLeft, FileText, ChevronDown, ChevronUp, ExternalLink
 import { ViewStudentModal } from '../../components/academic-staff/students/StudentModals';
 import { StudentResponse } from '../../services/api/academicStaffService';
 import { studentGradeService } from '../../services/api/studentGradeService';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 
 export const LeturerClassDetailPage: React.FC = () => {
     const { className } = useParams<{ className: string }>();
@@ -305,10 +305,10 @@ export const LeturerClassDetailPage: React.FC = () => {
                             <div className="flex flex-col">
                                 <div className="flex items-center gap-2 mb-1.5">
                                     <span className={`px-3 py-0.5 rounded-full text-[9px] font-bold tracking-widest uppercase shadow-sm border ${detail?.status === 'UPCOMING'
-                                            ? 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-900/40'
-                                            : detail?.status === 'OPEN' || detail?.status === 'ONGOING'
-                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-900/40'
-                                                : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700'
+                                        ? 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-900/40'
+                                        : detail?.status === 'OPEN' || detail?.status === 'ONGOING'
+                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-900/40'
+                                            : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700'
                                         }`}>
                                         {detail?.status === 'UPCOMING' ? 'SẮP DIỄN RA' :
                                             detail?.status === 'OPEN' || detail?.status === 'ONGOING' ? 'ĐANG DIỄN RA' :
@@ -406,13 +406,13 @@ export const LeturerClassDetailPage: React.FC = () => {
                                     <table className="w-full text-[13px]">
                                         <thead>
                                             <tr className="bg-fpt-orange text-white">
-                                                <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-widest">Ngày</th>
-                                                <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-widest w-20">Slot</th>
-                                                <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-widest w-24">Phòng</th>
-                                                <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-widest">Bài tập</th>
-                                                <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-widest w-28">Trạng thái</th>
-                                                <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-widest w-20">Nộp</th>
-                                                <th className="text-right px-4 py-3 text-[11px] font-bold uppercase tracking-widest w-24">Thao tác</th>
+                                                <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Ngày</th>
+                                                <th className="px-4 py-5 text-left w-20 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Slot</th>
+                                                <th className="px-4 py-5 text-left w-24 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Phòng</th>
+                                                <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Bài tập</th>
+                                                <th className="px-4 py-5 text-left w-28 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                                                <th className="px-4 py-5 text-left w-20 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Nộp</th>
+                                                <th className="px-4 py-5 text-right w-24 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Thao tác</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
@@ -568,11 +568,11 @@ export const LeturerClassDetailPage: React.FC = () => {
                             <table className="w-full">
                                 <thead>
                                     <tr className="bg-fpt-orange text-white">
-                                        <th className="px-4 py-3 text-center text-[11px] font-bold uppercase tracking-widest w-16">STT</th>
-                                        <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-widest">Sinh viên</th>
-                                        <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-widest">Liên hệ</th>
-                                        <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-widest">Chuyên ngành</th>
-                                        <th className="px-4 py-3 text-center text-[11px] font-bold uppercase tracking-widest w-32">Trạng thái</th>
+                                        <th className="px-4 py-5 text-center w-16 text-xs font-bold uppercase tracking-widest whitespace-nowrap">STT</th>
+                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Sinh viên</th>
+                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Liên hệ</th>
+                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Chuyên ngành</th>
+                                        <th className="px-4 py-5 text-center w-32 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50 dark:divide-zinc-800/50">
@@ -700,3 +700,4 @@ export const LeturerClassDetailPage: React.FC = () => {
         </LecturerLayout >
     );
 };
+

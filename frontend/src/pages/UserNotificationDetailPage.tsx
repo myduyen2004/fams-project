@@ -212,3 +212,4 @@ export const UserNotificationDetailPage: React.FC = () => {
     </Layout>
   );
 };
+

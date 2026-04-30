@@ -3,7 +3,7 @@ import { AdminLayout } from '../../components/admin/AdminLayout';
 import { RecentAccessTable } from '../../components/admin/dashboard/RecentAccessTable';
 import { dashboardService } from '../../services/api/dashboardService';
 import { RecentAccess } from '../../types/dashboard';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { useWebSocket } from '../../hooks/useWebSocket';
 
 export const RecentAccessPage: React.FC = () => {
@@ -45,3 +45,4 @@ export const RecentAccessPage: React.FC = () => {
         </AdminLayout>
     );
 };
+

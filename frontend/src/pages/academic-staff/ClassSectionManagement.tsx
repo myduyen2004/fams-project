@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useRoleAwareNavigate } from '../../hooks/useRoleAwareNavigate';
-import { ArrowLeft, ChevronRight, Search, FileText, Trash2, RefreshCw, Calendar, Plus, Edit } from 'lucide-react';
+import { ArrowLeft, Search, FileText, Trash2, RefreshCw, Calendar, Plus, Edit } from 'lucide-react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { Pagination } from '../../components/common/Pagination';
 import { Tooltip } from '../../components/common/Tooltip';
@@ -10,9 +10,10 @@ import { EnrollmentListModal } from '../../components/academic-staff/EnrollmentL
 import { ImportEnrollmentModal } from '../../components/academic-staff/ImportEnrollmentModal';
 import { ClassSectionFormModal } from '../../components/academic-staff/ClassSectionFormModal';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
+import { CustomSelect } from '../../components/common/CustomSelect';
 import { usePagination } from '../../hooks/usePagination';
 import apiClient from '../../services/api/authService';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 
 // Custom hook for debounce
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -307,37 +308,37 @@ export const ClassSectionManagement: React.FC = () => {
 
   return (
     <AcademicStaffLayout pageTitle="Quản lý lớp học phần">
-      <div className="max-w-7xl mx-auto space-y-6 pb-8 pt-2">
+      <div className="space-y-6 pb-8 pt-2">
 
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-gray-500">
+        <div className="flex items-center gap-3 text-sm text-gray-500 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm p-3 rounded-2xl border border-gray-100 dark:border-zinc-800 w-fit">
           <button
             onClick={() => navigate('/academic-staff/semesters')}
-            className="hover:text-orange-600 transition-colors flex items-center gap-1"
+            className="hover:text-fpt-orange transition-colors flex items-center gap-1 font-medium"
           >
             <ArrowLeft className="w-4 h-4" /> Quản lý học kỳ
           </button>
+          <div className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-zinc-700" />
           <button
-            className="hover:text-orange-600 transition-colors flex items-center gap-1"
+            className="hover:text-fpt-orange transition-colors flex items-center gap-1 font-medium"
           >
-            <ChevronRight className="w-4 h-4 text-gray-300" />
             <span>{semesterCode || 'Học kỳ'}</span>
           </button>
-          <ChevronRight className="w-4 h-4 text-gray-300" />
-          <span className="text-gray-900 font-bold">Quản lý lớp học phần</span>
+          <div className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-zinc-700" />
+          <span className="text-gray-900 dark:text-white font-bold">Quản lý lớp học phần</span>
         </div>
 
         {/* Semester Status Banner */}
         {!canEdit && semesterStatus && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center gap-3">
-            <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-              <span className="text-yellow-600 text-lg">⚠️</span>
+          <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-2xl p-6 flex items-start gap-4 shadow-sm">
+            <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center shrink-0">
+              <span className="text-amber-600 text-xl">⚠️</span>
             </div>
             <div>
-              <p className="text-sm font-medium text-yellow-800">
+              <p className="text-base font-bold text-amber-900 dark:text-amber-100 mb-1">
                 Học kỳ đang trong trạng thái "{semesterStatus === 'ONGOING' ? 'Đang diễn ra' : 'Đã kết thúc'}"
               </p>
-              <p className="text-xs text-yellow-600">
+              <p className="text-sm text-amber-700 dark:text-amber-400">
                 Không thể thêm, sửa hoặc xóa lớp học phần và đăng ký trong thời gian này.
               </p>
             </div>
@@ -345,17 +346,17 @@ export const ClassSectionManagement: React.FC = () => {
         )}
 
         {/* Header */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex gap-3">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-8 shadow-sm">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
+            <div className="flex flex-wrap gap-4">
               <Tooltip content="1. Nhập danh sách lớp học phần từ file Excel" position="bottom">
                 <button
                   onClick={handleImportList}
                   disabled={!canEdit}
-                  className={`px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold transition-all flex items-center gap-2
-                    ${canEdit ? 'text-gray-600 bg-white hover:bg-gray-50' : 'text-gray-400 bg-gray-100 cursor-not-allowed'}`}
+                  className={`h-[52px] px-6 border-2 rounded-2xl text-sm font-bold transition-all flex items-center gap-2 active:scale-95
+                    ${canEdit ? 'text-gray-700 dark:text-zinc-300 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-fpt-orange hover:text-fpt-orange' : 'text-gray-400 bg-gray-50 border-gray-100 cursor-not-allowed opacity-50'}`}
                 >
-                  <FileText className="w-4 h-4" /> Nhập danh sách lớp học phần
+                  <FileText className="w-5 h-5" /> Nhập danh sách lớp học phần
                 </button>
               </Tooltip>
 
@@ -363,112 +364,110 @@ export const ClassSectionManagement: React.FC = () => {
                 <button
                   onClick={handleImportEnrollment}
                   disabled={!canEdit}
-                  className={`px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold transition-all flex items-center gap-2
-                    ${canEdit ? 'text-gray-600 bg-white hover:bg-gray-50' : 'text-gray-400 bg-gray-100 cursor-not-allowed'}`}
+                  className={`h-[52px] px-6 border-2 rounded-2xl text-sm font-bold transition-all flex items-center gap-2 active:scale-95
+                    ${canEdit ? 'text-gray-700 dark:text-zinc-300 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-fpt-orange hover:text-fpt-orange' : 'text-gray-400 bg-gray-50 border-gray-100 cursor-not-allowed opacity-50'}`}
                 >
-                  <FileText className="w-4 h-4" /> Nhập danh sách đăng ký
+                  <FileText className="w-5 h-5" /> Nhập danh sách đăng ký
                 </button>
               </Tooltip>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-4">
               <Tooltip content="Tạo mới một lớp học phần" position="bottom">
                 <button
                   onClick={handleCreateClassSection}
                   disabled={!canEdit}
-                  className={`px-4 py-2 rounded-lg text-xs font-bold shadow-lg transition-all flex items-center gap-2
+                  className={`h-[52px] px-8 rounded-2xl text-sm font-bold transition-all flex items-center gap-2 active:scale-95
                     ${canEdit
-                      ? 'bg-orange-600 hover:bg-orange-700 text-white shadow-orange-600/20'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'}`}
+                      ? 'bg-fpt-orange text-white shadow-lg shadow-fpt-orange/20 hover:bg-orange-600'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'}`}
                 >
-                  <Plus className="w-4 h-4" /> Tạo lớp học phần
+                  <Plus className="w-5 h-5" strokeWidth={3} /> Tạo lớp học phần
                 </button>
               </Tooltip>
               <button
                 onClick={() => navigate('/academic-staff/schedule')}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs font-bold text-white shadow-lg shadow-blue-600/20 transition-all flex items-center gap-2"
+                className="h-[52px] px-8 bg-blue-600 hover:bg-blue-700 rounded-2xl text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition-all flex items-center gap-2 active:scale-95"
               >
-                <Calendar className="w-4 h-4" /> Tạo thời khóa biểu
+                <Calendar className="w-5 h-5" /> Tạo thời khóa biểu
               </button>
             </div>
           </div>
 
           {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {/* Tìm kiếm */}
             <div className="md:col-span-2">
-              <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Tìm kiếm</label>
+              <label className="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-2 ml-1 block">Tìm kiếm</label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Tìm kiếm theo mã lớp, tên môn học..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-orange-500 transition-all"
+                  className="w-full pl-12 pr-4 h-[52px] border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl text-sm font-medium focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 hover:shadow-lg hover:shadow-fpt-orange/5 text-gray-900 dark:text-white"
                 />
               </div>
             </div>
 
             {/* Lọc trạng thái */}
             <div>
-              <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Trạng thái</label>
-              <select
+              <label className="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-2 ml-1 block">Trạng thái</label>
+              <CustomSelect
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-orange-500 transition-all"
-              >
-                <option value="ALL">Tất cả trạng thái</option>
-                <option value="UPCOMING">Sắp diễn ra</option>
-                <option value="ONGOING">Đang diễn ra</option>
-                <option value="FINISHED">Đã kết thúc</option>
-              </select>
+                onChange={(value) => setStatusFilter(value)}
+                options={[
+                  { value: 'ALL', label: 'Tất cả trạng thái' },
+                  { value: 'UPCOMING', label: 'Sắp diễn ra' },
+                  { value: 'ONGOING', label: 'Đang diễn ra' },
+                  { value: 'FINISHED', label: 'Đã kết thúc' }
+                ]}
+              />
             </div>
 
             {/* Lọc giảng viên */}
             <div>
-              <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Giảng viên</label>
-              <select
+              <label className="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-2 ml-1 block">Giảng viên</label>
+              <CustomSelect
                 value={lecturerFilter}
-                onChange={(e) => setLecturerFilter(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-orange-500 transition-all"
-              >
-                <option value="ALL">Tất cả giảng viên</option>
-                {lecturers.map((lecturer) => (
-                  <option key={lecturer.id} value={lecturer.id}>
-                    {lecturer.fullName}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setLecturerFilter(value)}
+                options={[
+                  { value: 'ALL', label: 'Tất cả giảng viên' },
+                  ...lecturers.map(lecturer => ({ value: lecturer.id.toString(), label: lecturer.fullName }))
+                ]}
+              />
             </div>
           </div>
 
           {/* Xóa bộ lọc */}
           {(searchTerm || statusFilter !== 'ALL' || lecturerFilter !== 'ALL') && (
-            <div className="mt-4">
+            <div className="mt-6 flex justify-end">
               <button
                 onClick={() => {
                   setSearchTerm('');
                   setStatusFilter('ALL');
                   setLecturerFilter('ALL');
                 }}
-                className="text-xs text-orange-600 hover:text-orange-700 font-bold"
+                className="text-sm text-fpt-orange hover:text-orange-700 font-bold flex items-center gap-2 hover:underline decoration-2 underline-offset-4"
               >
-                Xóa bộ lọc
+                <RefreshCw className="w-4 h-4" /> Xóa bộ lọc
               </button>
             </div>
           )}
         </div>
 
-        {/* Table */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {/* Table Container */}
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
           {/* Bulk Actions */}
           {selectedRows.size > 0 && (
-            <div className="px-6 py-4 bg-orange-50 border-b border-orange-100 flex items-center justify-between">
-              <span className="text-sm font-medium text-orange-700">
-                Đã chọn <span className="font-bold">{selectedRows.size}</span> lớp học phần
-              </span>
-              <div className="flex gap-2">
+            <div className="px-8 py-4 bg-orange-50 dark:bg-orange-900/10 border-b border-orange-100 dark:border-orange-900/30 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-bold text-fpt-orange">
+                  Đã chọn <span className="bg-fpt-orange text-white px-2 py-0.5 rounded-lg mx-1">{selectedRows.size}</span> lớp học phần
+                </span>
+              </div>
+              <div className="flex gap-3">
                 {selectedRows.size === 1 && canEdit && (
                   <button
                     onClick={() => {
@@ -476,7 +475,7 @@ export const ClassSectionManagement: React.FC = () => {
                       const classSection = classSections.find(cs => cs.className === className);
                       if (classSection) handleEditClassSection(classSection);
                     }}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-2"
+                    className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-2 active:scale-95"
                   >
                     <Edit className="w-4 h-4" /> Sửa
                   </button>
@@ -485,7 +484,7 @@ export const ClassSectionManagement: React.FC = () => {
                   <button
                     onClick={handleBulkDelete}
                     disabled={deleting}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-2 disabled:opacity-50"
+                    className="h-10 px-6 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-2 disabled:opacity-50 active:scale-95"
                   >
                     {deleting ? (
                       <RefreshCw className="w-4 h-4 animate-spin" />
@@ -500,23 +499,23 @@ export const ClassSectionManagement: React.FC = () => {
           )}
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-orange-500 text-white">
+              <thead className="bg-fpt-orange text-white">
                 <tr>
-                  <th className="px-4 py-4 text-center w-8">
+                  <th className="px-4 py-5 text-center w-12">
                     <input
                       type="checkbox"
                       checked={classSections.length > 0 && selectedRows.size === classSections.length}
                       onChange={handleSelectAll}
-                      className="w-4 h-4 rounded border-white/30 text-orange-600 focus:ring-orange-500 focus:ring-offset-orange-600 cursor-pointer"
+                      className="w-5 h-5 rounded border-white/30 text-fpt-orange focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer"
                     />
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase w-36">Mã lớp</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase w-56">Môn học</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase w-16">Học kỳ</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase w-44">Giảng viên</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase w-24">Đăng ký</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase w-20">Số slot</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase w-28">Trạng thái</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã lớp</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Môn học</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Học kỳ</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Giảng viên</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Đăng ký</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Số slot</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -542,36 +541,36 @@ export const ClassSectionManagement: React.FC = () => {
                       className={`hover:bg-gray-50 transition-colors cursor-pointer ${selectedRows.has(classSection.className) ? 'bg-orange-50' : ''}`}
                       onDoubleClick={() => handleRowDoubleClick(classSection)}
                     >
-                      <td className="px-4 py-4 text-center">
+                      <td className="px-4 py-5 text-center">
                         <input
                           type="checkbox"
                           checked={selectedRows.has(classSection.className)}
                           onChange={() => handleSelectRow(classSection.className)}
-                          className="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500 cursor-pointer"
+                          className="w-4 h-4 rounded border-gray-300 text-fpt-orange focus:ring-fpt-orange cursor-pointer"
                         />
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm font-bold text-orange-600">{classSection.className}</span>
+                      <td className="px-6 py-5">
+                        <span className="text-sm font-bold text-fpt-orange">{classSection.className}</span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div>
-                          <div className="text-sm font-bold text-gray-900">{classSection.courseCode}</div>
-                          <div className="text-xs text-gray-500">{classSection.courseName}</div>
+                      <td className="px-6 py-5">
+                        <div className="flex flex-col gap-0.5">
+                          <div className="text-sm font-bold text-gray-900 dark:text-white">{classSection.courseCode}</div>
+                          <div className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider">{classSection.courseName}</div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-gray-700">{classSection.semesterCode}</span>
+                      <td className="px-6 py-5">
+                        <span className="text-sm font-medium text-gray-600 dark:text-zinc-400">{classSection.semesterCode}</span>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-gray-700">{classSection.lecturerName || '-'}</span>
+                      <td className="px-6 py-5">
+                        <span className="text-sm font-medium text-gray-600 dark:text-zinc-400">{classSection.lecturerName || '-'}</span>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm font-bold text-gray-900">{classSection.enrollmentInfo}</span>
+                      <td className="px-6 py-5">
+                        <span className="text-sm font-bold text-gray-900 dark:text-white">{classSection.enrollmentInfo}</span>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-gray-700">{classSection.slots}</span>
+                      <td className="px-6 py-5">
+                        <span className="text-sm font-medium text-gray-600 dark:text-zinc-400">{classSection.slots}</span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-5">
                         {getStatusBadge(classSection.status)}
                       </td>
                     </tr>
@@ -659,3 +658,5 @@ export const ClassSectionManagement: React.FC = () => {
 };
 
 export default ClassSectionManagement;
+
+

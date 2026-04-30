@@ -1,5 +1,6 @@
-import React from 'react';
 import { Search, Download, Calendar, Loader2 } from 'lucide-react';
+import { CustomDatePicker } from '../../common/CustomDatePicker';
+import { CustomSelect } from '../../common/CustomSelect';
 
 interface RequestFiltersProps {
     filters: {
@@ -25,11 +26,11 @@ const RequestFilters: React.FC<RequestFiltersProps> = ({
 }) => {
     return (
         <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-gray-100 dark:border-zinc-700 w-full mb-6">
-            <div className="flex flex-col lg:flex-row lg:items-end gap-4 overflow-x-auto pb-1">
+            <div className="flex flex-col lg:flex-row lg:items-end gap-4 pb-1">
 
                 {/* Search */}
                 <div className="flex-1 lg:min-w-[200px] relative">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block mb-1.5 ml-1">Tìm kiếm</label>
+                    <label className="text-[10px] uppercase tracking-wider text-gray-400 block mb-1.5 ml-1">Tìm kiếm</label>
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
@@ -37,7 +38,7 @@ const RequestFilters: React.FC<RequestFiltersProps> = ({
                             placeholder="Người gửi, mã, lớp..."
                             value={filters.search}
                             onChange={(e) => onFilterChange({ search: e.target.value })}
-                            className="pl-10 pr-4 py-2 w-full border border-gray-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white transition-all shadow-sm"
+                            className="pl-10 pr-4 h-[52px] w-full border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange text-gray-900 dark:text-white transition-all shadow-sm"
                         />
                     </div>
                 </div>
@@ -45,65 +46,63 @@ const RequestFilters: React.FC<RequestFiltersProps> = ({
                 {/* Request Type Filter - Conditionally Shown */}
                 {showRequestTypeFilter && (
                     <div className="w-full lg:w-64">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block mb-1.5 ml-1">Loại yêu cầu</label>
-                        <select
+                        <label className="text-[10px] uppercase tracking-wider text-gray-400 block mb-1.5 ml-1">Loại yêu cầu</label>
+                        <CustomSelect
                             value={filters.requestType || ''}
-                            onChange={(e) => onFilterChange({ requestType: e.target.value })}
-                            className="px-3 py-2 w-full border border-gray-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white transition-all shadow-sm"
-                        >
-                            <option value="">Tất cả loại</option>
-                            <option value="PAUSE_SEMESTER">Xin tạm nghỉ học</option>
-                            <option value="RETAKE_COURSE">Đăng ký học lại</option>
-                            <option value="CHANGE_CLASS">Yêu cầu đổi lớp</option>
-                            <option value="OVERLOAD_STUDY">Đăng ký học vượt</option>
-                            <option value="ABSENT_REQUEST">Đề nghị miễn điểm danh</option>
-                            <option value="GRADE_APPEAL">Đề nghị phúc khảo</option>
-                            <option value="CHANGE_MAJOR">Đề nghị chuyển ngành</option>
-                            <option value="CHANGE_SPECIALIZATION">Đề nghị đổi chuyên ngành hẹp</option>
-                            <option value="OTHERS">Các loại đơn khác</option>
-                        </select>
+                            onChange={(val) => onFilterChange({ requestType: val as string })}
+                            options={[
+                                { value: '', label: 'Tất cả loại' },
+                                { value: 'PAUSE_SEMESTER', label: 'Xin tạm nghỉ học' },
+                                { value: 'RETAKE_COURSE', label: 'Đăng ký học lại' },
+                                { value: 'CHANGE_CLASS', label: 'Yêu cầu đổi lớp' },
+                                { value: 'OVERLOAD_STUDY', label: 'Đăng ký học vượt' },
+                                { value: 'ABSENT_REQUEST', label: 'Đề nghị miễn điểm danh' },
+                                { value: 'GRADE_APPEAL', label: 'Đề nghị phúc khảo' },
+                                { value: 'CHANGE_MAJOR', label: 'Đề nghị chuyển ngành' },
+                                { value: 'CHANGE_SPECIALIZATION', label: 'Đề nghị đổi chuyên ngành hẹp' },
+                                { value: 'OTHERS', label: 'Các loại đơn khác' }
+                            ]}
+                        />
                     </div>
                 )}
 
                 {/* Status */}
-                <div className="w-full lg:w-40">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block mb-1.5 ml-1">Trạng thái</label>
-                    <select
+                <div className="w-full lg:w-64">
+                    <label className="text-[10px] uppercase tracking-wider text-gray-400 block mb-1.5 ml-1">Trạng thái</label>
+                    <CustomSelect
                         value={filters.status}
-                        onChange={(e) => onFilterChange({ status: e.target.value })}
-                        className="px-3 py-2 w-full border border-gray-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white transition-all shadow-sm"
-                    >
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="PENDING">Đang chờ</option>
-                        <option value="APPROVED">Đã duyệt</option>
-                        <option value="REJECTED">Đã từ chối</option>
-                    </select>
+                        onChange={(val) => onFilterChange({ status: val as string })}
+                        options={[
+                            { value: '', label: 'Tất cả trạng thái' },
+                            { value: 'PENDING', label: 'Đang chờ' },
+                            { value: 'APPROVED', label: 'Đã duyệt' },
+                            { value: 'REJECTED', label: 'Đã từ chối' }
+                        ]}
+                    />
                 </div>
 
                 {/* Date Range */}
                 <div className="flex-1 lg:max-w-md grid grid-cols-2 gap-3">
                     <div className="relative">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block mb-1.5 ml-1">Từ ngày</label>
+                        <label className="text-[10px] uppercase tracking-wider text-gray-400 block mb-1.5 ml-1">Từ ngày</label>
                         <div className="relative">
                             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                            <input
-                                type="date"
+                            <CustomDatePicker
                                 value={filters.startDate}
-                                onChange={(e) => onFilterChange({ startDate: e.target.value })}
-                                className="pl-10 pr-3 py-2 w-full border border-gray-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white transition-all shadow-sm appearance-none"
+                                onChange={(value) => onFilterChange({ startDate: value })}
+                                className="w-full"
                             />
                         </div>
                     </div>
 
                     <div className="relative">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block mb-1.5 ml-1">Đến ngày</label>
+                        <label className="text-[10px] uppercase tracking-wider text-gray-400 block mb-1.5 ml-1">Đến ngày</label>
                         <div className="relative">
                             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                            <input
-                                type="date"
+                            <CustomDatePicker
                                 value={filters.endDate}
-                                onChange={(e) => onFilterChange({ endDate: e.target.value })}
-                                className="pl-10 pr-3 py-2 w-full border border-gray-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white transition-all shadow-sm appearance-none"
+                                onChange={(value) => onFilterChange({ endDate: value })}
+                                className="w-full"
                             />
                         </div>
                     </div>
@@ -115,7 +114,7 @@ const RequestFilters: React.FC<RequestFiltersProps> = ({
                         <button
                             onClick={onExportClick}
                             disabled={isExporting}
-                            className="w-full lg:w-auto px-4 py-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-600 text-gray-700 dark:text-white text-sm font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-700 transition-all flex items-center justify-center gap-2 shadow-sm whitespace-nowrap disabled:opacity-50"
+                            className="w-full lg:w-auto px-6 h-[52px] bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 text-gray-700 dark:text-white text-sm font-bold rounded-2xl hover:border-fpt-orange/40 hover:shadow-lg hover:shadow-fpt-orange/5 transition-all flex items-center justify-center gap-2 shadow-sm whitespace-nowrap disabled:opacity-50"
                         >
                             {isExporting ? (
                                 <>
@@ -137,3 +136,4 @@ const RequestFilters: React.FC<RequestFiltersProps> = ({
 };
 
 export default RequestFilters;
+

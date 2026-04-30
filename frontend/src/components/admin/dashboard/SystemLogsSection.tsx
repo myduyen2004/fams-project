@@ -95,3 +95,4 @@ export const SystemLogsSection: React.FC<SystemLogsSectionProps> = ({ logs, isDa
   );
 };
 
+

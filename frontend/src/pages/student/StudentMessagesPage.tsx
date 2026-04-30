@@ -11,3 +11,4 @@ export const StudentMessagesPage: React.FC = () => {
         </StudentLayout>
     );
 };
+

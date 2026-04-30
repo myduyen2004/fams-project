@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Plus, Loader2, ArrowLeft, GripVertical, Trash2, BookOpen, Edit2, Play, CircleOff } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { specializationService } from '../../services/api/specializationService';
 import { subSpecializationService } from '../../services/api/subSpecializationService';
@@ -465,10 +465,10 @@ export const SpecializationDetail: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="rounded-lg bg-gradient-to-r from-fpt-orange to-orange-500 p-6 text-white">
+                <div className="rounded-2xl bg-gradient-to-r from-fpt-orange to-orange-500 p-8 text-white shadow-lg shadow-fpt-orange/20">
                     <div className="flex items-center gap-4">
-                        <div className="rounded-lg bg-white/20 p-3">
-                            <BookOpen className="h-6 w-6" />
+                        <div className="rounded-2xl bg-white/20 p-4 backdrop-blur-md">
+                            <BookOpen className="h-8 w-8" />
                         </div>
                         <div>
                             <h3 className="text-lg font-semibold">Tổng quan chương trình</h3>
@@ -493,13 +493,13 @@ export const SpecializationDetail: React.FC = () => {
                 </div>
 
 
-                <div className="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                    <div className="flex items-center justify-between border-b border-gray-100 p-4 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50">
+                <div className="rounded-2xl border-2 border-gray-100 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
+                    <div className="flex items-center justify-between border-b border-gray-100 p-6 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50">
                         <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-3">
                                 <input
                                     type="checkbox"
-                                    className="h-4 w-4 rounded border-gray-300 text-fpt-orange focus:ring-fpt-orange"
+                                    className="h-5 w-5 rounded border-gray-300 text-fpt-orange focus:ring-fpt-orange cursor-pointer"
                                     checked={specCourses.length > 0 && selectedSpecCourses.length === specCourses.length}
                                     onChange={(e) => {
                                         if (e.target.checked) {
@@ -511,19 +511,19 @@ export const SpecializationDetail: React.FC = () => {
                                     disabled={specCourses.length === 0}
                                 />
                                 <div className="flex items-center gap-2">
-                                    <BookOpen className="h-5 w-5 text-fpt-orange" />
-                                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                    <BookOpen className="h-6 w-6 text-fpt-orange" />
+                                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                                         Môn học bắt buộc của chuyên ngành
                                     </h2>
-                                    <span className="text-sm text-gray-500">({specCourses.length} môn · {totalSpecCredits} TC)</span>
+                                    <span className="text-sm font-medium text-gray-500">({specCourses.length} môn · {totalSpecCredits} TC)</span>
                                 </div>
                             </div>
                             {selectedSpecCourses.length > 0 && (
                                 <>
-                                    <div className="h-4 w-px bg-gray-300 dark:bg-zinc-700" />
+                                    <div className="h-6 w-px bg-gray-300 dark:bg-zinc-700" />
                                     <button
                                         onClick={handleBulkRemoveSpecCourses}
-                                        className="flex items-center gap-1 text-sm text-red-600 hover:text-red-700"
+                                        className="flex items-center gap-2 text-sm font-bold text-red-600 hover:text-red-700 transition-colors"
                                     >
                                         <Trash2 className="h-4 w-4" />
                                         {selectedSpecCourses.length > 1 ? 'Xóa hàng loạt' : 'Xóa'}
@@ -536,9 +536,9 @@ export const SpecializationDetail: React.FC = () => {
                                 setCourseModalTarget({ type: 'specialization', id: parseInt(id!) });
                                 setIsCourseModalOpen(true);
                             }}
-                            className="flex items-center gap-2 rounded-lg bg-fpt-orange px-3 py-2 text-sm font-medium text-white hover:bg-orange-600"
+                            className="flex h-[52px] items-center gap-2 rounded-2xl bg-fpt-orange px-8 text-sm font-bold text-white hover:bg-orange-600 hover:shadow-lg hover:shadow-fpt-orange/20 transition-all whitespace-nowrap active:scale-95"
                         >
-                            <Plus className="h-4 w-4" />
+                            <Plus className="h-[18px] w-[18px]" strokeWidth={3} />
                             Thêm từ kho
                         </button>
                     </div>
@@ -546,18 +546,18 @@ export const SpecializationDetail: React.FC = () => {
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
-                                <tr className="bg-gray-50 dark:bg-zinc-800">
-                                    <th className="px-4 py-3 text-left w-10"></th>
-                                    <th className="px-4 py-3 text-left w-10"></th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-zinc-400">Mã</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-zinc-400">Tên môn học</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-zinc-400">Số tín chỉ</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-zinc-400">Học kỳ</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-zinc-400">Trạng thái</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-zinc-400 w-20 whitespace-nowrap">Thao tác</th>
+                                <tr className="bg-gray-50 dark:bg-zinc-800/50">
+                                    <th className="px-6 py-4 text-left w-10"></th>
+                                    <th className="px-6 py-4 text-left w-10"></th>
+                                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã</th>
+                                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tên môn học</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Số tín chỉ</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Học kỳ</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                                    <th className="px-4 py-5 text-center w-24 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Thao tác</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
+                            <tbody className="divide-y divide-gray-50 dark:divide-zinc-800/50">
                                 {specCourses.length === 0 ? (
                                     <tr>
                                         <td colSpan={8} className="py-8 text-center text-gray-500">
@@ -587,20 +587,20 @@ export const SpecializationDetail: React.FC = () => {
                 </div>
 
                 {/* Section 2: Chuyên ngành hẹp */}
-                <div className="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                    <div className="flex items-center justify-between border-b border-gray-100 p-4 dark:border-zinc-800">
+                <div className="rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
+                    <div className="flex items-center justify-between border-b border-gray-100 p-6 dark:border-zinc-800">
                         <div className="flex items-center gap-2">
-                            <BookOpen className="h-5 w-5 text-fpt-orange" />
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            <BookOpen className="h-6 w-6 text-fpt-orange" />
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                                 Chuyên ngành hẹp
                             </h2>
-                            <span className="text-sm text-gray-500">({subSpecializations.length} combo)</span>
+                            <span className="text-sm font-medium text-gray-500">({subSpecializations.length} combo)</span>
                         </div>
                         <button
                             onClick={() => { setEditingSubSpec(null); setIsSubSpecFormOpen(true); }}
-                            className="flex items-center gap-2 rounded-lg bg-fpt-orange px-3 py-2 text-sm font-medium text-white hover:bg-orange-600"
+                            className="flex h-[52px] items-center gap-2 rounded-2xl bg-fpt-orange px-8 text-sm font-bold text-white hover:bg-orange-600 hover:shadow-lg hover:shadow-fpt-orange/20 transition-all whitespace-nowrap active:scale-95"
                         >
-                            <Plus className="h-4 w-4" />
+                            <Plus className="h-[18px] w-[18px]" strokeWidth={3} />
                             Thêm chuyên ngành hẹp
                         </button>
                     </div>
@@ -635,7 +635,7 @@ export const SpecializationDetail: React.FC = () => {
                                                     {subSpec.code}
                                                 </p>
                                             </div>
-                                            
+
                                             {activeTab === subSpec.id && (
                                                 <div className="flex-shrink-0 w-2 h-2 rounded-full bg-fpt-orange animate-pulse shadow-[0_0_8px_rgba(234,88,12,0.6)] mt-2" />
                                             )}
@@ -737,67 +737,75 @@ export const SpecializationDetail: React.FC = () => {
 
                 {/* Tab content */}
                 {activeTab !== null && (
-                    <div className="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                    <div className="rounded-2xl border-2 border-gray-100 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
                         {/* Toolbar */}
-                        <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50">
-                            <div className="flex items-center gap-4">
-                                {subSpecCourses.length > 0 && (
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="checkbox"
-                                            className="h-4 w-4 rounded border-gray-300 text-fpt-orange focus:ring-fpt-orange"
-                                            checked={subSpecCourses.length > 0 && selectedSubSpecCourses.length === subSpecCourses.length}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setSelectedSubSpecCourses(subSpecCourses.map(c => c.id));
-                                                } else {
-                                                    setSelectedSubSpecCourses([]);
-                                                }
-                                            }}
-                                        />
-                                        <span className="text-sm text-gray-600 dark:text-zinc-400">Chọn tất cả</span>
-                                    </div>
-                                )}
-                                {selectedSubSpecCourses.length > 0 && (
-                                    <>
-                                        <div className="h-4 w-px bg-gray-300 dark:bg-zinc-700" />
-                                        <button
-                                            onClick={() => handleBulkRemove(activeTab)}
-                                            className="flex items-center gap-1 text-sm text-red-600 hover:text-red-700"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                            {selectedSubSpecCourses.length > 1 ? 'Xóa hàng loạt' : 'Xóa'}
-                                        </button>
-                                    </>
-                                )}
+                        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50">
+                            <div className="flex items-center gap-6">
+                                <div className="flex items-center gap-4">
+                                    {subSpecCourses.length > 0 && (
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                className="h-5 w-5 rounded border-gray-300 text-fpt-orange focus:ring-fpt-orange cursor-pointer"
+                                                checked={subSpecCourses.length > 0 && selectedSubSpecCourses.length === subSpecCourses.length}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedSubSpecCourses(subSpecCourses.map(c => c.id));
+                                                    } else {
+                                                        setSelectedSubSpecCourses([]);
+                                                    }
+                                                }}
+                                            />
+                                            <span className="text-sm font-bold text-gray-500 dark:text-zinc-400">Chọn tất cả</span>
+                                        </div>
+                                    )}
+                                    {selectedSubSpecCourses.length > 0 && (
+                                        <>
+                                            <div className="h-6 w-px bg-gray-300 dark:bg-zinc-700" />
+                                            <button
+                                                onClick={() => handleBulkRemove(activeTab!)}
+                                                className="flex items-center gap-2 text-sm font-bold text-red-600 hover:text-red-700 transition-colors"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                                {selectedSubSpecCourses.length > 1 ? 'Xóa hàng loạt' : 'Xóa'}
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+
+                                <span className="text-sm font-medium text-gray-500">
+                                    Tổng số tín chỉ: <span className="text-gray-900 dark:text-white font-black">{totalSubSpecCredits} TC</span>
+                                </span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm text-gray-500">Tổng số tín chỉ: {totalSubSpecCredits} TC</span>
-                                {/* <div className="w-24 h-2 bg-gray-200 rounded-full dark:bg-zinc-700 overflow-hidden">
-                                    <div
-                                        className="h-full bg-blue-500 rounded-full"
-                                        style={{ width: `${Math.min((totalSubSpecCredits / 24) * 100, 100)}%` }}
-                                    />
-                                </div> */}
-                            </div>
+
+                            <button
+                                onClick={() => {
+                                    setCourseModalTarget({ type: 'subspecialization', id: activeTab! });
+                                    setIsCourseModalOpen(true);
+                                }}
+                                className="flex h-[48px] items-center gap-2 rounded-2xl bg-fpt-orange px-6 text-sm font-bold text-white hover:bg-orange-600 hover:shadow-lg hover:shadow-fpt-orange/20 transition-all whitespace-nowrap active:scale-95"
+                            >
+                                <Plus className="h-[18px] w-[18px]" strokeWidth={3} />
+                                Thêm môn học
+                            </button>
                         </div>
 
                         {/* Table */}
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead>
-                                    <tr className="bg-gray-50/50 dark:bg-zinc-900/50 border-b border-gray-100 dark:border-zinc-800">
-                                        <th className="px-4 py-3 text-left w-10"></th>
-                                        <th className="px-4 py-3 text-left w-10"></th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-400">Mã môn</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-400">Tên môn học</th>
-                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-400">Số tín chỉ</th>
-                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-400">Học kỳ</th>
-                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-400">Trạng thái</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-400 w-24 whitespace-nowrap">Thao tác</th>
+                                    <tr className="bg-gray-50 dark:bg-zinc-800/50">
+                                        <th className="px-6 py-4 text-left w-10"></th>
+                                        <th className="px-6 py-4 text-left w-10"></th>
+                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã môn</th>
+                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tên môn học</th>
+                                        <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Số tín chỉ</th>
+                                        <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Học kỳ</th>
+                                        <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                                        <th className="px-4 py-5 text-center w-24 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Thao tác</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
+                                <tbody className="divide-y divide-gray-50 dark:divide-zinc-800/50">
                                     {loadingSubSpecCourses ? (
                                         <tr>
                                             <td colSpan={8} className="py-8 text-center">
@@ -891,3 +899,5 @@ export const SpecializationDetail: React.FC = () => {
         </AcademicStaffLayout >
     );
 };
+
+

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Search, Loader2, X, Check } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Search, Loader2, X, Check, BookOpen } from 'lucide-react';
 import { Course } from '../../types/course';
 import { courseService } from '../../services/api/courseService';
 
@@ -76,114 +77,127 @@ export const PrerequisiteSelectionModal: React.FC<PrerequisiteSelectionModalProp
 
     if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-2xl rounded-xl bg-white shadow-xl dark:bg-zinc-900 max-h-[85vh] flex flex-col">
+    return createPortal(
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 flex flex-col max-h-[85vh] overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between border-b border-gray-100 p-4 dark:border-zinc-800">
-                    <div>
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            Thêm môn tiên quyết
-                        </h2>
-                        <p className="text-sm text-gray-500 dark:text-zinc-400">
-                            Chọn các môn học sinh viên cần hoàn thành trước khi học môn này
-                        </p>
+                <div className="flex items-center justify-between border-b border-gray-100 p-6 dark:border-zinc-800">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-orange-100 dark:bg-orange-950/40 rounded-xl text-fpt-orange">
+                            <BookOpen className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                                Thêm môn tiên quyết
+                            </h2>
+                            <p className="text-sm font-medium text-gray-500 dark:text-zinc-400">
+                                Chọn các môn học từ kho dữ liệu
+                            </p>
+                        </div>
                     </div>
-                    <button onClick={onClose} className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-zinc-800">
-                        <X className="h-5 w-5 text-gray-500 dark:text-zinc-400" />
+                    <button onClick={onClose} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all active:scale-95">
+                        <X className="h-6 w-6 text-gray-400 hover:text-gray-600" />
                     </button>
                 </div>
 
                 {/* Search */}
-                <div className="p-4 border-b border-gray-100 dark:border-zinc-800">
+                <div className="p-6 bg-gray-50/50 dark:bg-zinc-900/50 border-b border-gray-100 dark:border-zinc-800">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                        <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
                         <input
                             type="text"
                             placeholder="Tìm kiếm theo mã hoặc tên môn học..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             autoFocus
-                            className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-fpt-orange focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                            className="w-full h-[52px] px-4 pl-12 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 outline-none text-gray-900 dark:text-white font-medium"
                         />
+                        {loading && (
+                            <Loader2 className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin text-fpt-orange" />
+                        )}
                     </div>
                 </div>
 
                 {/* Course list */}
-                <div className="flex-1 overflow-y-auto p-4">
-                    {loading && courses.length === 0 ? (
-                        <div className="flex justify-center py-8">
-                            <Loader2 className="h-6 w-6 animate-spin text-fpt-orange" />
+                <div className="flex-1 overflow-y-auto p-6 space-y-3">
+                    {courses.length === 0 && !loading ? (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                            <div className="p-4 bg-gray-100 dark:bg-zinc-800 rounded-full mb-4">
+                                <Search className="w-8 h-8 text-gray-300 dark:text-zinc-600" />
+                            </div>
+                            <p className="text-gray-500 dark:text-zinc-400 font-medium">
+                                {searchTerm ? 'Không tìm thấy môn học phù hợp' : 'Không có môn học nào khả dụng'}
+                            </p>
                         </div>
-                    ) : courses.length === 0 ? (
-                        <p className="text-center text-gray-500 dark:text-zinc-400 py-8">
-                            {searchTerm ? 'Không tìm thấy môn học phù hợp' : 'Không có môn học nào có thể thêm'}
-                        </p>
                     ) : (
-                        <div className="grid gap-2.5">
-                            {courses.map((course) => {
-                                const isSelected = selectedIds.includes(course.id);
-                                return (
-                                    <div
-                                        key={course.id}
-                                        onClick={() => handleSelect(course.id)}
-                                        className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${isSelected
-                                            ? 'border-fpt-orange bg-orange-50 dark:bg-orange-900/20'
-                                            : 'border-gray-200 hover:border-fpt-orange/50 hover:bg-gray-50 dark:border-zinc-700 dark:hover:bg-zinc-800'
-                                            }`}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div
-                                                className={`w-5 h-5 rounded border flex items-center justify-center transition-colors flex-shrink-0 ${isSelected
-                                                    ? 'bg-fpt-orange border-fpt-orange text-white'
-                                                    : 'border-gray-300 dark:border-zinc-600'
-                                                    }`}
-                                            >
-                                                {isSelected && <Check className="h-3 w-3" />}
-                                            </div>
-                                            <div>
-                                                <div className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                        courses.map((course) => {
+                            const isSelected = selectedIds.includes(course.id);
+                            return (
+                                <div
+                                    key={course.id}
+                                    onClick={() => handleSelect(course.id)}
+                                    className={`group flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all active:scale-[0.98] ${isSelected
+                                        ? 'border-fpt-orange bg-orange-50/50 dark:bg-orange-950/10'
+                                        : 'border-gray-100 dark:border-zinc-800 hover:border-fpt-orange/40 hover:bg-gray-50 dark:hover:bg-zinc-800'
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div
+                                            className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${isSelected
+                                                ? 'bg-fpt-orange border-fpt-orange text-white shadow-lg shadow-fpt-orange/20'
+                                                : 'border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900'
+                                                }`}
+                                        >
+                                            {isSelected && <Check className="h-4 w-4 stroke-[3]" />}
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-3 mb-1">
+                                                <span className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-fpt-orange transition-colors">
                                                     {course.code}
-                                                    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                                                        {course.credits} TC
+                                                </span>
+                                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 font-bold uppercase tracking-wider">
+                                                    {course.credits} TC
+                                                </span>
+                                                {course.status !== 'ACTIVE' && (
+                                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400 font-bold uppercase tracking-wider">
+                                                        Ẩn
                                                     </span>
-                                                    <span className={`text-xs px-2 py-0.5 rounded-full ${course.status === 'ACTIVE' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-zinc-700 dark:text-zinc-400'}`}>
-                                                        {course.status === 'ACTIVE' ? 'Đang hoạt động' : 'Không hoạt động'}
-                                                    </span>
-                                                </div>
-                                                <div className="text-sm text-gray-500 dark:text-zinc-400">{course.name}</div>
+                                                )}
                                             </div>
+                                            <div className="text-sm font-medium text-gray-500 dark:text-zinc-400 line-clamp-1">{course.name}</div>
                                         </div>
                                     </div>
-                                );
-                            })}
-                        </div>
+                                </div>
+                            );
+                        })
                     )}
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-gray-100 dark:border-zinc-800 flex justify-between items-center bg-gray-50 dark:bg-zinc-900/50 rounded-b-xl">
-                    <div className="text-sm text-gray-500 dark:text-zinc-400">
-                        Đã chọn: <span className="font-medium text-fpt-orange">{selectedIds.length}</span> môn học
+                <div className="p-6 border-t border-gray-100 dark:border-zinc-800 flex justify-between items-center bg-white dark:bg-zinc-900">
+                    <div className="text-sm font-bold text-gray-400">
+                        Đã chọn: <span className="text-fpt-orange font-black text-lg">{selectedIds.length}</span>
                     </div>
                     <div className="flex gap-3">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700 dark:hover:bg-zinc-700"
+                            className="h-[48px] px-6 rounded-2xl bg-gray-100 dark:bg-zinc-800 text-sm font-bold text-gray-500 dark:text-zinc-400 hover:bg-gray-200 dark:hover:bg-zinc-700 transition-all active:scale-95"
                         >
                             Hủy bỏ
                         </button>
                         <button
                             onClick={handleConfirm}
                             disabled={selectedIds.length === 0 || confirmLoading}
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-fpt-orange rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="flex items-center gap-2 h-[48px] px-8 rounded-2xl bg-fpt-orange text-sm font-bold text-white hover:bg-orange-600 shadow-lg shadow-fpt-orange/20 transition-all active:scale-95 disabled:opacity-50"
                         >
                             {confirmLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                            Thêm {selectedIds.length > 0 ? `(${selectedIds.length})` : ''} môn tiên quyết
+                            Xác nhận thêm
                         </button>
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
+

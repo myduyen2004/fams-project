@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, KeyRound, Loader2 } from 'lucide-react';
 import { lecturerOtpService } from '../../services/api/lecturerOtpService';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 
 interface OtpVerificationModalProps {
     isOpen: boolean;
@@ -197,3 +197,4 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
         </div>
     );
 };
+

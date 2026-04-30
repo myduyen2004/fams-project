@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, Upload, Loader2, FileSpreadsheet } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { specializationService } from '../../services/api/specializationService';
 import { SpecializationImportDTO } from '../../types/specialization';
 
@@ -49,7 +49,7 @@ export const ImportSpecializationModal: React.FC<ImportSpecializationModalProps>
             }
             setPreviewData(data);
             if (data.length === 0) {
-                toast('File không có dữ liệu hợp lệ', { icon: '⚠️' });
+                toast.warning('File không có dữ liệu hợp lệ', { icon: '⚠️' });
             } else {
                 toast.success(`Đã đọc ${data.length} dòng`);
             }
@@ -105,7 +105,7 @@ export const ImportSpecializationModal: React.FC<ImportSpecializationModalProps>
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
             <div className={`relative bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ${previewData ? 'w-full max-w-5xl max-h-[92vh]' : 'w-full max-w-lg'}`}>
                 <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800 shrink-0">
                     <div>
@@ -120,7 +120,7 @@ export const ImportSpecializationModal: React.FC<ImportSpecializationModalProps>
                             </p>
                         )}
                     </div>
-                    <button onClick={handleClose} className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-zinc-800">
+                    <button onClick={handleClose} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all active:scale-95">
                         <X className="h-5 w-5 text-gray-500 dark:text-zinc-400" />
                     </button>
                 </div>
@@ -128,7 +128,7 @@ export const ImportSpecializationModal: React.FC<ImportSpecializationModalProps>
                 <div className="p-6 overflow-y-auto flex-1">
                     {!previewData ? (
                         <form onSubmit={handlePreview} className="space-y-4">
-                            <div className="p-4 bg-blue-50 dark:bg-blue-900/10 text-blue-800 dark:text-blue-300 rounded-lg text-sm">
+                            <div className="p-4 bg-blue-50 dark:bg-blue-900/10 text-blue-800 dark:text-blue-300 rounded-2xl text-sm border border-blue-100 dark:border-blue-900/20">
                                 <p className="font-semibold mb-1">Hướng dẫn:</p>
                                 <ul className="list-disc pl-4 space-y-1">
                                     <li>Tải lên file <strong>.xlsx</strong> chứa dữ liệu chuyên ngành.</li>
@@ -147,13 +147,13 @@ export const ImportSpecializationModal: React.FC<ImportSpecializationModalProps>
                                     }
                                 }}
                                 disabled={loading}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-xl hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors font-semibold"
+                                className="w-full flex items-center justify-center gap-2 h-[44px] bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-2xl hover:bg-green-100 dark:hover:bg-green-900/30 transition-all font-bold active:scale-95"
                             >
                                 <FileSpreadsheet size={18} />
                                 Tải file mẫu Excel
                             </button>
 
-                            <div className="border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-lg p-6 flex flex-col items-center text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors relative">
+                            <div className="border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-2xl p-6 flex flex-col items-center text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors relative">
                                 <input
                                     required
                                     type="file"
@@ -177,14 +177,14 @@ export const ImportSpecializationModal: React.FC<ImportSpecializationModalProps>
                                     type="button"
                                     onClick={handleClose}
                                     disabled={loading}
-                                    className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 disabled:opacity-50"
+                                    className="h-[44px] px-6 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-bold text-gray-600 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-50"
                                 >
                                     Hủy
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="flex items-center justify-center rounded-lg bg-fpt-orange px-5 py-2.5 text-sm font-medium text-white hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-300 disabled:opacity-50"
+                                    className="flex items-center justify-center h-[44px] px-6 rounded-2xl bg-fpt-orange text-sm font-bold text-white hover:bg-orange-600 shadow-lg shadow-fpt-orange/20 transition-all active:scale-95 disabled:opacity-50"
                                 >
                                     {loading && <Loader2 size={16} className="animate-spin mr-2" />}
                                     Xem trước
@@ -193,7 +193,7 @@ export const ImportSpecializationModal: React.FC<ImportSpecializationModalProps>
                         </form>
                     ) : (
                         <div className="space-y-4">
-                            <div className="border rounded-lg overflow-hidden border-gray-200 dark:border-zinc-700">
+                            <div className="border rounded-2xl overflow-hidden border-gray-200 dark:border-zinc-700">
                                 <table className="w-full text-sm text-left">
                                     <thead className="bg-gray-50 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 font-medium border-b border-gray-200 dark:border-zinc-700">
                                         <tr>
@@ -263,7 +263,7 @@ export const ImportSpecializationModal: React.FC<ImportSpecializationModalProps>
                                     type="button"
                                     onClick={() => setPreviewData(null)}
                                     disabled={loading}
-                                    className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 disabled:opacity-50"
+                                    className="h-[44px] px-6 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-bold text-gray-600 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-50"
                                 >
                                     Quay lại
                                 </button>
@@ -272,7 +272,7 @@ export const ImportSpecializationModal: React.FC<ImportSpecializationModalProps>
                                         type="button"
                                         onClick={handleConfirmImport}
                                         disabled={loading}
-                                        className="flex items-center justify-center rounded-lg bg-fpt-orange px-5 py-2.5 text-sm font-medium text-white hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-300 disabled:opacity-50"
+                                        className="flex items-center justify-center h-[44px] px-6 rounded-2xl bg-fpt-orange text-sm font-bold text-white hover:bg-orange-600 shadow-lg shadow-fpt-orange/20 transition-all active:scale-95 disabled:opacity-50"
                                     >
                                         {loading && <Loader2 size={16} className="animate-spin mr-2" />}
                                         Xác nhận Import ({validCount + warningCount} dòng)
@@ -286,3 +286,4 @@ export const ImportSpecializationModal: React.FC<ImportSpecializationModalProps>
         </div>
     );
 };
+

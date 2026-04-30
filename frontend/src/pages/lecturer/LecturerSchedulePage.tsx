@@ -1,4 +1,13 @@
-import React, { useEffect, useState, useRef, Fragment } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
+
+// Static keyframes injected once at module level — avoids dangerouslySetInnerHTML per cell
+const PULSE_GLOW_CSS = `@keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 5px rgba(255,102,0,0.2); border-color: rgba(255,102,0,0.8); } 50% { box-shadow: 0 0 18px rgba(255,102,0,0.4); border-color: rgba(255,102,0,1); } }`;
+if (typeof document !== 'undefined' && !document.getElementById('pulse-glow-style')) {
+    const styleEl = document.createElement('style');
+    styleEl.id = 'pulse-glow-style';
+    styleEl.textContent = PULSE_GLOW_CSS;
+    document.head.appendChild(styleEl);
+}
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { Card } from '../../components/common/Card';
 import {
@@ -11,19 +20,17 @@ import {
     ChevronLeft,
     ChevronRight,
     BookOpen,
-    Plus,
     Lock,
     FileText,
-    Check,
-    ChevronDown
+    Plus
 } from 'lucide-react';
-import { Listbox, Transition } from '@headlessui/react';
-import { toast } from 'react-hot-toast';
+import toast from "@utils/toast";
 import timetableService, { WeeklyTimetableDTO, TimetableSlotDTO } from '../../services/api/timetableService';
 import { assignmentService, AssignmentDTO } from '../../services/api/assignmentService';
 import { scheduleRequestService } from '../../services/api/scheduleRequestService';
 import { uploadFile } from '../../services/utils/fileUploadService';
 import { useNavigate } from 'react-router-dom';
+import { CustomSelect } from '../../components/common/CustomSelect';
 
 const SLOTS = [
     { id: 1, label: 'SLOT 1', time: '07:30 - 09:45' },
@@ -97,7 +104,7 @@ export const LecturerSchedulePage: React.FC = () => {
             setUploadingFile(true);
             const uploadPromises = validFiles.map(file => uploadFile(file));
             const results = await Promise.all(uploadPromises);
-            
+
             const urls = results.map(r => r.secure_url || r.url);
             const names = validFiles.map(f => f.name);
 
@@ -137,9 +144,9 @@ export const LecturerSchedulePage: React.FC = () => {
         return `${year}-${month}-${day}`;
     };
 
-    // Generate weeks for the entire selected year
-    const generateWeeks = () => {
-        const weeks = [];
+    // Generate weeks for the entire selected year — memoized to avoid 53 object allocations per render
+    const weeks = useMemo(() => {
+        const weeks: { value: string; label: string; isCurrent: boolean }[] = [];
         const d = new Date(selectedYear, 0, 1);
         const startOfFirstWeek = getStartOfWeek(d);
 
@@ -159,9 +166,7 @@ export const LecturerSchedulePage: React.FC = () => {
             });
         }
         return weeks;
-    };
-
-    const weeks = generateWeeks();
+    }, [selectedYear]);
 
     const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const year = Number(e.target.value);
@@ -499,150 +504,80 @@ export const LecturerSchedulePage: React.FC = () => {
     return (
         <LecturerLayout pageTitle="Lịch giảng dạy">
             <div className="space-y-6">
-                <div className="flex flex-col gap-4">
-                    <div>
-                        <div className="flex items-center gap-2 text-fpt-orange font-bold text-sm mb-1">
-                            <CalendarIcon size={16} /> Năm học {selectedYear}-{selectedYear + 1}
-                        </div>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                            Lịch giảng dạy theo tuần
-                        </h1>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-4 p-2 rounded-xl">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-zinc-800">
+                    <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-3">
-                            {/* Year Selector */}
-                            <div className="relative">
-                                <Listbox value={selectedYear} onChange={(val) => handleYearChange({ target: { value: val } } as any)}>
-                                    <div className="relative">
-                                        <Listbox.Button className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 px-3 py-2 rounded-lg border border-orange-100 dark:border-orange-800 text-fpt-orange font-bold text-sm transition-all hover:bg-orange-100 dark:hover:bg-orange-900/30">
-                                            <span className="text-gray-500 dark:text-gray-400 font-medium flex items-center gap-1 whitespace-nowrap">
-                                                Lọc:
-                                            </span>
-                                            <span>{selectedYear}</span>
-                                            <ChevronDown size={14} className="text-fpt-orange" />
-                                        </Listbox.Button>
-                                        <Transition
-                                            as={Fragment}
-                                            leave="transition ease-in duration-100"
-                                            leaveFrom="opacity-100"
-                                            leaveTo="opacity-0"
-                                        >
-                                            <Listbox.Options className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-xl bg-white dark:bg-zinc-800 py-1 text-sm shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm border border-gray-100 dark:border-zinc-700">
-                                                {YEARS.map((year) => (
-                                                    <Listbox.Option
-                                                        key={year}
-                                                        className={({ active }) =>
-                                                            `relative cursor-default select-none py-2 pl-10 pr-4 ${
-                                                                active ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange' : 'text-gray-900 dark:text-gray-200'
-                                                            }`
-                                                        }
-                                                        value={year}
-                                                    >
-                                                        {({ selected }) => (
-                                                            <>
-                                                                <span className={`block truncate ${selected ? 'font-bold' : 'font-normal'}`}>
-                                                                    {year}
-                                                                </span>
-                                                                {selected ? (
-                                                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-fpt-orange">
-                                                                        <Check className="h-4 w-4" aria-hidden="true" />
-                                                                    </span>
-                                                                ) : null}
-                                                            </>
-                                                        )}
-                                                    </Listbox.Option>
-                                                ))}
-                                            </Listbox.Options>
-                                        </Transition>
-                                    </div>
-                                </Listbox>
-                            </div>
+                            <div className="w-2 h-8 bg-fpt-orange rounded-full" />
+                            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Lịch giảng dạy theo tuần</h1>
+                        </div>
+                        <p className="text-gray-500 dark:text-gray-400 font-medium ml-5 flex items-center gap-2">
+                            <CalendarIcon size={16} className="text-fpt-orange" /> Năm học {selectedYear}-{selectedYear + 1}
+                        </p>
+                    </div>
+                </div>
 
-                            <div className="flex items-center gap-1">
+                {/* Filters & Actions */}
+                <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-zinc-800">
+                    <div className="flex flex-wrap items-end gap-6">
+                        {/* Year Selector */}
+                        <div className="w-full md:w-48">
+                            <CustomSelect
+                                label="Năm học"
+                                value={selectedYear.toString()}
+                                onChange={(val) => handleYearChange({ target: { value: val } } as any)}
+                                options={YEARS.map(year => ({ label: year.toString(), value: year.toString() }))}
+                            />
+                        </div>
+
+                        {/* Week Navigation */}
+                        <div className="flex items-end gap-2">
+                            <div className="flex items-end gap-2 pb-0.5">
                                 <button
                                     onClick={handlePrevWeek}
-                                    className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-fpt-orange transition-colors"
+                                    className="h-[52px] w-[52px] flex items-center justify-center rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-fpt-orange hover:border-fpt-orange/40 hover:shadow-lg transition-all active:scale-95 shrink-0"
                                     title="Tuần trước"
                                 >
                                     <ChevronLeft size={20} />
                                 </button>
-
-                                {/* Week Selector */}
-                                <div className="relative min-w-[260px]">
-                                    <Listbox value={getCurrentWeekValue()} onChange={(val) => handleWeekChange({ target: { value: val } } as any)}>
-                                        <div className="relative">
-                                            <Listbox.Button className="flex items-center justify-between w-full gap-2 bg-white dark:bg-zinc-800 px-3 py-2 rounded-lg border border-fpt-orange/50 shadow-sm text-gray-700 dark:text-gray-200 font-medium text-sm transition-all hover:border-fpt-orange focus:ring-2 ring-fpt-orange/20">
-                                                <span className="truncate">{weeks.find(w => w.value === getCurrentWeekValue())?.label || 'Chọn tuần'}</span>
-                                                <ChevronDown size={14} className="text-gray-400" />
-                                            </Listbox.Button>
-                                            <Transition
-                                                as={Fragment}
-                                                leave="transition ease-in duration-100"
-                                                leaveFrom="opacity-100"
-                                                leaveTo="opacity-0"
-                                            >
-                                                <Listbox.Options className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-xl bg-white dark:bg-zinc-800 py-1 text-sm shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm border border-gray-100 dark:border-zinc-700">
-                                                    {weeks.map((week) => (
-                                                        <Listbox.Option
-                                                            key={week.value}
-                                                            className={({ active }) =>
-                                                                `relative cursor-default select-none py-2 pl-10 pr-4 ${
-                                                                    active ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange' : 'text-gray-900 dark:text-gray-200'
-                                                                }`
-                                                            }
-                                                            value={week.value}
-                                                        >
-                                                            {({ selected }) => (
-                                                                <>
-                                                                    <span className={`block truncate ${selected ? 'font-bold' : 'font-normal'}`}>
-                                                                        {week.label}
-                                                                    </span>
-                                                                    {selected ? (
-                                                                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-fpt-orange">
-                                                                            <Check className="h-4 w-4" aria-hidden="true" />
-                                                                        </span>
-                                                                    ) : null}
-                                                                </>
-                                                            )}
-                                                        </Listbox.Option>
-                                                    ))}
-                                                </Listbox.Options>
-                                            </Transition>
-                                        </div>
-                                    </Listbox>
+                                <div className="w-full md:w-80">
+                                    <CustomSelect
+                                        label="Tuần"
+                                        value={getCurrentWeekValue()}
+                                        onChange={(val) => handleWeekChange({ target: { value: val } } as any)}
+                                        options={weeks.map(week => ({ label: week.label, value: week.value }))}
+                                    />
                                 </div>
-
                                 <button
                                     onClick={handleNextWeek}
-                                    className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-fpt-orange transition-colors"
+                                    className="h-[52px] w-[52px] flex items-center justify-center rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-fpt-orange hover:border-fpt-orange/40 hover:shadow-lg transition-all active:scale-95 shrink-0"
                                     title="Tuần sau"
                                 >
                                     <ChevronRight size={20} />
                                 </button>
                             </div>
                         </div>
-
-                        {!isScheduleHidden && (
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={handleOpenDownloadDialog}
-                                    className="flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-xl font-medium text-sm shadow-md shadow-orange-500/20 hover:bg-orange-600 transition-colors"
-                                >
-                                    <Download size={18} />
-                                    <span>Tải bài nộp theo slot</span>
-                                </button>
-                                <button
-                                    onClick={handleExport}
-                                    disabled={exporting}
-                                    className={`flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-xl font-medium text-sm shadow-md shadow-orange-500/20 hover:bg-orange-600 transition-colors ${exporting ? 'opacity-70 cursor-not-allowed' : ''}`}
-                                >
-                                    {exporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-                                    <span>{exporting ? 'Đang xuất...' : 'Xuất file'}</span>
-                                </button>
-                            </div>
-                        )}
                     </div>
+
+                    {!isScheduleHidden && (
+                        <div className="flex items-end gap-3 pb-0.5">
+                            <button
+                                onClick={handleOpenDownloadDialog}
+                                className="flex h-[52px] items-center gap-2 px-6 bg-white dark:bg-zinc-900 text-fpt-orange border-2 border-fpt-orange/20 rounded-2xl font-bold text-sm hover:border-fpt-orange hover:shadow-lg transition-all active:scale-95 whitespace-nowrap"
+                            >
+                                <Download size={18} />
+                                <span>Bài nộp</span>
+                            </button>
+                            <button
+                                onClick={handleExport}
+                                disabled={exporting}
+                                className={`flex h-[52px] items-center gap-2 px-8 bg-fpt-orange text-white rounded-2xl font-bold text-sm shadow-lg shadow-fpt-orange/20 hover:bg-orange-600 transition-all active:scale-95 whitespace-nowrap ${exporting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            >
+                                {exporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+                                <span>{exporting ? 'Đang xuất...' : 'Xuất file'}</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 <Card className="min-w-full overflow-hidden border-none shadow-sm dark:shadow-none bg-white dark:bg-zinc-900">
@@ -665,7 +600,7 @@ export const LecturerSchedulePage: React.FC = () => {
                             <table className="w-full border-collapse min-w-[1000px] table-fixed">
                                 <thead>
                                     <tr className="bg-gray-50 dark:bg-zinc-800/50">
-                                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-zinc-800 w-[14%]">
+                                        <th className="px-4 py-5 text-black dark:text-white text-left w-[14%] text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             Thứ / Ngày
                                         </th>
                                         {SLOTS.map((slot) => {
@@ -677,10 +612,10 @@ export const LecturerSchedulePage: React.FC = () => {
                                                     key={slot.id}
                                                     className="text-center px-4 py-3 border-b border-l border-gray-100 dark:border-zinc-800 w-[21.5%]"
                                                 >
-                                                    <div className="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider">
+                                                    <div className="text-xs font-bold text-black dark:text-white uppercase tracking-wider">
                                                         {slot.label}
                                                     </div>
-                                                    <div className="text-[11px] text-gray-400 mt-1 font-medium">
+                                                    <div className="text-[11px] text-black dark:text-white/80 mt-1 font-medium">
                                                         {timeRange}
                                                     </div>
                                                 </th>
@@ -731,16 +666,15 @@ export const LecturerSchedulePage: React.FC = () => {
                                                                     onClick={() => setSelectedSlot(slotData)}
                                                                     className={`relative group rounded-md p-2.5 shadow-sm transition-all cursor-pointer h-[110px] w-full flex flex-col justify-between ${borderClass} ${bgClass} ${isOngoing ? 'ring-1 ring-fpt-orange/30 shadow-[0_0_15px_rgba(255,102,0,0.2)] animate-[pulse-glow_2s_infinite_ease-in-out]' : 'hover:shadow-md'}`}
                                                                 >
-                                                                    {isOngoing && <style dangerouslySetInnerHTML={{ __html: `@keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 5px rgba(255,102,0,0.2); border-color: rgba(255,102,0,0.8); } 50% { box-shadow: 0 0 18px rgba(255,102,0,0.4); border-color: rgba(255,102,0,1); } }` }} />}
+                                                                    {isOngoing && <div className="absolute inset-0 rounded-md pointer-events-none ring-1 ring-fpt-orange/30" />}
                                                                     <div>
                                                                         <div className="flex items-center justify-between mb-1.5">
                                                                             <span className="font-extrabold text-[#001D4A] dark:text-white text-sm leading-tight truncate pr-1" title={slotData.courseName}>{slotData.courseCode}</span>
-                                                                            <span className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
-                                                                                isCancelled ? 'bg-red-50/20 text-red-500/80 border border-red-100/20' :
+                                                                            <span className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${isCancelled ? 'bg-red-50/20 text-red-500/80 border border-red-100/20' :
                                                                                 isFinished ? 'bg-gray-100 text-gray-500 border border-gray-200' :
-                                                                                isOngoing ? 'bg-fpt-orange/20 text-fpt-orange border border-fpt-orange/30' :
-                                                                                'bg-slate-50/20 text-slate-400 border border-slate-100/20'
-                                                                            }`}>
+                                                                                    isOngoing ? 'bg-fpt-orange/20 text-fpt-orange border border-fpt-orange/30' :
+                                                                                        'bg-slate-50/20 text-slate-400 border border-slate-100/20'
+                                                                                }`}>
                                                                                 {status}
                                                                             </span>
                                                                         </div>
@@ -778,7 +712,7 @@ export const LecturerSchedulePage: React.FC = () => {
             {selectedSlot && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedSlot(null)}>
                     <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
-                        
+
                         {/* Header */}
                         <div className="bg-fpt-orange px-8 py-6 relative">
                             <h3 className="text-white font-bold text-xl mb-1">Chi tiết buổi dạy</h3>
@@ -793,7 +727,7 @@ export const LecturerSchedulePage: React.FC = () => {
 
                         {/* Content */}
                         <div className="p-8 space-y-6">
-                            
+
                             {/* Date & Time Row */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="flex items-center gap-4">
@@ -870,11 +804,10 @@ export const LecturerSchedulePage: React.FC = () => {
                                             {selectedSlot.assignmentTitle}
                                         </p>
                                         <div className="mt-2">
-                                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider ${
-                                                selectedSlot.assignmentStatus === 'OPEN'
-                                                    ? 'bg-green-100/80 text-green-700'
-                                                    : 'bg-gray-200 text-gray-600'
-                                            }`}>
+                                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider ${selectedSlot.assignmentStatus === 'OPEN'
+                                                ? 'bg-green-100/80 text-green-700'
+                                                : 'bg-gray-200 text-gray-600'
+                                                }`}>
                                                 {selectedSlot.assignmentStatus === 'OPEN' ? 'Đang mở' : 'Đã đóng'}
                                             </span>
                                         </div>
@@ -893,7 +826,7 @@ export const LecturerSchedulePage: React.FC = () => {
                                     {getStatusLabel(selectedSlot)}
                                 </span>
                             </div>
-                            
+
                             <div className="flex gap-3 w-full sm:w-auto">
                                 {!selectedSlot.assignmentId && (
                                     <button
@@ -1011,18 +944,15 @@ export const LecturerSchedulePage: React.FC = () => {
                                 <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
                                     Lớp học <span className="text-red-500">*</span>
                                 </label>
-                                <select
+                                <CustomSelect
                                     value={dlClassName}
-                                    onChange={e => handleDlClassChange(e.target.value)}
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                >
-                                    <option value="">-- Chọn lớp --</option>
-                                    {loadingDlData && !dlClasses.length ? (
-                                        <option disabled>Đang tải...</option>
-                                    ) : dlClasses.map(c => (
-                                        <option key={c} value={c}>{c}</option>
-                                    ))}
-                                </select>
+                                    onChange={handleDlClassChange}
+                                    options={[
+                                        { value: '', label: '-- Chọn lớp --' },
+                                        ...(loadingDlData && !dlClasses.length ? [{ value: 'loading', label: 'Đang tải...', disabled: true }] : dlClasses.map(c => ({ value: c, label: c })))
+                                    ]}
+                                    className="bg-gray-50 dark:bg-zinc-800 border-gray-200 dark:border-zinc-700"
+                                />
                             </div>
 
                             {dlClassName && (
@@ -1030,20 +960,15 @@ export const LecturerSchedulePage: React.FC = () => {
                                     <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
                                         Bài tập <span className="text-red-500">*</span>
                                     </label>
-                                    <select
+                                    <CustomSelect
                                         value={dlAssignmentId?.toString() || ''}
-                                        onChange={e => handleDlAssignmentChange(e.target.value)}
-                                        className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                    >
-                                        <option value="">-- Chọn bài tập --</option>
-                                        {loadingDlData ? (
-                                            <option disabled>Đang tải...</option>
-                                        ) : dlAssignments.map(a => (
-                                            <option key={a.id} value={a.id.toString()}>
-                                                {a.title} ({a.status === 'OPEN' ? 'Đang mở' : 'Đã đóng'})
-                                            </option>
-                                        ))}
-                                    </select>
+                                        onChange={handleDlAssignmentChange}
+                                        options={[
+                                            { value: '', label: '-- Chọn bài tập --' },
+                                            ...(loadingDlData ? [{ value: 'loading', label: 'Đang tải...', disabled: true }] : dlAssignments.map(a => ({ value: a.id.toString(), label: `${a.title} (${a.status === 'OPEN' ? 'Đang mở' : 'Đã đóng'})` })))
+                                        ]}
+                                        className="bg-gray-50 dark:bg-zinc-800 border-gray-200 dark:border-zinc-700"
+                                    />
                                 </div>
                             )}
 
@@ -1070,3 +995,5 @@ export const LecturerSchedulePage: React.FC = () => {
         </LecturerLayout>
     );
 };
+
+

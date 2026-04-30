@@ -21,3 +21,4 @@ export const ComingSoon: React.FC<ComingSoonProps> = ({ title }) => {
         </div>
     );
 };
+
