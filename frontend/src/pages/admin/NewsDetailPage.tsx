@@ -186,10 +186,6 @@ export const NewsDetailPage = () => {
                 
                 <div className="space-y-0 text-sm">
                   <div className="flex justify-between items-center py-4 border-b border-gray-100 dark:border-zinc-800/60">
-                    <span className="text-gray-500 dark:text-gray-400 font-medium">ID Bài viết:</span>
-                    <span className="font-bold text-gray-900 dark:text-white">{news.id}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-4 border-b border-gray-100 dark:border-zinc-800/60">
                     <span className="text-gray-500 dark:text-gray-400 font-medium">Trạng thái:</span>
                     <span className="font-bold text-gray-900 dark:text-white">
                       {news.status === NewsStatus.SENT ? 'Đã xuất bản' : news.status === NewsStatus.SCHEDULED ? 'Đã lên lịch' : 'Bản nháp'}

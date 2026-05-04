@@ -13,6 +13,7 @@ import { AdminSidebar } from '../../components/admin/AdminSidebar';
 import { CustomSelect } from '../../components/common/CustomSelect';
 
 import { CommonHeader } from '../../components/common/CommonHeader';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 // --- Constants ---
 const MODELS = [
@@ -296,6 +297,8 @@ export const ChatPage: React.FC = () => {
     const [userRole, setUserRole] = useState('');
     const [userId, setUserId] = useState<string | null>(null);
     const [pendingFieldRequest, setPendingFieldRequest] = useState<PendingFieldRequest | null>(null);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [sessionIdToDelete, setSessionIdToDelete] = useState<number | null>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const lastUserIdRef = useRef<string | null>(null);
@@ -362,7 +365,7 @@ export const ChatPage: React.FC = () => {
         }
     }, [userId, loadSessions]);
 
-    const handleSelectSession = async (session: AIChatSession) => {
+    const handleSelectSession = useCallback(async (session: AIChatSession) => {
         setCurrentSession(session);
         try {
             const msgs = await chatService.getMessages(session.id);
@@ -372,9 +375,37 @@ export const ChatPage: React.FC = () => {
         } catch {
             toast.error('Không thể tải tin nhắn');
         }
-    };
+    }, []);
 
     const handleNewChat = useCallback(async () => {
+        // 1. If current session is already empty, just stay here
+        if (currentSession && messages.length === 0) {
+            return;
+        }
+
+        // 2. Look for an existing empty session in the list
+        // We use a more robust check for placeholder titles or missing titles
+        const emptySession = sessions.find(s => {
+            const title = (s.title || "").trim().toLowerCase();
+            return (
+                title === "" || 
+                title === "không có tiêu đề" || 
+                title === "chat mới" || 
+                title === "new chat" || 
+                title === "new chat session" ||
+                title === "phiên chat mới" ||
+                title === "cuộc trò chuyện mới" ||
+                title === "new conversation" ||
+                title.includes("new chat")
+            );
+        });
+
+        if (emptySession) {
+            handleSelectSession(emptySession);
+            return;
+        }
+
+        // 3. Create a brand new session if no empty one exists
         try {
             const newSession = await chatService.createSession();
             setSessions(prev => [newSession, ...prev]);
@@ -385,15 +416,19 @@ export const ChatPage: React.FC = () => {
         } catch {
             toast.error('Không thể tạo phiên chat mới');
         }
+    }, [currentSession, messages.length, sessions, handleSelectSession]);
+
+    const handleDeleteSession = useCallback((sessionId: number) => {
+        setSessionIdToDelete(sessionId);
+        setShowDeleteModal(true);
     }, []);
 
-    const handleDeleteSession = useCallback(async (sessionId: number) => {
-        if (!window.confirm('Bạn có chắc chắn muốn xóa phiên chat này?')) return;
-
+    const confirmDelete = async () => {
+        if (!sessionIdToDelete) return;
         try {
-            await chatService.deleteSession(sessionId);
-            setSessions(prev => prev.filter(s => s.id !== sessionId));
-            if (currentSession?.id === sessionId) {
+            await chatService.deleteSession(sessionIdToDelete);
+            setSessions(prev => prev.filter(s => s.id !== sessionIdToDelete));
+            if (currentSession?.id === sessionIdToDelete) {
                 setCurrentSession(null);
                 setMessages([]);
                 setThinkingSteps([]);
@@ -402,8 +437,11 @@ export const ChatPage: React.FC = () => {
             toast.success('Đã xóa phiên chat');
         } catch {
             toast.error('Không thể xóa phiên chat');
+        } finally {
+            setShowDeleteModal(false);
+            setSessionIdToDelete(null);
         }
-    }, [currentSession]);
+    };
 
     const handleSendMessage = useCallback(async (content: string) => {
         if (!content.trim() || !currentSession || isLoading) return;
@@ -656,7 +694,7 @@ export const ChatPage: React.FC = () => {
                             <div className="chat-ambient-orb chat-ambient-orb-two" />
                             <div className="chat-ambient-grid" />
                         </div>
-                        <header className="h-16 flex-shrink-0 border-b border-gray-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md flex items-center justify-between px-4 z-10">
+                        <header className="min-h-[72px] h-auto flex-shrink-0 border-b border-gray-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md flex flex-wrap items-center justify-between px-4 py-2 z-10 gap-y-4">
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -688,7 +726,7 @@ export const ChatPage: React.FC = () => {
                                         value={selectedRoutingModel}
                                         onChange={(value) => setSelectedRoutingModel(value)}
                                         options={MODELS.map(m => ({ value: m.id, label: m.name }))}
-                                        className="text-xs bg-gray-50 dark:bg-zinc-800 border-none rounded p-1 text-gray-700 dark:text-zinc-300"
+                                        className="text-xs dark:bg-zinc-800 border-none rounded p-1 text-gray-700 dark:text-zinc-300"
                                     />
                                 </div>
                                 <div className="flex flex-col gap-1">
@@ -697,7 +735,7 @@ export const ChatPage: React.FC = () => {
                                         value={selectedAnswerModel}
                                         onChange={(value) => setSelectedAnswerModel(value)}
                                         options={MODELS.map(m => ({ value: m.id, label: m.name }))}
-                                        className="text-xs bg-gray-50 dark:bg-zinc-800 border-none rounded p-1 text-gray-700 dark:text-zinc-300"
+                                        className="text-xs dark:bg-zinc-800 border-none rounded p-1 text-gray-700 dark:text-zinc-300"
                                     />
                                 </div>
                             </div>
@@ -763,12 +801,12 @@ export const ChatPage: React.FC = () => {
                         )}
 
                         <div className="relative z-10">
-                        <ChatInput
-                            onSendMessage={handleSendMessage}
-                            onUploadFile={handleUploadFile}
-                            isLoading={isLoading}
-                            disabled={!currentSession}
-                        />
+                            <ChatInput
+                                onSendMessage={handleSendMessage}
+                                onUploadFile={handleUploadFile}
+                                isLoading={isLoading}
+                                disabled={!currentSession}
+                            />
                         </div>
                     </div>
 
@@ -866,6 +904,16 @@ export const ChatPage: React.FC = () => {
             `}</style>
                 </div>
             </div>
+            <ConfirmModal
+                isOpen={showDeleteModal}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={confirmDelete}
+                title="Xóa phiên chat"
+                message="Bạn có chắc chắn muốn xóa phiên chat này không? Toàn bộ lịch sử tin nhắn sẽ bị xóa vĩnh viễn."
+                confirmLabel="Xóa ngay"
+                cancelLabel="Hủy"
+                type="danger"
+            />
         </div>
     );
 };

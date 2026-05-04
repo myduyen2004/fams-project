@@ -68,7 +68,6 @@ export const ChatMessageIcon: React.FC = () => {
                         sentAt: data.sentAt
                     }
                 };
-
                 // Sort by last message time
                 return updatedGroups.sort((a, b) => {
                     const timeA = a.lastMessage?.sentAt ? new Date(a.lastMessage.sentAt).getTime() : 0;
@@ -79,13 +78,17 @@ export const ChatMessageIcon: React.FC = () => {
         }
     });
 
-    const unreadGroups = useMemo(() => {
-        return groups.filter(g => (g.unreadCount || 0) > 0);
+    const recentGroups = useMemo(() => {
+        return [...groups].sort((a, b) => {
+            const timeA = a.lastMessage?.sentAt ? new Date(a.lastMessage.sentAt).getTime() : 0;
+            const timeB = b.lastMessage?.sentAt ? new Date(b.lastMessage.sentAt).getTime() : 0;
+            return timeB - timeA;
+        }).slice(0, 5);
     }, [groups]);
 
     const totalUnread = useMemo(() => {
-        return unreadGroups.reduce((acc, g) => acc + (g.unreadCount || 0), 0);
-    }, [unreadGroups]);
+        return groups.reduce((acc, g) => acc + (g.unreadCount || 0), 0);
+    }, [groups]);
 
     const handleGroupClick = (group: ChatGroupResponse) => {
         const path = `/${role}/messages`;
@@ -119,22 +122,22 @@ export const ChatMessageIcon: React.FC = () => {
                     <div className="p-4 border-b border-gray-100 dark:border-zinc-800 flex justify-between items-center">
                         <h3 className="font-bold text-gray-900 dark:text-white">Tin nhắn</h3>
                         <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {unreadGroups.length} cuộc hội thoại mới
+                            {totalUnread} tin nhắn mới
                         </span>
                     </div>
 
                     <div className="max-h-[400px] overflow-y-auto">
-                        {unreadGroups.length === 0 ? (
+                        {recentGroups.length === 0 ? (
                             <div className="py-12 flex flex-col items-center justify-center text-gray-400">
                                 <MessageCircle size={40} className="opacity-10 mb-2" />
-                                <p className="text-xs">Không có tin nhắn mới</p>
+                                <p className="text-xs">Không có tin nhắn</p>
                             </div>
                         ) : (
-                            unreadGroups.map(group => (
+                            recentGroups.map(group => (
                                 <div
                                     key={group.id}
                                     onClick={() => handleGroupClick(group)}
-                                    className="p-3 flex gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors border-b border-gray-50 dark:border-zinc-800/50 last:border-0"
+                                    className={`p-3 flex gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors border-b border-gray-50 dark:border-zinc-800/50 last:border-0 ${group.unreadCount && group.unreadCount > 0 ? 'bg-blue-50/20 dark:bg-blue-900/10' : ''}`}
                                 >
                                     <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-sm shrink-0">
                                         {group.name.charAt(0)}

@@ -273,7 +273,7 @@ export const AIToolManagement: React.FC = () => {
         </div>
 
         {/* Search & Filter Bar */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-0 shadow-sm border-2 border-gray-100 dark:border-zinc-800 flex items-center justify-between overflow-hidden">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-0 shadow-sm border-2 border-gray-100 dark:border-zinc-800 flex flex-wrap items-center justify-between min-h-[52px]">
           <div className="flex-1 flex items-center h-[52px] px-4 relative">
             <Search size={18} className="text-slate-400 shrink-0 absolute left-4" />
             <input
