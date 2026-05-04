@@ -68,9 +68,6 @@ export const ChatMessageIcon: React.FC = () => {
                         sentAt: data.sentAt
                     }
                 };
-
-
-
                 // Sort by last message time
                 return updatedGroups.sort((a, b) => {
                     const timeA = a.lastMessage?.sentAt ? new Date(a.lastMessage.sentAt).getTime() : 0;
@@ -140,7 +137,7 @@ export const ChatMessageIcon: React.FC = () => {
                                 <div
                                     key={group.id}
                                     onClick={() => handleGroupClick(group)}
-                                    className={`p-3 flex gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors border-b border-gray-50 dark:border-zinc-800/50 last:border-0 ${(group.unreadCount ?? 0) > 0 ? 'bg-blue-50/20 dark:bg-blue-900/10' : ''}`}
+                                    className={`p-3 flex gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors border-b border-gray-50 dark:border-zinc-800/50 last:border-0 ${group.unreadCount && group.unreadCount > 0 ? 'bg-blue-50/20 dark:bg-blue-900/10' : ''}`}
                                 >
                                     <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-sm shrink-0">
                                         {group.name.charAt(0)}
@@ -160,7 +157,7 @@ export const ChatMessageIcon: React.FC = () => {
                                             </span> {group.lastMessage?.content || (group.lastMessage?.type === 'IMAGE' ? '[Hình ảnh]' : '[Tệp tin]')}
                                         </p>
                                     </div>
-                                    {(group.unreadCount ?? 0) > 0 && (
+                                    {group.unreadCount && group.unreadCount > 0 && (
                                         <div className="mt-1">
                                             <div className="bg-blue-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
                                                 {group.unreadCount}
