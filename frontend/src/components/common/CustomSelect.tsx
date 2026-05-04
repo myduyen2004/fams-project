@@ -142,9 +142,9 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
 
   const filteredOptions = isSearchable
     ? options.filter((opt) =>
-        opt.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        opt.value.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      opt.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      opt.value.toLowerCase().includes(searchTerm.toLowerCase())
+    )
     : options;
 
   return (
@@ -159,23 +159,20 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         type="button"
         disabled={disabled}
         onClick={handleToggle}
-        className={`flex items-center justify-between w-full h-[52px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 text-left focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 transition-all ${
-          disabled
+        className={`flex items-center justify-between w-full h-[52px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 text-left focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 transition-all ${disabled
             ? 'opacity-50 cursor-not-allowed text-gray-500'
             : 'hover:border-fpt-orange/40 hover:shadow-lg hover:shadow-fpt-orange/5'
-        } ${isOpen ? 'border-fpt-orange' : ''}`}
+          } ${isOpen ? 'border-fpt-orange' : ''}`}
       >
         <span
-          className={`text-sm font-semibold truncate ${
-            selectedOption ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-zinc-500'
-          }`}
+          className={`text-sm font-semibold truncate ${selectedOption ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-zinc-500'
+            }`}
         >
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <ChevronDown
-          className={`h-4 w-4 text-gray-400 transition-transform flex-shrink-0 ml-2 ${
-            isOpen ? 'rotate-180 text-fpt-orange' : ''
-          }`}
+          className={`h-4 w-4 text-gray-400 transition-transform flex-shrink-0 ml-2 ${isOpen ? 'rotate-180 text-fpt-orange' : ''
+            }`}
         />
       </button>
 
@@ -230,17 +227,15 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
                             setIsOpen(false);
                           }
                         }}
-                        className={`flex w-full items-center justify-between px-4 py-2.5 text-left transition-all rounded-xl ${
-                          opt.disabled
+                        className={`flex w-full items-center justify-between px-4 py-2.5 text-left transition-all rounded-xl ${opt.disabled
                             ? 'opacity-50 cursor-not-allowed text-gray-400 dark:text-zinc-500'
                             : 'hover:bg-gray-50 dark:hover:bg-zinc-800/50'
-                        } ${
-                          value === opt.value
+                          } ${value === opt.value
                             ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange'
                             : opt.disabled
-                            ? ''
-                            : 'text-gray-700 dark:text-zinc-300 font-medium'
-                        }`}
+                              ? ''
+                              : 'text-gray-700 dark:text-zinc-300 font-medium'
+                          }`}
                       >
                         <span className="text-sm truncate pr-2">{opt.label}</span>
                         {value === opt.value && (

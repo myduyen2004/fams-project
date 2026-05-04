@@ -8,8 +8,9 @@ import { authService } from '../../services/api/authService';
 import { uploadFile } from '../../services/utils/fileUploadService';
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import { Pagination } from '../../components/common/Pagination';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-    Clock, Search, FileText, Loader2, Plus, X, BookOpen, Edit3, Trash2, Download
+    Clock, Search, FileText, Loader2, Plus, X, BookOpen, Edit3, Trash2, Download, ChevronDown, Check
 } from 'lucide-react';
 import toast from "@utils/toast";
 import { CustomSelect } from '../../components/common/CustomSelect';
@@ -65,6 +66,27 @@ export const LecturerAssignmentPage: React.FC = () => {
     const [createClassSlots, setCreateClassSlots] = useState<TimetableSlotDTO[]>([]);
     const [loadingClassSlots, setLoadingClassSlots] = useState(false);
     const [selectedSessionNumber, setSelectedSessionNumber] = useState<number | null>(null);
+
+    // Custom dropdown states for create modal
+    const [openClassDropdown, setOpenClassDropdown] = useState(false);
+    const [classSearchTerm, setClassSearchTerm] = useState('');
+    const [openSlotDropdown, setOpenSlotDropdown] = useState(false);
+    const classDropdownRef = useRef<HTMLDivElement>(null);
+    const slotDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Click outside for custom dropdowns
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (classDropdownRef.current && !classDropdownRef.current.contains(event.target as Node)) {
+                setOpenClassDropdown(false);
+            }
+            if (slotDropdownRef.current && !slotDropdownRef.current.contains(event.target as Node)) {
+                setOpenSlotDropdown(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // Download dialog state
     const [showDownloadDialog, setShowDownloadDialog] = useState(false);
@@ -885,42 +907,125 @@ export const LecturerAssignmentPage: React.FC = () => {
                         <div className="p-8 overflow-y-auto custom-scrollbar">
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                                 <div className="space-y-6">
-                                    {/* Class Selector using CustomSelect */}
-                                    <div>
-                                        <CustomSelect
-                                            label="Lớp học *"
-                                            value={createClassName}
-                                            onChange={(val) => {
-                                                setCreateClassName(val);
-                                                setSelectedSessionNumber(null);
-                                            }}
-                                            placeholder="Chọn lớp học"
-                                            options={classes.map(cls => ({
-                                                value: cls.className,
-                                                label: `${cls.className} - ${cls.courseName}`
-                                            }))}
-                                            isSearchable={true}
-                                        />
+                                    {/* Class Selector - Custom UI */}
+                                    <div ref={classDropdownRef} className="relative">
+                                        <label className="block text-[10px] uppercase font-bold tracking-widest text-gray-400 mb-2 ml-1">
+                                            Lớp học <span className="text-red-500">*</span>
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={() => setOpenClassDropdown(!openClassDropdown)}
+                                            className={`flex items-center justify-between w-full h-[52px] rounded-2xl border-2 px-4 text-left transition-all ${openClassDropdown ? 'border-fpt-orange ring-4 ring-fpt-orange/10 shadow-lg shadow-fpt-orange/5' : 'border-gray-100 dark:border-zinc-800 hover:border-fpt-orange/40'
+                                                } bg-white dark:bg-zinc-900`}
+                                        >
+                                            <span className={`text-sm font-bold truncate ${createClassName ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-zinc-500'}`}>
+                                                {createClassName ? (classes.find(c => c.className === createClassName)?.className + ' - ' + classes.find(c => c.className === createClassName)?.courseName) : 'Chọn lớp học'}
+                                            </span>
+                                            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${openClassDropdown ? 'rotate-180 text-fpt-orange' : ''}`} />
+                                        </button>
+
+                                        <AnimatePresence>
+                                            {openClassDropdown && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: -10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -10 }}
+                                                    transition={{ duration: 0.15 }}
+                                                    className="absolute z-[60] mt-2 w-full bg-white dark:bg-zinc-900 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 shadow-2xl p-1.5 overflow-hidden flex flex-col"
+                                                >
+                                                    <div className="max-h-[250px] overflow-auto custom-scrollbar">
+                                                        {classes.filter(c =>
+                                                            c.className.toLowerCase().includes(classSearchTerm.toLowerCase()) ||
+                                                            c.courseName.toLowerCase().includes(classSearchTerm.toLowerCase())
+                                                        ).length > 0 ? (
+                                                            classes.filter(c =>
+                                                                c.className.toLowerCase().includes(classSearchTerm.toLowerCase()) ||
+                                                                c.courseName.toLowerCase().includes(classSearchTerm.toLowerCase())
+                                                            ).map((cls) => (
+                                                                <button
+                                                                    key={cls.className}
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setCreateClassName(cls.className);
+                                                                        setSelectedSessionNumber(null);
+                                                                        setOpenClassDropdown(false);
+                                                                        setClassSearchTerm('');
+                                                                    }}
+                                                                    className={`flex w-full items-center justify-between px-4 py-2.5 text-left transition-all rounded-xl hover:bg-gray-50 dark:hover:bg-zinc-800/50 ${createClassName === cls.className ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange' : 'text-gray-700 dark:text-zinc-300 font-medium'
+                                                                        }`}
+                                                                >
+                                                                    <span className="text-sm truncate pr-2">{cls.className} - {cls.courseName}</span>
+                                                                    {createClassName === cls.className && <Check size={14} className="stroke-[3]" />}
+                                                                </button>
+                                                            ))
+                                                        ) : (
+                                                            <div className="py-6 text-center text-gray-400 text-xs">Không tìm thấy lớp học</div>
+                                                        )}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
                                     </div>
 
-                                    {/* Slot Selector using CustomSelect */}
-                                    <div>
-                                        <CustomSelect
-                                            label="Slot học *"
-                                            value={selectedSessionNumber?.toString() || ''}
+                                    {/* Slot Selector - Custom UI */}
+                                    <div ref={slotDropdownRef} className="relative">
+                                        <label className="block text-[10px] uppercase font-bold tracking-widest text-gray-400 mb-2 ml-1">
+                                            Buổi học <span className="text-red-500">*</span>
+                                        </label>
+                                        <button
+                                            type="button"
                                             disabled={!createClassName || loadingClassSlots}
-                                            placeholder={loadingClassSlots ? 'Đang tải...' : 'Chọn buổi học'}
-                                            onChange={(val) => setSelectedSessionNumber(Number(val))}
-                                            options={createClassSlots.map((s, idx) => {
-                                                const sessionNum = idx + 1;
-                                                const hasAssignment = assignments.some(a => a.timetableSlotId === s.id);
-                                                return {
-                                                    value: sessionNum.toString(),
-                                                    label: `Buổi ${sessionNum} — ${formatSlotDate(s.date)} — Slot ${s.slotNumber}`,
-                                                    disabled: hasAssignment
-                                                };
-                                            })}
-                                        />
+                                            onClick={() => setOpenSlotDropdown(!openSlotDropdown)}
+                                            className={`flex items-center justify-between w-full h-[52px] rounded-2xl border-2 px-4 text-left transition-all ${openSlotDropdown ? 'border-fpt-orange ring-4 ring-fpt-orange/10 shadow-lg shadow-fpt-orange/5' : 'border-gray-100 dark:border-zinc-800 hover:border-fpt-orange/40'
+                                                } bg-white dark:bg-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed`}
+                                        >
+                                            <span className={`text-sm font-bold truncate ${selectedSessionNumber ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-zinc-500'}`}>
+                                                {loadingClassSlots ? 'Đang tải...' : selectedSessionNumber ? `Buổi ${selectedSessionNumber} — ${formatSlotDate(createClassSlots[selectedSessionNumber - 1]?.date)}` : 'Chọn buổi học'}
+                                            </span>
+                                            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${openSlotDropdown ? 'rotate-180 text-fpt-orange' : ''}`} />
+                                        </button>
+
+                                        <AnimatePresence>
+                                            {openSlotDropdown && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: -10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -10 }}
+                                                    transition={{ duration: 0.15 }}
+                                                    className="absolute z-[60] mt-2 w-full bg-white dark:bg-zinc-900 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 shadow-2xl p-1.5 overflow-hidden"
+                                                >
+                                                    <div className="max-h-[250px] overflow-auto custom-scrollbar">
+                                                        {createClassSlots.length > 0 ? createClassSlots.map((s, idx) => {
+                                                            const sessionNum = idx + 1;
+                                                            const hasAssignment = assignments.some(a => a.timetableSlotId === s.id);
+                                                            const isSelected = selectedSessionNumber === sessionNum;
+                                                            return (
+                                                                <button
+                                                                    key={s.id}
+                                                                    type="button"
+                                                                    disabled={hasAssignment}
+                                                                    onClick={() => {
+                                                                        setSelectedSessionNumber(sessionNum);
+                                                                        setOpenSlotDropdown(false);
+                                                                    }}
+                                                                    className={`flex w-full items-center justify-between px-4 py-2.5 text-left transition-all rounded-xl ${hasAssignment ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-zinc-800/50'
+                                                                        } ${isSelected ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange' : 'text-gray-700 dark:text-zinc-300 font-medium'
+                                                                        }`}
+                                                                >
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-sm font-bold">Buổi {sessionNum} — {formatSlotDate(s.date)}</span>
+                                                                        <span className="text-[10px] text-gray-400 uppercase tracking-widest font-black mt-0.5">Slot {s.slotNumber} {hasAssignment && '• Đã có bài tập'}</span>
+                                                                    </div>
+                                                                    {isSelected && <Check size={14} className="stroke-[3]" />}
+                                                                </button>
+                                                            );
+                                                        }) : (
+                                                            <div className="py-6 text-center text-gray-400 text-xs">Không có dữ liệu buổi học</div>
+                                                        )}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
                                     </div>
 
                                     {/* Auto-populated slot info - Enhanced view */}

@@ -6,12 +6,12 @@ import {
   FileText,
   Newspaper,
   CheckSquare,
-  Settings,
   Clock,
   LogOut,
   ChevronDown,
   List as ListIcon,
-  LayoutDashboard
+  LayoutDashboard,
+  User
 } from 'lucide-react';
 
 import { authService } from '../../services/api/authService';
@@ -242,7 +242,7 @@ export const AcademicStaffSidebar: React.FC = () => {
             title={!isExpanded ? 'Hồ sơ cá nhân' : ''}
           >
             <div className={`flex-shrink-0 transition-colors duration-200 ${location.pathname === '/academic-staff/profile' ? 'text-white' : 'text-fpt-orange group-hover:text-white'}`}>
-              <Settings size={20} />
+              <User size={20} />
             </div>
             {isExpanded && <span className={`text-sm font-medium whitespace-nowrap ${location.pathname === '/academic-staff/profile' ? 'text-white' : ''}`}>Hồ sơ cá nhân</span>}
           </button>

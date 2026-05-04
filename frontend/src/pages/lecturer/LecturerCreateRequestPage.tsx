@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, Info, Check, Trash2, FileText, AlertCircle, Calendar, Clock, MapPin, Loader2 } from 'lucide-react';
+import { ArrowLeft, Upload, Info, Check, Trash2, FileText, AlertCircle, MapPin, Loader2 } from 'lucide-react';
 import toast from "@utils/toast";
 import { scheduleRequestService, ClassSlotResponse, CreateScheduleRequestPayload, ConflictCheckResponse } from '../../services/api/scheduleRequestService';
 import { RoomSelectionCard } from '../../components/lecturer/request/RoomSelectionCard';
@@ -274,7 +274,6 @@ export const LecturerCreateRequestPage: React.FC = () => {
                                         ]}
                                         className="h-[52px] rounded-2xl bg-gray-50/50 dark:bg-zinc-800/50 border-gray-100 dark:border-zinc-700 font-bold"
                                     />
-                                    <Calendar size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" />
                                 </div>
                             </div>
 
@@ -299,7 +298,6 @@ export const LecturerCreateRequestPage: React.FC = () => {
                                         ]}
                                         className="h-[52px] rounded-2xl bg-gray-50/50 dark:bg-zinc-800/50 border-gray-100 dark:border-zinc-700 font-bold"
                                     />
-                                    <Clock size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" />
                                 </div>
                             </div>
 

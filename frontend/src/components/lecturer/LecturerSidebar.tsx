@@ -7,7 +7,6 @@ import {
     FolderOpen,
     MessageCircle,
     Send,
-    Settings,
     LogOut,
     ChevronDown,
     KeyRound,
@@ -323,16 +322,7 @@ export const LecturerSidebar: React.FC = () => {
                         {isExpanded && <span className="text-sm font-medium whitespace-nowrap">Đổi OTP điểm</span>}
                     </button>
 
-                    <button
-                        onClick={() => navigate('/lecturer/settings')}
-                        className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-fpt-orange hover:bg-fpt-orange hover:text-white transition-all duration-200 group ${isActive('/lecturer/settings') ? 'bg-fpt-orange text-white' : ''}`}
-                        title={!isExpanded ? 'Cài đặt' : ''}
-                    >
-                        <div className={`flex-shrink-0 transition-colors duration-200 ${isActive('/lecturer/settings') ? 'text-white' : 'text-fpt-orange group-hover:text-white'}`}>
-                            <Settings size={20} />
-                        </div>
-                        {isExpanded && <span className={`text-sm font-medium whitespace-nowrap ${isActive('/lecturer/settings') ? 'text-white' : ''}`}>Cài đặt</span>}
-                    </button>
+
 
                     <button
                         onClick={() => setShowLogoutModal(true)}

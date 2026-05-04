@@ -10,6 +10,21 @@ import { timetableService } from '../../services/api/timetableService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 
+// --- Helpers for Date Handling ---
+const formatDateToYYYYMMDD = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const parseYYYYMMDDToDate = (dateStr: string) => {
+  if (!dateStr) return new Date();
+  const [year, month, day] = dateStr.split('-').map(Number);
+  // Create date at local noon to avoid any midnight-edge-case shifting during simple calculations
+  return new Date(year, month - 1, day, 12, 0, 0);
+};
+
 // --- Inline Modal Components ---
 
 interface ModalDatePickerProps {
@@ -23,7 +38,7 @@ interface ModalDatePickerProps {
 const ModalDatePicker: React.FC<ModalDatePickerProps> = ({ label, value, onChange, disabled = false, placeholder = 'Chọn ngày...' }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [viewDate, setViewDate] = useState(value ? new Date(value) : new Date());
+  const [viewDate, setViewDate] = useState(value ? parseYYYYMMDDToDate(value) : new Date());
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
 
   const updateCoords = () => {
@@ -65,8 +80,8 @@ const ModalDatePicker: React.FC<ModalDatePickerProps> = ({ label, value, onChang
   const firstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
 
   const handleDateSelect = (day: number) => {
-    const selectedDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
-    onChange(selectedDate.toISOString().split('T')[0]);
+    const selectedDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), day, 12, 0, 0);
+    onChange(formatDateToYYYYMMDD(selectedDate));
     setIsOpen(false);
   };
 
@@ -83,9 +98,12 @@ const ModalDatePicker: React.FC<ModalDatePickerProps> = ({ label, value, onChang
     }
 
     for (let d = 1; d <= totalDays; d++) {
-      const isSelected = value && new Date(value).getDate() === d &&
-        new Date(value).getMonth() === viewDate.getMonth() &&
-        new Date(value).getFullYear() === viewDate.getFullYear();
+      const isSelected = value && (() => {
+        const dObj = parseYYYYMMDDToDate(value);
+        return dObj.getDate() === d &&
+          dObj.getMonth() === viewDate.getMonth() &&
+          dObj.getFullYear() === viewDate.getFullYear();
+      })();
       days.push(
         <button
           key={d}
@@ -114,7 +132,7 @@ const ModalDatePicker: React.FC<ModalDatePickerProps> = ({ label, value, onChang
                 `}
       >
         <span className={value ? 'font-bold' : 'text-gray-400'}>
-          {value ? new Date(value).toLocaleDateString('vi-VN') : placeholder}
+          {value ? parseYYYYMMDDToDate(value).toLocaleDateString('vi-VN') : placeholder}
         </span>
         <CalendarIcon size={16} className="text-gray-400" />
       </button>
@@ -426,8 +444,8 @@ export const SlotTypePage: React.FC = () => {
       return;
     }
 
-    const start = new Date(config.startDate);
-    const end = new Date(config.endDate);
+    const start = parseYYYYMMDDToDate(config.startDate);
+    const end = parseYYYYMMDDToDate(config.endDate);
     const year = start.getFullYear();
 
     const standardHolidays: Holiday[] = [];
@@ -436,10 +454,10 @@ export const SlotTypePage: React.FC = () => {
     VIETNAMESE_HOLIDAYS_PRESETS.forEach(preset => {
       const daysToLoad = preset.days || 1;
       for (let i = 0; i < daysToLoad; i++) {
-        const holidayDate = new Date(year, preset.month - 1, preset.day + i);
+        const holidayDate = new Date(year, preset.month - 1, preset.day + i, 12, 0, 0);
         if (holidayDate >= start && holidayDate <= end) {
           holidaysInRange++;
-          const formattedDate = holidayDate.toISOString().split('T')[0];
+          const formattedDate = formatDateToYYYYMMDD(holidayDate);
           // Avoid duplicates
           if (!config.holidays.some(h => h.holidayDate === formattedDate)) {
             standardHolidays.push({
@@ -720,12 +738,12 @@ export const SlotTypePage: React.FC = () => {
                       <div className="flex bg-gray-50 dark:bg-zinc-800/50 p-1 rounded-2xl border-2 border-gray-100 dark:border-zinc-800">
                         <button onClick={() => handleInputChange('slotType', '90')}
                           disabled={isReadOnly}
-                          className={`flex-1 py-2.5 rounded-xl text-[9px] font-black transition-all duration-300 uppercase tracking-widest ${config.slotType === '90' ? 'bg-white dark:bg-zinc-900 text-fpt-orange shadow-sm border border-gray-100 dark:border-zinc-700' : 'text-gray-400 hover:text-gray-600'} ${isReadOnly ? 'cursor-not-allowed' : ''}`}>
+                          className={`flex-1 py-2.5 rounded-xl text-[9px] font-black transition-all duration-300 uppercase tracking-widest ${config.slotType === '90' ? 'bg-fpt-orange text-white shadow-lg shadow-fpt-orange/20' : 'text-gray-400 hover:text-gray-600'} ${isReadOnly ? 'cursor-not-allowed' : ''}`}>
                           90 PHÚT
                         </button>
                         <button onClick={() => handleInputChange('slotType', '135')}
                           disabled={isReadOnly}
-                          className={`flex-1 py-2.5 rounded-xl text-[9px] font-black transition-all duration-300 uppercase tracking-widest ${config.slotType === '135' ? 'bg-white dark:bg-zinc-900 text-fpt-orange shadow-sm border border-gray-100 dark:border-zinc-700' : 'text-gray-400 hover:text-gray-600'} ${isReadOnly ? 'cursor-not-allowed' : ''}`}>
+                          className={`flex-1 py-2.5 rounded-xl text-[9px] font-black transition-all duration-300 uppercase tracking-widest ${config.slotType === '135' ? 'bg-fpt-orange text-white shadow-lg shadow-fpt-orange/20' : 'text-gray-400 hover:text-gray-600'} ${isReadOnly ? 'cursor-not-allowed' : ''}`}>
                           135 PHÚT
                         </button>
                       </div>
@@ -819,7 +837,7 @@ export const SlotTypePage: React.FC = () => {
                                 type="time"
                                 value={slot.startTime}
                                 onChange={(e) => handleSlotTimeChange(index, e.target.value)}
-                                className="w-28 h-[40px] bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl px-3 text-sm font-black text-gray-900 dark:text-white outline-none shadow-sm transition-all hover:border-fpt-orange/40 focus:border-fpt-orange focus:ring-4 focus:ring-fpt-orange/10"
+                                className="w-36 h-[40px] bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl px-3 text-sm font-black text-gray-900 dark:text-white outline-none shadow-sm transition-all hover:border-fpt-orange/40 focus:border-fpt-orange focus:ring-4 focus:ring-fpt-orange/10"
                               />
                             )}
                           </td>
@@ -832,7 +850,7 @@ export const SlotTypePage: React.FC = () => {
                                   type="time"
                                   value={slot.endTime || ''}
                                   disabled
-                                  className="w-28 h-[40px] bg-gray-50 dark:bg-zinc-800/50 border-2 border-transparent rounded-2xl px-3 text-sm font-black text-gray-400 outline-none cursor-not-allowed"
+                                  className="w-36 h-[40px] bg-gray-50 dark:bg-zinc-800/50 border-2 border-transparent rounded-2xl px-3 text-sm font-black text-gray-400 outline-none cursor-not-allowed"
                                 />
                               )}
                               {!isReadOnly && <Check className="w-3.5 h-3.5 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />}

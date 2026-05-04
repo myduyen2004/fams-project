@@ -8,7 +8,6 @@ import {
     FileText,
     MessageCircle,
     Send,
-    Settings,
     LogOut,
     GraduationCap,
     TrendingUp,
@@ -235,16 +234,7 @@ export const StudentSidebar: React.FC = () => {
 
                 {/* Bottom Actions */}
                 <div className="border-t border-gray-200 dark:border-zinc-800 p-2 space-y-1">
-                    <button
-                        onClick={() => navigate('/student/settings')}
-                        className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-fpt-orange hover:bg-fpt-orange hover:text-white transition-all duration-200 group ${isActive('/student/settings') ? 'bg-fpt-orange text-white' : ''}`}
-                        title={!isExpanded ? 'Cài đặt' : ''}
-                    >
-                        <div className={`flex-shrink-0 transition-colors duration-200 ${isActive('/student/settings') ? 'text-white' : 'text-fpt-orange group-hover:text-white'}`}>
-                            <Settings size={20} />
-                        </div>
-                        {isExpanded && <span className={`text-sm font-medium whitespace-nowrap ${isActive('/student/settings') ? 'text-white' : ''}`}>Cài đặt</span>}
-                    </button>
+
 
                     <button
                         onClick={() => setShowLogoutModal(true)}

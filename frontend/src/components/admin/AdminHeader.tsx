@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Moon, Sun, User, Settings, LogOut, Newspaper } from 'lucide-react';
+import { Moon, Sun, User, LogOut, Newspaper } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/api/authService';
 import { userService } from '../../services/api/userService';
@@ -15,7 +15,7 @@ interface AdminHeaderProps {
 export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
   const navigate = useNavigate();
   const [isDark, setIsDark] = useState(false);
-  const [user, setUser] = useState<{ email: string; fullName: string; avatar?: string } | null>(null);
+  const [user, setUser] = useState<{ email: string; fullName: string; avatar?: string; role?: string } | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [activeJob, setActiveJob] = useState<any>(null);
@@ -211,17 +211,6 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
               >
                 <User size={18} />
                 <span>Xem hồ sơ</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  navigate('/admin/settings');
-                  setShowDropdown(false);
-                }}
-                className="w-full flex items-center gap-3 px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors"
-              >
-                <Settings size={18} />
-                <span>Cài đặt</span>
               </button>
 
               <hr className="my-2 border-gray-200 dark:border-zinc-700" />
