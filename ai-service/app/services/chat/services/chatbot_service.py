@@ -45,6 +45,7 @@ from app.services.chat.router.tool_catalog import (
 from app.services.chat.db.queries import normalize_entities
 from app.services.chat.services.answer_generator import answer_generator
 from app.services.chat.tools.executor import tool_executor
+from app.services.chat.services.memory_service import process_post_chat
 
 # ── Timeout budget ────────────────────────────────────────────────────────────
 _MAX_TOTAL_SECONDS = 7.0   # Tối đa 7s cho toàn bộ flow
@@ -580,14 +581,18 @@ class ChatbotService:
                 answer_model,
                 today=datetime.now().strftime("%Y-%m-%d"),
                 user_role=user_role,
+                user_id=user_id,
             )
-            return _build_response(
+            final_resp = _build_response(
                 answer,
                 steps,
                 None,
                 None,
                 agent=detect_agent(message, hard_result.tool_name or ""),
             )
+            import threading
+            threading.Thread(target=process_post_chat, args=(user_id, message, answer)).start()
+            return final_resp
 
         if hard_result:
             steps[-1]["status"] += f" → Pattern matched: {hard_result.tool_name}"
@@ -756,13 +761,16 @@ class ChatbotService:
                 missing_info = "Xin lỗi, tôi chưa hiểu rõ yêu cầu của bạn. Bạn có thể mô tả chi tiết hơn không?"
             steps.append(_make_step(3, "Clarification", "Cần làm rõ yêu cầu"))
             steps.append(_make_step(4, "Answer Generator", "Tạo câu hỏi làm rõ"))
-            return _build_response(
+            final_resp = _build_response(
                 f"❓ {missing_info}",
                 steps,
                 None,
                 None,
                 agent=cast(Optional[str], intent_data.get("agent")) or detect_agent(message),
             )
+            import threading
+            threading.Thread(target=process_post_chat, args=(user_id, message, answer)).start()
+            return final_resp
 
         if intent_data.get("intent") == "tool_locked":
             steps.append(_make_step(3, "Tool Executor", "Bỏ qua (tool bị khóa)."))
@@ -775,46 +783,59 @@ class ChatbotService:
                 answer_model,
                 today=datetime.now().strftime("%Y-%m-%d"),
                 user_role=user_role,
+                user_id=user_id,
             )
-            return _build_response(
+            final_resp = _build_response(
                 answer,
                 steps,
                 None,
                 None,
                 agent=cast(Optional[str], intent_data.get("agent")),
             )
+            import threading
+            threading.Thread(target=process_post_chat, args=(user_id, message, answer)).start()
+            return final_resp
 
         current_tool_name = (intent_data.get("toolName") or "").strip()
         if not current_tool_name and intent_data.get("intent") == "general_chat":
             steps.append(_make_step(3, "Tool Executor", "Bỏ qua (không khớp tool ngoài lề nào trong hệ thống)."))
             steps.append(_make_step(4, "Answer Generator", "Trả về thông báo chức năng chưa được hệ thống hỗ trợ."))
-            return _build_response(
+            final_resp = _build_response(
                 _ERR_UNSUPPORTED,
                 steps,
                 None,
                 None,
                 agent=cast(Optional[str], intent_data.get("agent")) or detect_agent(message),
             )
+            import threading
+            threading.Thread(target=process_post_chat, args=(user_id, message, answer)).start()
+            return final_resp
         if not current_tool_name and intent_data.get("intent") not in ("general_chat", "need_clarification", "permission_denied", "direct_response", "navigation"):
             steps.append(_make_step(3, "Tool Executor", "Bỏ qua (không khớp tool nào trong hệ thống)."))
             steps.append(_make_step(4, "Answer Generator", "Trả về thông báo chức năng chưa được hệ thống hỗ trợ."))
-            return _build_response(
+            final_resp = _build_response(
                 _ERR_UNSUPPORTED,
                 steps,
                 None,
                 None,
                 agent=cast(Optional[str], intent_data.get("agent")) or detect_agent(message),
             )
+            import threading
+            threading.Thread(target=process_post_chat, args=(user_id, message, answer)).start()
+            return final_resp
         if current_tool_name and not is_kept_tool(current_tool_name) and current_tool_name not in _AI_ONLY_TOOLS:
             steps.append(_make_step(3, "Tool Executor", "Bỏ qua (tool đã bị loại khỏi inventory lõi)."))
             steps.append(_make_step(4, "Answer Generator", "Trả về thông báo chức năng chưa được hệ thống hỗ trợ."))
-            return _build_response(
+            final_resp = _build_response(
                 _ERR_UNSUPPORTED,
                 steps,
                 None,
                 None,
                 agent=cast(Optional[str], intent_data.get("agent")) or detect_agent(message),
             )
+            import threading
+            threading.Thread(target=process_post_chat, args=(user_id, message, answer)).start()
+            return final_resp
 
         # ── is_active check: chặn tool bị tắt từ bất kỳ router nào ──────
         if current_tool_name and current_tool_name not in _AI_ONLY_TOOLS:
@@ -835,8 +856,9 @@ class ChatbotService:
                     answer_model,
                     today=datetime.now().strftime("%Y-%m-%d"),
                     user_role=user_role,
+                    user_id=user_id,
                 )
-                return _build_response(
+                final_resp = _build_response(
                     answer,
                     steps,
                     None,
@@ -1144,6 +1166,7 @@ class ChatbotService:
                     answer_model,
                     today=today_str,
                     user_role=user_role,
+                    user_id=user_id,
                 )
             except RuntimeError as exc:
                 if _is_rate_limit_error(exc) and tool_result:
@@ -1161,7 +1184,7 @@ class ChatbotService:
 
         steps[-1]["status"] += " → Hoàn thành"
         redirect = _resolve_redirect(tool_name, intent_data.get("redirectPath"), user_role, intent_data.get("entities"))
-        return _build_response(
+        final_resp = _build_response(
             answer,
             steps,
             redirect,
@@ -1169,6 +1192,12 @@ class ChatbotService:
             agent=cast(Optional[str], intent_data.get("agent")),
             continuation=continuation_response,
         )
+
+        # ✅ NEW: Trigger background profiling (non-blocking)
+        import threading
+        threading.Thread(target=process_post_chat, args=(user_id, message, answer)).start()
+
+        return final_resp
 
     def chat_stream(
         self,
@@ -1426,6 +1455,7 @@ class ChatbotService:
                     answer_model,
                     today=today_str,
                     user_role=user_role,
+                    user_id=user_id,
                 ):
                     yield {"type": "answer", "chunk": chunk}
             except RuntimeError as exc:
@@ -1445,6 +1475,10 @@ class ChatbotService:
 
         steps[-1]["status"] += " → Hoàn thành"
         yield {"type": "step", "step": steps[-1]}
+
+        # ✅ NEW: Trigger background profiling (non-blocking)
+        import threading
+        threading.Thread(target=process_post_chat, args=(user_id, corrected_message, chunk if 'chunk' in locals() else "")).start()
 
     # ── Excel ─────────────────────────────────────────────────────────────────
     def chat_with_excel(
