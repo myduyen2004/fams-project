@@ -251,6 +251,15 @@ export const academicStaffService = {
         await apiClient.delete('/v1/academic-staff/students', { data: ids });
     },
 
+    getStudentFaceImages: async (studentId: number): Promise<{ userId: number, faceImage: string, registeredAt: string }[]> => {
+        const response = await apiClient.get<{ userId: number, faceImage: string, registeredAt: string }[]>(`/v1/academic-staff/students/${studentId}/faces`);
+        return response.data;
+    },
+
+    resetStudentFaceData: async (studentId: number): Promise<void> => {
+        await apiClient.delete(`/v1/academic-staff/students/${studentId}/faces`);
+    },
+
     importStudents: async (file: File): Promise<{ created: number; updated: number; failed: number; errors?: string[] }> => {
         const formData = new FormData();
         formData.append('file', file);

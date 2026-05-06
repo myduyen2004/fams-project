@@ -25,13 +25,21 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class AIToolServiceImpl implements AIToolService {
 
     private final AIToolRepository aiToolRepository;
     private final AIToolTestRepository aiToolTestRepository;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+
+    public AIToolServiceImpl(
+            AIToolRepository aiToolRepository,
+            AIToolTestRepository aiToolTestRepository,
+            @org.springframework.beans.factory.annotation.Qualifier("aiServiceRestTemplate") RestTemplate aiServiceRestTemplate) {
+        this.aiToolRepository = aiToolRepository;
+        this.aiToolTestRepository = aiToolTestRepository;
+        this.restTemplate = aiServiceRestTemplate;
+    }
 
     @Value("${ai-service.url:http://localhost:5000}")
     private String aiServiceBaseUrl;

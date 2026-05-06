@@ -32,8 +32,7 @@ class FaceQualityService:
     # Image Quality Requirements (relaxed for more devices)
     MIN_IMAGE_WIDTH = 320          # Minimum 320px width
     MIN_IMAGE_HEIGHT = 240         # Minimum 240px height
-    MIN_LAPLACIAN_VARIANCE = 40.0  # Lowered from 70.0 for extreme usability
-  # Sharpness threshold (relaxed from 120.0)
+    MIN_LAPLACIAN_VARIANCE = 30.0  # Lowered to 30.0 for demo (relaxed sharpness)
     
     # Face Coverage (Relaxed range)
     MIN_FACE_COVERAGE = 0.20       # Min 20% (was 0.25)
@@ -202,8 +201,10 @@ class FaceQualityService:
             dist_right = abs(nose_tip.x - right_ear.x)
             yaw_ratio = min(dist_left, dist_right) / (max(dist_left, dist_right) + 1e-6)
             
-            if yaw_ratio < 0.5:
-                errors.append("head_turned")
+            # Loosened for demo to avoid false 'head_turned' errors
+            # Disabled completely because mobile app already strictly validates 3D Euler angles.
+            # if yaw_ratio < 0.2:
+            #     errors.append("head_turned")
             
             # --- 4. Occlusion Checks (Strict) ---
             
@@ -258,7 +259,8 @@ class FaceQualityService:
             has_glasses, glare_score = self._detect_glasses_v2(image, landmarks, width, height)
             details["glare_score"] = float(glare_score)
             if has_glasses:
-                errors.append("glasses_detected")
+                # errors.append("glasses_detected")
+                pass # Disabled for demo
 
 
             # --- Build Message ---

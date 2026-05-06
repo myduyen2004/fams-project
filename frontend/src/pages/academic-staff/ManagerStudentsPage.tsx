@@ -344,6 +344,7 @@ export const ManagerStudentsPage = () => {
                 <ViewStudentModal
                     student={selectedStudent}
                     onClose={() => setIsViewModalOpen(false)}
+                    onUpdate={fetchStudents}
                 />
             )}
             {isEditModalOpen && selectedStudent && (

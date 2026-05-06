@@ -157,7 +157,7 @@ export const ActivatedUsersPage: React.FC = () => {
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      setSelectedUsers(users.map(u => u.id));
+      setSelectedUsers(users.filter(u => u.role !== 'ADMIN' && u.role !== 'ACADEMIC_STAFF').map(u => u.id));
     } else {
       setSelectedUsers([]);
     }
@@ -451,9 +451,10 @@ export const ActivatedUsersPage: React.FC = () => {
                     <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
-                        className="w-4 h-4 rounded border-gray-300 text-fpt-orange focus:ring-fpt-orange cursor-pointer"
+                        className="w-4 h-4 rounded border-gray-300 text-fpt-orange focus:ring-fpt-orange cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         checked={selectedUsers.includes(user.id)}
                         onChange={() => handleSelectUser(user.id)}
+                        disabled={user.role === 'ADMIN' || user.role === 'ACADEMIC_STAFF'}
                       />
                     </td>
                     <td className="px-4 py-4">

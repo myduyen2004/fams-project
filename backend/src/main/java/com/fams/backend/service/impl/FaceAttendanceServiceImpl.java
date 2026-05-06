@@ -597,6 +597,35 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
 
         @Override
         @Transactional(readOnly = true)
+        public java.util.List<FaceDTO.FaceImagesResponse> getStudentFaceImagesByAdmin(Long studentId) {
+                return faceEncodingRepository.findAllByUserId(studentId).stream()
+                                .map(fe -> FaceDTO.FaceImagesResponse.builder()
+                                                .userId(studentId)
+                                                .faceImage(fe.getFaceImage())
+                                                .registeredAt(fe.getRegisteredAt())
+                                                .build())
+                                .collect(Collectors.toList());
+        }
+
+        @Override
+        @Transactional
+        public void resetStudentFaceDataByAdmin(Long studentId) {
+                log.info("Resetting face data for student id: {}", studentId);
+                
+                // Delete all encodings for this user
+                faceEncodingRepository.deleteByUserId(studentId);
+
+                // Update user status
+                User user = userRepository.findById(studentId)
+                                .orElseThrow(() -> new NotFoundException("Student not found"));
+                user.setFaceDataStatus(User.FaceDataStatus.NOT_REGISTERED);
+                user.setFaceRegistrationAttempts(0);
+                user.setFaceRegistrationBlockedUntil(null);
+                userRepository.save(user);
+        }
+
+        @Override
+        @Transactional(readOnly = true)
         public FaceDTO.PendingVerificationsResponse getPendingVerifications(Long lecturerId) {
                 List<StudentAttendance> pendingList = attendanceRepository
                                 .findByRequiresManualVerifyTrueAndSessionLecturerId(lecturerId);

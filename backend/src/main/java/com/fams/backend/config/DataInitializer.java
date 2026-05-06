@@ -34,7 +34,7 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         private void seedAdminUser() {
-                // Find existing admin by username or email
+                // Find existing admin by username, email, or code
                 Optional<User> existingAdmin = userRepository.findByUsername("admin");
                 if (existingAdmin.isEmpty()) {
                         existingAdmin = userRepository.findByEmail("admin@fams.com");
@@ -44,6 +44,7 @@ public class DataInitializer implements CommandLineRunner {
                 }
 
                 if (existingAdmin.isEmpty()) {
+                        // Only create admin on FIRST run — never overwrite existing credentials
                         User admin = User.builder()
                                         .code("ADMIN001")
                                         .username("admin")
@@ -56,23 +57,17 @@ public class DataInitializer implements CommandLineRunner {
                                         .status(User.UserStatus.ACTIVE)
                                         .avatar("/assets/images/fams-logo.png")
                                         .faceDataStatus(User.FaceDataStatus.NOT_REGISTERED)
-                                        .isPasswordChanged(true)
+                                        .isPasswordChanged(false)
                                         .build();
                         userRepository.save(admin);
-                        log.info("Default admin user created: admin/admin123");
+                        log.info("Default admin user created (first-time seed): admin/admin123");
                 } else {
-                        User admin = existingAdmin.get();
-                        admin.setPassword(passwordEncoder.encode("admin123"));
-                        admin.setStatus(User.UserStatus.ACTIVE);
-                        admin.setAvatar("/assets/images/fams-logo.png");
-                        admin.setIsPasswordChanged(true);
-                        userRepository.save(admin);
-                        log.info("Default admin user updated/reset: admin/admin123");
+                        log.info("Admin user already exists (id={}), skipping password reset.", existingAdmin.get().getId());
                 }
         }
 
         private void seedAcademicStaffUser() {
-                // Find existing staff by username, email or code
+                // Find existing staff by username, email, or code
                 Optional<User> existingStaff = userRepository.findByUsername("academic");
                 if (existingStaff.isEmpty()) {
                         existingStaff = userRepository.findByEmail("staff@fams.com");
@@ -82,6 +77,7 @@ public class DataInitializer implements CommandLineRunner {
                 }
 
                 if (existingStaff.isEmpty()) {
+                        // Only create staff on FIRST run — never overwrite existing credentials
                         User staff = User.builder()
                                         .code("STAFF001")
                                         .username("academic")
@@ -94,18 +90,12 @@ public class DataInitializer implements CommandLineRunner {
                                         .status(User.UserStatus.ACTIVE)
                                         .avatar("/assets/images/fams-logo.png")
                                         .faceDataStatus(User.FaceDataStatus.NOT_REGISTERED)
-                                        .isPasswordChanged(true)
+                                        .isPasswordChanged(false)
                                         .build();
                         userRepository.save(staff);
-                        log.info("Default academic staff user created: academic/staff123");
+                        log.info("Default academic staff user created (first-time seed): academic/staff123");
                 } else {
-                        User staff = existingStaff.get();
-                        staff.setPassword(passwordEncoder.encode("staff123"));
-                        staff.setStatus(User.UserStatus.ACTIVE);
-                        staff.setAvatar("/assets/images/fams-logo.png");
-                        staff.setIsPasswordChanged(true);
-                        userRepository.save(staff);
-                        log.info("Default academic staff user updated/reset: academic/staff123");
+                        log.info("Academic staff user already exists (id={}), skipping password reset.", existingStaff.get().getId());
                 }
         }
 

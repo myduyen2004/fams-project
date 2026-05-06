@@ -113,8 +113,10 @@ class FaceRegistrationView extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(totalSteps, (index) {
-          final isCompleted = currentPhase > index;
-          final isActive = currentPhase == index;
+          final state = controller.state.value;
+          final isFinished = state == FaceRegistrationState.success || state == FaceRegistrationState.submitting;
+          final isCompleted = isFinished || currentPhase > index;
+          final isActive = !isFinished && currentPhase == index;
           
           return Row(
             mainAxisSize: MainAxisSize.min,
@@ -300,12 +302,19 @@ class FaceRegistrationView extends StatelessWidget {
             children: [
               // Progress ring (draws both grey background and colored progress)
               Positioned.fill(
-                child: CustomPaint(
-                  painter: OvalProgressPainter(
-                    progress: progress,
-                    color: ringColor,
-                    strokeWidth: borderWidth,
-                  ),
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0, end: progress),
+                  duration: const Duration(milliseconds: 600),
+                  curve: Curves.easeInOutCubic,
+                  builder: (context, animatedProgress, child) {
+                    return CustomPaint(
+                      painter: OvalProgressPainter(
+                        progress: animatedProgress,
+                        color: ringColor,
+                        strokeWidth: borderWidth,
+                      ),
+                    );
+                  },
                 ),
               ),
               // Camera preview (clipped to OVAL - matches progress ring exactly)
@@ -336,20 +345,27 @@ class FaceRegistrationView extends StatelessWidget {
         ),
         // Percentage badge
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-          decoration: BoxDecoration(
-            color: ringColor,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            '${(progress * 100).toInt()}%',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+        TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0, end: progress),
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeInOutCubic,
+          builder: (context, animatedProgress, child) {
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+              decoration: BoxDecoration(
+                color: ringColor,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${(animatedProgress * 100).toInt()}%',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            );
+          },
         ),
         // Instruction text (fixed height to prevent jumping)
         const SizedBox(height: 8),

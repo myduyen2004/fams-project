@@ -52,6 +52,10 @@ CORS(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max for image uploads
 
+# Security: API key validation middleware
+from app.core.security import init_api_key_middleware
+init_api_key_middleware(app)
+
 # Register blueprints
 from app.api.v1 import v1_bp, face_bp, plagiarism_bp
 

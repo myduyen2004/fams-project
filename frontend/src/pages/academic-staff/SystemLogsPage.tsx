@@ -310,7 +310,37 @@ export const SystemLogsPage: React.FC = () => {
                                                                     Thông tin trình duyệt
                                                                 </div>
                                                                 <div className="p-3 bg-white dark:bg-zinc-900 rounded-lg text-[11px] font-mono text-zinc-500 break-all leading-relaxed border border-zinc-100 dark:border-zinc-800">
-                                                                    {log.userAgent || 'Không có thông tin UA'}
+                                                                    {(() => {
+                                                                        const ua = log.userAgent;
+                                                                        if (!ua) return 'Không có thông tin UA';
+                                                                        if (ua.startsWith('Dart/') || ua.includes('dart:io')) {
+                                                                            return 'FAMS Mobile App (Flutter)';
+                                                                        }
+                                                                        let browser = '';
+                                                                        let os = '';
+                                                                        if (ua.includes('Edg/')) {
+                                                                            const v = ua.match(/Edg\/([\d.]+)/);
+                                                                            browser = `Edge ${v ? v[1].split('.')[0] : ''}`;
+                                                                        } else if (ua.includes('Chrome/')) {
+                                                                            const v = ua.match(/Chrome\/([\d.]+)/);
+                                                                            browser = `Chrome ${v ? v[1].split('.')[0] : ''}`;
+                                                                        } else if (ua.includes('Firefox/')) {
+                                                                            const v = ua.match(/Firefox\/([\d.]+)/);
+                                                                            browser = `Firefox ${v ? v[1].split('.')[0] : ''}`;
+                                                                        } else if (ua.includes('Safari/') && !ua.includes('Chrome')) {
+                                                                            const v = ua.match(/Version\/([\d.]+)/);
+                                                                            browser = `Safari ${v ? v[1].split('.')[0] : ''}`;
+                                                                        }
+                                                                        if (ua.includes('Windows NT 10')) os = 'Windows 10/11';
+                                                                        else if (ua.includes('Windows')) os = 'Windows';
+                                                                        else if (ua.includes('Mac OS X')) os = 'macOS';
+                                                                        else if (ua.includes('Linux')) os = 'Linux';
+                                                                        else if (ua.includes('Android')) os = 'Android';
+                                                                        else if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS';
+                                                                        if (browser && os) return `${browser} trên ${os}`;
+                                                                        if (browser) return browser;
+                                                                        return ua;
+                                                                    })()}
                                                                 </div>
                                                             </div>
                                                             
