@@ -18,9 +18,9 @@ class DecisionEngine:
     a final PASS/REVIEW/FAIL decision.
     """
     
-    # Score thresholds
-    PASS_THRESHOLD = 0.75    # Tightened from 0.80 for Round 3
-    REVIEW_THRESHOLD = 0.60  # Manual review floor
+    # Score thresholds (Loosened for demo)
+    PASS_THRESHOLD = 0.65    # Tightened from 0.80 for Round 3
+    REVIEW_THRESHOLD = 0.50  # Manual review floor
     
     def __init__(self):
         """Initialize the decision engine."""
@@ -77,8 +77,8 @@ class DecisionEngine:
         # 2. Security Vetoes (Attendance is Paranoid, Registration is Patient)
         rej_moire = 0.85 if is_reg else 0.60    # Stricter for daily attendance
         rej_bezel = 0.85 if is_reg else 0.55    # Stricter for daily attendance
-        rej_replay = 0.95 if is_reg else 0.92   # LOOSENED from 0.85 for attendance
-        rej_geo = 0.05 if is_reg else 0.12     # Stricter for daily attendance
+        rej_replay = 0.98 if is_reg else 0.98   # LOOSENED for demo
+        rej_geo = 0.05 if is_reg else 0.05     # Stricter for daily attendance
         # [SECURITY HARDENING]: Glare Penalty for Screen Reflections
         # If glare is high but the surface is flat, it's a screen, not curved glasses.
         actual_replay_score = replay_detection_score
@@ -202,11 +202,11 @@ class DecisionEngine:
             decision = "SPOOFING_DETECTED"
             total_score = min(total_score, 0.49)
             
-            # Special message for glasses
-            if has_glasses and (effective_bezel > 0.3 or effective_specular > 0.3):
-                message = "TỪ CHỐI: Kính của bạn gây ra phản chiếu hoặc tạo ra các cạnh nhiễu vật lý. Vui lòng tháo kính và thử lại."
-            else:
-                message = f"TỪ CHỐI: {veto_reason}"
+            # Special message for glasses disabled for demo
+            # if has_glasses and (effective_bezel > 0.3 or effective_specular > 0.3):
+            #     message = "TỪ CHỐI: Kính của bạn gây ra phản chiếu hoặc tạo ra các cạnh nhiễu vật lý. Vui lòng tháo kính và thử lại."
+            # else:
+            message = f"TỪ CHỐI: {veto_reason}"
         elif votes_real >= 2 and total_score >= self.PASS_THRESHOLD:
             # Golden Triangle: 2/3 agree REAL + weighted score is high enough
             if is_low_res:

@@ -21,10 +21,15 @@ public class FaceRecognitionClient {
 
     private final RestClient restClient;
 
-    public FaceRecognitionClient(@Value("${ai-service.url:http://localhost:5000}") String aiServiceUrl) {
-        this.restClient = RestClient.builder()
-                .baseUrl(aiServiceUrl)
-                .build();
+    public FaceRecognitionClient(
+            @Value("${ai-service.url:http://localhost:5000}") String aiServiceUrl,
+            @Value("${ai-service.api-key:}") String aiServiceApiKey) {
+        RestClient.Builder builder = RestClient.builder()
+                .baseUrl(aiServiceUrl);
+        if (aiServiceApiKey != null && !aiServiceApiKey.isBlank()) {
+            builder.defaultHeader("X-API-Key", aiServiceApiKey);
+        }
+        this.restClient = builder.build();
     }
 
     public FaceVerifyResponse verifyFace(FaceVerifyRequest request) {

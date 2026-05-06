@@ -13,12 +13,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class PlagiarismAiClient {
 
     private final ObjectMapper objectMapper;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+
+    public PlagiarismAiClient(
+            ObjectMapper objectMapper,
+            @org.springframework.beans.factory.annotation.Qualifier("aiServiceRestTemplate") RestTemplate aiServiceRestTemplate) {
+        this.objectMapper = objectMapper;
+        this.restTemplate = aiServiceRestTemplate;
+    }
 
     @Value("${ai-service.url:http://localhost:5000}")
     private String aiServiceUrl;

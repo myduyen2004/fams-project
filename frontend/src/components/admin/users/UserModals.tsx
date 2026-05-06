@@ -462,7 +462,7 @@ export const EditUserModal: React.FC<{ user: UserResponse; onClose: () => void; 
                 onChange={value => setFormData({ ...formData, status: value as any })}
                 options={[
                   { value: 'ACTIVE', label: 'Đang hoạt động' },
-                  { value: 'LOCKED', label: 'Đã khóa' },
+                  ...((formData.role === 'ADMIN' || formData.role === 'ACADEMIC_STAFF') ? [] : [{ value: 'LOCKED', label: 'Đã khóa' }]),
                   { value: 'INACTIVE', label: 'Chưa kích hoạt' }
                 ]}
               />

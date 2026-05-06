@@ -20,6 +20,7 @@ public class FaceAttendanceController {
 
     private final FaceAttendanceService faceAttendanceService;
     private final com.fams.backend.repository.UserRepository userRepository;
+    private final com.fams.backend.service.impl.SystemLogService systemLogService;
 
     @PostMapping("/register")
     @Operation(summary = "Register face")
@@ -31,9 +32,17 @@ public class FaceAttendanceController {
 
         FaceDTO.RegisterFaceResponse response = faceAttendanceService.registerFace(userId, request);
 
+        // System log for face registration
+        com.fams.backend.entity.User user = userRepository.findById(userId).orElse(null);
+        String userCode = user != null ? user.getCode() : String.valueOf(userId);
+        String userName = user != null ? user.getFullName() : userDetails.getUsername();
+
         if (response.getSuccess()) {
+            int faceCount = request.getFaceImages() != null ? request.getFaceImages().size() : 0;
+            systemLogService.logFaceRegistrationSuccess(userName, userCode, faceCount);
             return ResponseEntity.ok(response);
         } else {
+            systemLogService.logFaceRegistrationFailed(userName, userCode, response.getMessage());
             return ResponseEntity.badRequest().body(response);
         }
     }
@@ -48,10 +57,24 @@ public class FaceAttendanceController {
 
         FaceDTO.FaceCheckInResponse response = faceAttendanceService.checkInWithFace(studentId, request);
 
+        // System log for face check-in
+        com.fams.backend.entity.User student = userRepository.findById(studentId).orElse(null);
+        String studentCode = student != null ? student.getCode() : String.valueOf(studentId);
+        String studentName = student != null ? student.getFullName() : userDetails.getUsername();
+
         String status = response.getStatus();
-        if ("SUCCESS".equals(status) || "ALREADY_CHECKED_IN".equals(status) || "FAILED".equals(status)) {
+        if ("SUCCESS".equals(status)) {
+            double confidence = response.getConfidence() != null ? response.getConfidence() : 0;
+            String courseName = response.getCourseName() != null ? response.getCourseName() : "N/A";
+            systemLogService.logFaceCheckInSuccess(studentName, studentCode, courseName, confidence);
+            return ResponseEntity.ok(response);
+        } else if ("ALREADY_CHECKED_IN".equals(status)) {
+            return ResponseEntity.ok(response);
+        } else if ("FAILED".equals(status)) {
+            systemLogService.logFaceCheckInFailed(studentName, studentCode, response.getMessage());
             return ResponseEntity.ok(response);
         } else if ("REQUIRES_MANUAL".equals(status)) {
+            systemLogService.logFaceCheckInFailed(studentName, studentCode, "Yêu cầu xác minh thủ công");
             return ResponseEntity.status(202).body(response);
         } else {
             return ResponseEntity.badRequest().body(response);

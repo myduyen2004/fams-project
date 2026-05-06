@@ -472,4 +472,41 @@ public class SystemLogService {
                 "AttendanceConfig",
                 getCurrentUsername());
     }
+
+    // ==================== FACE REGISTRATION ====================
+    public void logFaceRegistrationSuccess(String username, String userCode, int faceCount) {
+        logSuccess("Đăng ký khuôn mặt thành công",
+                String.format("Sinh viên %s (Mã: %s) đã đăng ký thành công %d góc mặt", username, userCode, faceCount),
+                "FaceRegistration",
+                username);
+    }
+
+    public void logFaceRegistrationFailed(String username, String userCode, String reason) {
+        logWarning("Đăng ký khuôn mặt thất bại",
+                String.format("Sinh viên %s (Mã: %s) đăng ký khuôn mặt thất bại: %s", username, userCode, reason),
+                "FaceRegistration",
+                username);
+    }
+
+    public void logFaceCheckInSuccess(String username, String userCode, String courseName, double confidence) {
+        logSuccess("Điểm danh khuôn mặt thành công",
+                String.format("Sinh viên %s (Mã: %s) đã điểm danh bằng khuôn mặt cho %s (Độ tin cậy: %.1f%%)",
+                        username, userCode, courseName, confidence * 100),
+                "FaceAttendance",
+                username);
+    }
+
+    public void logFaceCheckInFailed(String username, String userCode, String reason) {
+        logWarning("Điểm danh khuôn mặt thất bại",
+                String.format("Sinh viên %s (Mã: %s) điểm danh thất bại: %s", username, userCode, reason),
+                "FaceAttendance",
+                username);
+    }
+
+    public void logFaceDataReset(String adminUsername, String studentCode) {
+        logWarning("Xóa dữ liệu khuôn mặt",
+                String.format("Admin %s đã xóa dữ liệu khuôn mặt của sinh viên %s", adminUsername, studentCode),
+                "FaceRegistration",
+                adminUsername);
+    }
 }

@@ -101,6 +101,7 @@ jwt:
 # ---------------- AI Service Configuration ----------------
 ai-service:
     url: http://ai-service:5000
+    api-key: ${AI_SERVICE_API_KEY:}
     timeout: 30000
     endpoints:
         face-recognition: /api/face/recognize

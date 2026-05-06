@@ -10,6 +10,8 @@ import com.fams.backend.service.AIChatService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -34,7 +36,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
-@RequiredArgsConstructor
+@Slf4j
 public class AIChatServiceImpl implements AIChatService {
     private static final Pattern CLASS_NAME_PATTERN = Pattern.compile(
             "\\b([A-Z]{2,}\\d{2,}[A-Z\\d]*_[A-Z0-9]+|[A-Z]{2,}\\d{2,}[A-Z\\d]*-[A-Z]{2,4}\\d{3,4})\\b",
@@ -46,11 +48,31 @@ public class AIChatServiceImpl implements AIChatService {
     private final AIChatMessageRepository messageRepository;
     private final AIChatActionService aiChatActionService;
     private final ObjectMapper objectMapper;
-    private final RestTemplate restTemplate = new RestTemplate();
-    private final WebClient webClient = WebClient.builder().build(); // Basic initialization
+    private final RestTemplate restTemplate;
+    private final WebClient webClient;
 
     @Value("${ai.service.url:http://localhost:5000}")
     private String aiServiceUrl;
+
+    public AIChatServiceImpl(
+            AIChatSessionRepository sessionRepository,
+            AIChatMessageRepository messageRepository,
+            AIChatActionService aiChatActionService,
+            ObjectMapper objectMapper,
+            @Qualifier("aiServiceRestTemplate") RestTemplate aiServiceRestTemplate,
+            @Value("${ai-service.api-key:}") String aiServiceApiKey) {
+        this.sessionRepository = sessionRepository;
+        this.messageRepository = messageRepository;
+        this.aiChatActionService = aiChatActionService;
+        this.objectMapper = objectMapper;
+        this.restTemplate = aiServiceRestTemplate;
+        // Build WebClient with API key header if configured
+        WebClient.Builder builder = WebClient.builder();
+        if (aiServiceApiKey != null && !aiServiceApiKey.isBlank()) {
+            builder.defaultHeader("X-API-Key", aiServiceApiKey);
+        }
+        this.webClient = builder.build();
+    }
 
     @Override
     @Transactional
