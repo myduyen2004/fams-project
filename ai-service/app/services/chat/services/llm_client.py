@@ -30,7 +30,7 @@ _THOUGHT_RE = re.compile(r"<thought>.*?</thought>", re.S)
 # ── Constants ─────────────────────────────────────────────────────────────────
 _DEFAULT_RETRY_AFTER  = 30.0   # giây chờ khi không có header Retry-After
 _MIN_REQUEST_INTERVAL = 1.2    # giây tối thiểu giữa 2 request cùng key (RPM guard)
-_MAX_CONCURRENT       = 3      # số request đồng thời tối đa toàn bộ client
+_MAX_CONCURRENT       = 12     # số request đồng thời tối đa toàn bộ client
 _CIRCUIT_BREAK_THRESH = 4      # số lần lỗi liên tiếp để circuit break 1 key
 _CIRCUIT_RESET_AFTER  = 120.0  # giây reset circuit breaker
 
