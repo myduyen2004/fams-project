@@ -42,10 +42,11 @@ from app.services.chat.router.tool_catalog import (
     require_all_required_fields,
     validate_required_entities,
 )
-from app.services.chat.db.queries import normalize_entities
+from app.services.chat.db.queries import normalize_entities, TEMPLATES
 from app.services.chat.services.answer_generator import answer_generator
 from app.services.chat.tools.executor import tool_executor
 from app.services.chat.services.memory_service import process_post_chat
+from app.services.chat.db.pool import db_pool
 
 # ── Timeout budget ────────────────────────────────────────────────────────────
 _MAX_TOTAL_SECONDS = 7.0   # Tối đa 7s cho toàn bộ flow
@@ -398,6 +399,30 @@ class ChatbotService:
     Thêm vào chỉ gây double-throttle và deadlock.
     """
 
+    def _check_daily_limit(self, user_id: int, user_role: str) -> Optional[str]:
+        """
+        Kiểm tra giới hạn câu hỏi:
+        - >= 20: Hết hạn mức tuyệt đối.
+        - >= 15: Lỗi 429 Too Many Requests.
+        """
+        if user_role not in ('STUDENT', 'LECTURER'):
+            return None
+            
+        try:
+            with db_pool.get_cursor() as cur:
+                cur.execute(TEMPLATES["count_user_messages_today"], (user_id,))
+                row = cur.fetchone()
+                count = row['count'] if row else 0
+                
+                if count >= 20:
+                    return "⚠️ **Hạn mức tuyệt đối**: Bạn đã sử dụng hết hạn mức 20 câu hỏi trong hôm nay. Vui lòng quay lại vào ngày mai!"
+                if count >= 15:
+                    return "⚠️ **Lỗi 429 (Too Many Requests)**: Bạn đã gửi quá 15 câu hỏi. Để đảm bảo ổn định hệ thống, vui lòng tạm dừng và quay lại sau!"
+                return None
+        except Exception as e:
+            logger.error(f"Error checking daily limit for user {user_id}: {e}")
+            return None
+
     def _generate_clarification_question(self, error_msg: str, tool_name: str, original_message: str) -> str:
         """Tạo câu hỏi làm rõ dựa trên trường bị thiếu."""
         # Extract field name from error: "Thiếu trường bắt buộc: class_name"
@@ -530,6 +555,18 @@ class ChatbotService:
         pending_entities: Optional[Dict[str, Any]] = None,
         continuation: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        # ✅ Rate Limit Check (15/20)
+        limit_msg = self._check_daily_limit(user_id, user_role)
+        if limit_msg:
+            return {
+                "answer": limit_msg,
+                "thinkingSteps": [
+                    _make_step(1, "Rate Limit Check", "Hệ thống kiểm tra hạn mức sử dụng hàng ngày.")
+                ],
+                "redirectPath": None,
+                "action": None
+            }
+
         # ✅ Ensure fresh tool status from DB (lazy reload)
         tools_loader.maybe_reload(min_interval_seconds=10.0)
 
@@ -1213,6 +1250,19 @@ class ChatbotService:
         pending_tool: Optional[str] = None,
         original_message: Optional[str] = None,
     ) -> Generator[Dict[str, Any], None, None]:
+        # ✅ Rate Limit Check (15/20)
+        limit_msg = self._check_daily_limit(user_id, user_role)
+        if limit_msg:
+            yield {
+                "type": "step",
+                "step": _make_step(1, "Rate Limit Check", "Hệ thống kiểm tra hạn mức sử dụng hàng ngày.")
+            }
+            yield {
+                "type": "answer",
+                "chunk": limit_msg
+            }
+            return
+
         steps: List[Dict[str, Any]] = []
         t_start = time.time()
 
@@ -1493,6 +1543,14 @@ class ChatbotService:
         routing_model: Optional[str] = None,
         answer_model: Optional[str] = None,
     ) -> Dict[str, Any]:
+        # ✅ Rate Limit Check (15/20)
+        limit_msg = self._check_daily_limit(user_id, user_role)
+        if limit_msg:
+            return {
+                "answer": limit_msg,
+                "thinkingSteps": []
+            }
+
         steps: List[Dict[str, Any]] = []
         steps.append(_make_step(1, "Excel Analysis", "Đang phân tích file..."))
         excel_summary = self._parse_excel(file_content, filename)
