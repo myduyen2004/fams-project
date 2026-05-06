@@ -37,6 +37,8 @@ public class AcademicStaffDashboardController {
     private final LecturerService lecturerService;
     private final com.fams.backend.service.StudentService studentService;
     private final com.fams.backend.repository.SystemLogRepository systemLogRepository;
+    private final com.fams.backend.service.FaceAttendanceService faceAttendanceService;
+    private final com.fams.backend.service.impl.SystemLogService systemLogService;
 
     @GetMapping("/dashboard")
     @PreAuthorize("hasRole('ACADEMIC_STAFF')")
@@ -276,6 +278,40 @@ public class AcademicStaffDashboardController {
                 .header("Content-Disposition", "attachment; filename=students.xlsx")
                 .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
                 .body(data);
+    }
+
+    @GetMapping("/students/{id}/faces")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
+    @Operation(summary = "Lấy dữ liệu khuôn mặt đã đăng ký của sinh viên")
+    public ResponseEntity<List<com.fams.backend.dto.face.FaceDTO.FaceImagesResponse>> getStudentFaceImages(@PathVariable Long id) {
+        log.info("GET /academic-staff/students/{}/faces", id);
+        return ResponseEntity.ok(faceAttendanceService.getStudentFaceImagesByAdmin(id));
+    }
+
+    @DeleteMapping("/students/{id}/faces")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
+    @Operation(summary = "Reset/Xóa dữ liệu khuôn mặt của sinh viên")
+    public ResponseEntity<Void> resetStudentFaceData(
+            @PathVariable Long id,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal org.springframework.security.core.userdetails.UserDetails currentUser) {
+        log.info("DELETE /academic-staff/students/{}/faces", id);
+        
+        // Get student code before reset for logging
+        String studentCode;
+        try {
+            com.fams.backend.dto.response.StudentResponse studentInfo = studentService.getStudentById(id);
+            studentCode = studentInfo.getCode();
+        } catch (Exception e) {
+            studentCode = String.valueOf(id);
+        }
+        
+        faceAttendanceService.resetStudentFaceDataByAdmin(id);
+        
+        // Log face data reset
+        String adminUsername = currentUser != null ? currentUser.getUsername() : "unknown";
+        systemLogService.logFaceDataReset(adminUsername, studentCode);
+        
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/majors-list")

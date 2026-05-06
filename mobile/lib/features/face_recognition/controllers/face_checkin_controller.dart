@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:network_info_plus/network_info_plus.dart';
+import 'package:screen_brightness/screen_brightness.dart';
 import '../../../core/services/api_service.dart';
 
 /// States for face check-in flow
@@ -63,8 +64,12 @@ class FaceCheckInController extends GetxController {
 
   // Detection
   bool _isDetecting = false;
+  int _lastProcessTime = 0;
   Timer? _countdownTimer;
   final RxInt captureCountdown = 0.obs;
+  
+  // Screen Brightness
+  double? _originalBrightness;
 
   @override
   void onInit() {
@@ -75,10 +80,23 @@ class FaceCheckInController extends GetxController {
 
   @override
   void onClose() {
+    _restoreBrightness();
     cameraController?.dispose();
     _faceDetector.close();
     _countdownTimer?.cancel();
     super.onClose();
+  }
+
+  Future<void> _restoreBrightness() async {
+    try {
+      if (_originalBrightness != null) {
+        await ScreenBrightness().setScreenBrightness(_originalBrightness!);
+      } else {
+        await ScreenBrightness().resetScreenBrightness();
+      }
+    } catch (e) {
+      debugPrint('Could not restore brightness: $e');
+    }
   }
 
   void _initializeFaceDetector() {
@@ -139,6 +157,14 @@ class FaceCheckInController extends GetxController {
       );
 
       await cameraController!.initialize();
+      
+      try {
+        _originalBrightness = await ScreenBrightness().current;
+        await ScreenBrightness().setScreenBrightness(1.0);
+      } catch (e) {
+        debugPrint('Could not set brightness: $e');
+      }
+
       cameraController!.startImageStream(_processImage);
 
       state.value = FaceCheckInState.ready;
@@ -151,7 +177,11 @@ class FaceCheckInController extends GetxController {
   }
 
   Future<void> _processImage(CameraImage image) async {
-    if (_isDetecting || isProcessing.value) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    // Throttle to roughly 10 FPS (100ms) to reduce lag
+    if (_isDetecting || isProcessing.value || now - _lastProcessTime < 100) return;
+    
+    _lastProcessTime = now;
     _isDetecting = true;
 
     try {

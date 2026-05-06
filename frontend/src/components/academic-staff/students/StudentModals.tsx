@@ -296,7 +296,45 @@ const getErrorMessage = (error: unknown, defaultMessage: string): string => {
 export const ViewStudentModal: React.FC<{
     student: StudentResponse;
     onClose: () => void;
-}> = ({ student, onClose }) => {
+    onUpdate?: () => void;
+}> = ({ student, onClose, onUpdate }) => {
+    const [faceImages, setFaceImages] = useState<{ faceImage: string, registeredAt: string }[]>([]);
+    const [isLoadingFaces, setIsLoadingFaces] = useState(false);
+    const [isResettingFace, setIsResettingFace] = useState(false);
+    const [showConfirmReset, setShowConfirmReset] = useState(false);
+
+    useEffect(() => {
+        if (student.faceDataStatus === 'REGISTERED') {
+            const fetchFaces = async () => {
+                try {
+                    setIsLoadingFaces(true);
+                    const images = await academicStaffService.getStudentFaceImages(student.id);
+                    setFaceImages(images || []);
+                } catch (error) {
+                    console.error('Failed to fetch face images', error);
+                } finally {
+                    setIsLoadingFaces(false);
+                }
+            };
+            fetchFaces();
+        }
+    }, [student.id, student.faceDataStatus]);
+
+    const handleResetFaceData = async () => {
+        try {
+            setIsResettingFace(true);
+            await academicStaffService.resetStudentFaceData(student.id);
+            toast.success('Đã reset dữ liệu khuôn mặt thành công');
+            setFaceImages([]);
+            if (onUpdate) onUpdate();
+            setShowConfirmReset(false);
+        } catch (error) {
+            toast.error(getErrorMessage(error, 'Lỗi khi reset dữ liệu khuôn mặt'));
+        } finally {
+            setIsResettingFace(false);
+        }
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-lg border border-gray-100 dark:border-zinc-800 overflow-hidden">
@@ -384,9 +422,72 @@ export const ViewStudentModal: React.FC<{
                                 </div>
                             </div>
                         </div>
+
+                        {student.faceDataStatus === 'REGISTERED' && (
+                            <div className="pt-4 border-t border-gray-100 dark:border-zinc-800">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h5 className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-zinc-500 flex items-center gap-2">
+                                        <Stars size={14} className="text-fpt-orange" />
+                                        Dữ liệu khuôn mặt ({faceImages.length} ảnh)
+                                    </h5>
+                                    {!showConfirmReset ? (
+                                        <button 
+                                            onClick={() => setShowConfirmReset(true)}
+                                            className="px-3 py-1 bg-red-50 text-red-600 text-[10px] font-black uppercase rounded-lg dark:bg-red-900/20 dark:text-red-400 border border-red-100 dark:border-red-800/30 hover:bg-red-100 transition-colors"
+                                        >
+                                            Mở lại quyền đăng ký
+                                        </button>
+                                    ) : (
+                                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-300">
+                                            <span className="text-[10px] text-red-500 font-bold">Bạn chắc chắn muốn xóa?</span>
+                                            <button 
+                                                onClick={handleResetFaceData}
+                                                disabled={isResettingFace}
+                                                className="px-3 py-1 bg-red-600 text-white text-[10px] font-black uppercase rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+                                            >
+                                                {isResettingFace && <Loader2 size={10} className="animate-spin" />}
+                                                Có, Xóa
+                                            </button>
+                                            <button 
+                                                onClick={() => setShowConfirmReset(false)}
+                                                disabled={isResettingFace}
+                                                className="px-3 py-1 bg-gray-100 text-gray-600 text-[10px] font-black uppercase rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+                                            >
+                                                Hủy
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                {isLoadingFaces ? (
+                                    <div className="flex items-center justify-center p-8 bg-gray-50 dark:bg-zinc-800/30 rounded-2xl border border-gray-100 dark:border-zinc-800">
+                                        <Loader2 size={24} className="text-fpt-orange animate-spin" />
+                                    </div>
+                                ) : faceImages.length > 0 ? (
+                                    <div className="grid grid-cols-4 gap-3">
+                                        {faceImages.map((img, idx) => (
+                                            <div key={idx} className="aspect-square rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-700 relative group bg-gray-100 dark:bg-zinc-800">
+                                                <img 
+                                                    src={img.faceImage.startsWith('http') ? img.faceImage : `data:image/jpeg;base64,${img.faceImage}`} 
+                                                    alt={`Face ${idx+1}`} 
+                                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-2">
+                                                    <span className="text-[9px] text-white font-medium">{formatDate(img.registeredAt)}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="p-4 bg-gray-50 dark:bg-zinc-800/30 rounded-xl border border-gray-100 dark:border-zinc-800 text-center text-xs text-gray-500">
+                                        Không thể tải hình ảnh.
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
-                    <div className="flex justify-end mt-6">
+                    <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-zinc-800">
                         <button onClick={onClose} className="h-[44px] px-8 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 rounded-2xl text-sm font-bold hover:bg-gray-200 dark:hover:bg-zinc-700 transition-all active:scale-95">Đóng</button>
                     </div>
                 </div>

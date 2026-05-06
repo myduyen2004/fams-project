@@ -25,6 +25,9 @@ public interface FaceAttendanceService {
 
     FaceDTO.FaceImagesResponse getFaceImage(Long userId);
 
+    java.util.List<FaceDTO.FaceImagesResponse> getStudentFaceImagesByAdmin(Long studentId);
+
+    void resetStudentFaceDataByAdmin(Long studentId);
     FaceDTO.FaceQualityResponse checkQuality(FaceDTO.FaceQualityRequest request);
 
     com.fams.backend.client.FaceRecognitionClient.FaceDetectResponse detectFace(String image);

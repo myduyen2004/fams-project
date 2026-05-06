@@ -110,6 +110,7 @@ dependencies:
   path_provider: ^2.1.1
   flutter_html: ^3.0.0
   wifi_info_plugin_plus: ^2.0.3
+  screen_brightness: ^2.1.7
 
 dev_dependencies:
   flutter_test:

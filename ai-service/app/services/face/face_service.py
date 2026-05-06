@@ -27,8 +27,8 @@ class FaceRecognitionService:
     """
     
     # Default matching threshold (lower = stricter)
-    # [RE-TUNING]: Set to 0.5 for better stability/accuracy in FAMS context
-    DEFAULT_TOLERANCE = 0.5
+    # [RE-TUNING]: Set to 0.6 for better stability/accuracy in FAMS context (Demo friendly)
+    DEFAULT_TOLERANCE = 0.60
     
     def __init__(self, tolerance: float = DEFAULT_TOLERANCE):
         """

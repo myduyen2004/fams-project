@@ -82,7 +82,7 @@ public class DiscordNotificationService {
     }
 
     @Async
-    public void sendDeploymentNotification(String status, String branch, String commit) {
+    public void sendDeploymentNotification(String status, String branch, String details, String url) {
         try {
             Map<String, Object> webhook = new HashMap<>();
 
@@ -94,8 +94,12 @@ public class DiscordNotificationService {
             List<Map<String, Object>> fields = List.of(
                     Map.of("name", "Environment", "value", "**" + environment.toUpperCase() + "**", "inline", true),
                     Map.of("name", "Branch", "value", branch, "inline", true),
-                    Map.of("name", "Commit", "value", "`" + commit.substring(0, Math.min(7, commit.length())) + "`",
-                            "inline", true));
+                    Map.of("name", "Status", "value", details, "inline", true));
+
+            if (url != null && !url.isEmpty()) {
+                fields = new java.util.ArrayList<>(fields);
+                fields.add(Map.of("name", "Access URL", "value", "[Click to Open](" + url + ")", "inline", false));
+            }
 
             embed.put("fields", fields);
             embed.put("footer", Map.of("text", "FAMS Deployment Monitor"));

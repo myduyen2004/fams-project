@@ -54,7 +54,7 @@ class LivenessDetectionService:
     EYE_AR_THRESH = 0.21
     
     # Head movement thresholds (degrees)
-    HEAD_TURN_THRESH = 15.0
+    HEAD_TURN_THRESH = 45.0
     
     def __init__(self):
         """Initialize the liveness detection service."""
@@ -316,8 +316,8 @@ class LivenessDetectionService:
             combined_score = (blur_score + edge_score) / 2
             
             # Threshold (tunable)
-            # Lowered threshold to 50 to accommodate mobile front cameras in various lighting
-            passed = bool(combined_score > 0.4 and laplacian_var > 50)
+            # Lowered threshold for demo to accommodate mobile front cameras in various lighting
+            passed = bool(combined_score > 0.25 and laplacian_var > 25)
             
             return {
                 "passed": passed,

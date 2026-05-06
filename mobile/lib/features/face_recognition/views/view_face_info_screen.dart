@@ -2,10 +2,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:solar_icons/solar_icons.dart';
 import '../../../core/constants/app_colors.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../../core/services/api_service.dart';
+import '../../profile/views/profile_screen.dart'; // For HeaderCurveClipper
+import 'face_registration_guide_screen.dart';
 
 /// Screen to view registered face information
 class ViewFaceInfoScreen extends StatefulWidget {
@@ -78,59 +81,112 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).scaffoldBackgroundColor : const Color(0xFFF5F5F5),
-      appBar: AppBar(
-        title: Text(
-          'Thông tin khuôn mặt',
-          style: GoogleFonts.plusJakartaSans(
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
+      backgroundColor: const Color(0xFFF9FAFB),
+      body: Stack(
+        children: [
+          // 1. Curved Background
+          ClipPath(
+            clipper: HeaderCurveClipper(),
+            child: Container(
+              height: 250.h,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0xFFE3F2FD),
+                    const Color(0xFFF1F8E9).withOpacity(0.5),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ),
-        backgroundColor: AppColors.primaryOrange,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 20.r),
-          onPressed: () => Get.back(),
-        ),
-      ),
-      body: SafeArea(
-        child: _buildBody(),
+          
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // 2. Standardized Header
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(20.w, 60.h, 20.w, 15.h),
+                sliver: SliverToBoxAdapter(
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => Get.back(),
+                        child: Container(
+                          padding: EdgeInsets.all(8.r),
+                          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                          child: Icon(SolarIconsOutline.altArrowLeft, color: const Color(0xFF1E2A3A), size: 24.sp),
+                        ),
+                      ),
+                      SizedBox(width: 16.w),
+                      Text(
+                        'Thông tin khuôn mặt',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 22.sp,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF1E2A3A),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 3. Body content
+              SliverToBoxAdapter(
+                child: _buildBodyContent(),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBodyContent() {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(
-          color: AppColors.primaryOrange,
+      return Container(
+        height: 300.h,
+        alignment: Alignment.center,
+        child: const CircularProgressIndicator(
+          color: Color(0xFFF26F21),
         ),
       );
     }
 
     if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              _error!,
-              style: GoogleFonts.plusJakartaSans(color: Colors.red, fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _loadFaceData,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryOrange,
+      return Container(
+        height: 300.h,
+        alignment: Alignment.center,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(SolarIconsOutline.dangerTriangle, size: 64, color: Colors.redAccent),
+              const SizedBox(height: 16),
+              Text(
+                _error!,
+                style: GoogleFonts.plusJakartaSans(color: Colors.redAccent, fontSize: 16.sp),
+                textAlign: TextAlign.center,
               ),
-              child: const Text('Thử lại', style: TextStyle(color: Colors.white)),
-            ),
-          ],
+              const SizedBox(height: 24),
+              OutlinedButton(
+                onPressed: _loadFaceData,
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFFF26F21), width: 1.5),
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFFF26F21),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100.r)),
+                ),
+                child: Text(
+                  'Thử lại',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 14.sp, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -139,89 +195,91 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
     final registeredAt = _faceStatus?['registeredAt'];
     final faceImageBase64 = _faceImage?['faceImage'] as String?;
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(24.r),
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20.w),
       child: Column(
         children: [
-          // Face Image or Icon Container
-          _buildFaceImageWidget(faceImageBase64),
-
-          24.verticalSpace,
-
+          SizedBox(height: 20.h),
+          
+          // Face Image
+          Center(
+            child: _buildFaceImageWidget(faceImageBase64, hasFaceData),
+          ),
+          
+          SizedBox(height: 16.h),
+          
           // Status Text
           Text(
-            hasFaceData ? 'Đã đăng ký khuôn mặt' : 'Chưa đăng ký',
+            hasFaceData ? 'Đã đăng ký' : 'Chưa đăng ký',
             style: GoogleFonts.plusJakartaSans(
-              fontSize: 24.sp,
-              fontWeight: FontWeight.bold,
-              color: hasFaceData ? Colors.green : Colors.red,
+              fontSize: 22.sp,
+              fontWeight: FontWeight.w800,
+              color: hasFaceData ? const Color(0xFF10B981) : const Color(0xFFEF4444),
             ),
           ),
 
-          32.verticalSpace,
+          SizedBox(height: 30.h),
 
-          // Info Card
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(20.r),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(16.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.05),
-                  blurRadius: 10.r,
-                  offset: Offset(0, 4.h),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                _buildInfoRow(
-                  icon: Icons.check_circle,
-                  label: 'Trạng thái',
-                  value: hasFaceData ? 'Đã xác minh' : 'Chưa xác minh',
-                  valueColor: hasFaceData ? Colors.green : Colors.red,
-                ),
-                Divider(height: 24.h, color: Theme.of(context).dividerColor),
-                _buildInfoRow(
-                  icon: Icons.calendar_today,
-                  label: 'Ngày đăng ký',
-                  value: _formatDateTime(registeredAt),
-                  valueColor: Theme.of(context).colorScheme.onSurface,
-                ),
-                Divider(height: 24.h, color: Theme.of(context).dividerColor),
-                _buildInfoRow(
-                  icon: Icons.security,
-                  label: 'Bảo mật',
-                  value: 'Dữ liệu được mã hóa',
-                  valueColor: Theme.of(context).colorScheme.onSurface,
-                ),
-              ],
-            ),
+          // Info Cards
+          Align(
+            alignment: Alignment.centerLeft,
+            child: _buildSectionTitle("TRẠNG THÁI XÁC MINH"),
           ),
+          SizedBox(height: 12.h),
 
-          24.verticalSpace,
+          _buildGroupedCard([
+            _buildInfoItem(
+              icon: SolarIconsOutline.verifiedCheck,
+              iconColor: const Color(0xFF64748B),
+              iconBgColor: const Color(0xFFF8FAFC),
+              label: 'Trạng thái',
+              value: hasFaceData ? 'Đã xác minh' : 'Chưa xác minh',
+              valueColor: hasFaceData ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+              isLast: false,
+            ),
+            _buildInfoItem(
+              icon: SolarIconsOutline.calendar,
+              iconColor: const Color(0xFF64748B),
+              iconBgColor: const Color(0xFFF8FAFC),
+              label: 'Ngày đăng ký',
+              value: _formatDateTime(registeredAt),
+              valueColor: const Color(0xFF1E2A3A),
+              isLast: false,
+            ),
+            _buildInfoItem(
+              icon: SolarIconsOutline.shieldCheck,
+              iconColor: const Color(0xFF64748B),
+              iconBgColor: const Color(0xFFF8FAFC),
+              label: 'Bảo mật',
+              value: 'Dữ liệu được mã hóa',
+              valueColor: const Color(0xFF1E2A3A),
+              isLast: true,
+            ),
+          ]),
+
+          SizedBox(height: 24.h),
 
           // Info Note
           Container(
-            width: double.infinity,
             padding: EdgeInsets.all(16.r),
             decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12.r),
-              border: Border.all(color: Colors.blue.withOpacity(0.3)),
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(20.r),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.info_outline, color: Colors.blue, size: 24.r),
-                12.horizontalSpace,
+                Icon(SolarIconsOutline.infoCircle, color: const Color(0xFF64748B), size: 24.sp),
+                SizedBox(width: 12.w),
                 Expanded(
                   child: Text(
                     'Khuôn mặt của bạn được sử dụng để điểm danh tự động. Dữ liệu được bảo mật và chỉ dùng trong hệ thống FAMS.',
                     style: GoogleFonts.plusJakartaSans(
-                      color: Colors.blue[800],
+                      color: const Color(0xFF475569),
                       fontSize: 13.sp,
+                      fontWeight: FontWeight.w500,
+                      height: 1.5,
                     ),
                   ),
                 ),
@@ -229,111 +287,190 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
             ),
           ),
           
-          32.verticalSpace,
+          // Register button when face not registered
+          if (!hasFaceData) ...[
+            SizedBox(height: 24.h),
+            SizedBox(
+              width: double.infinity,
+              height: 52.h,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Get.off(() => const FaceRegistrationGuideScreen());
+                },
+                icon: Icon(SolarIconsOutline.faceScanSquare, size: 22.sp),
+                label: Text(
+                  'Đăng ký khuôn mặt',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF26F21),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16.r),
+                  ),
+                ),
+              ),
+            ),
+          ],
+
+          SizedBox(height: 40.h),
         ],
       ),
     );
   }
 
-  Widget _buildFaceImageWidget(String? faceImageData) {
+  Widget _buildFaceImageWidget(String? faceImageData, bool hasFaceData) {
     // 1. Try Base64 or URL from _faceImage response
     if (faceImageData != null && faceImageData.isNotEmpty) {
       if (faceImageData.startsWith('http')) {
-        return _buildCircleImage(Image.network(faceImageData, fit: BoxFit.cover));
+        return _buildCircleImage(Image.network(faceImageData, fit: BoxFit.cover), hasFaceData);
       }
       try {
         final bytes = base64Decode(faceImageData);
-        return _buildCircleImage(Image.memory(bytes, fit: BoxFit.cover));
+        return _buildCircleImage(Image.memory(bytes, fit: BoxFit.cover), hasFaceData);
       } catch (_) {}
     }
 
     // 2. Try URL from other potential keys in _faceImage
     final altUrl = _faceImage?['url'] ?? _faceImage?['imageUrl'] ?? _faceImage?['faceImageUrl'];
     if (altUrl != null && altUrl is String && altUrl.startsWith('http')) {
-      return _buildCircleImage(Image.network(altUrl, fit: BoxFit.cover));
+      return _buildCircleImage(Image.network(altUrl, fit: BoxFit.cover), hasFaceData);
     }
 
     // 3. Fallback to Profile Avatar if registered
     final userAvatar = authController.currentUser.value?.avatarUrl;
     if (userAvatar != null && userAvatar.isNotEmpty) {
-      return _buildCircleImage(Image.network(userAvatar, fit: BoxFit.cover));
+      return _buildCircleImage(Image.network(userAvatar, fit: BoxFit.cover), hasFaceData);
     }
 
-    return _buildDefaultFaceIcon();
+    return _buildDefaultFaceIcon(hasFaceData);
   }
 
-  Widget _buildCircleImage(Widget imageWidget) {
+  Widget _buildCircleImage(Widget imageWidget, bool hasFaceData) {
     return Container(
-      width: 150.r,
-      height: 150.r,
+      width: 140.r,
+      height: 140.r,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.green, width: 3.r),
+        color: Colors.white,
+        border: Border.all(
+          color: hasFaceData ? const Color(0xFF10B981) : const Color(0xFFE2E8F0), 
+          width: 4.r
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 10.r,
-            offset: Offset(0, 4.h),
+            color: (hasFaceData ? const Color(0xFF10B981).withOpacity(0.15) : const Color(0xFF94A3B8).withOpacity(0.08)),
+            blurRadius: 20,
+            spreadRadius: 5,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: ClipOval(
-        child: imageWidget,
+      child: Padding(
+        padding: EdgeInsets.all(4.r),
+        child: ClipOval(
+          child: imageWidget,
+        ),
       ),
     );
   }
 
-  Widget _buildDefaultFaceIcon() {
+  Widget _buildDefaultFaceIcon(bool hasFaceData) {
     return Container(
-      width: 120.r,
-      height: 120.r,
+      width: 140.r,
+      height: 140.r,
       decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.1),
+        color: Colors.white,
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.green, width: 3.r),
+        border: Border.all(
+          color: hasFaceData ? const Color(0xFF10B981) : const Color(0xFFE2E8F0), 
+          width: 4.r
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (hasFaceData ? const Color(0xFF10B981).withOpacity(0.15) : const Color(0xFF94A3B8).withOpacity(0.08)),
+            blurRadius: 20,
+            spreadRadius: 5,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
-      child: Icon(
-        Icons.face,
-        size: 64.r,
-        color: Colors.green,
+      child: Center(
+        child: Icon(
+          SolarIconsOutline.faceScanSquare,
+          size: 64.r,
+          color: hasFaceData ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+        ),
       ),
     );
   }
 
-  Widget _buildInfoRow({
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: GoogleFonts.plusJakartaSans(
+        fontSize: 12.sp,
+        fontWeight: FontWeight.w800,
+        color: const Color(0xFF1E2A3A).withOpacity(0.4),
+        letterSpacing: 1.2,
+      ),
+    );
+  }
+
+  Widget _buildGroupedCard(List<Widget> children) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24.r),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 20, offset: const Offset(0, 8)),
+        ],
+      ),
+      child: Column(children: children),
+    );
+  }
+
+  Widget _buildInfoItem({
     required IconData icon,
+    required Color iconColor,
+    required Color iconBgColor,
     required String label,
     required String value,
     required Color valueColor,
+    required bool isLast,
   }) {
-    return Row(
-      children: [
-        Icon(icon, color: AppColors.primaryOrange, size: 24.r),
-        12.horizontalSpace,
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: GoogleFonts.plusJakartaSans(
-                  color: Colors.grey[600],
-                  fontSize: 13.sp,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: GoogleFonts.plusJakartaSans(
-                  color: valueColor,
-                  fontSize: 15.sp,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+      decoration: BoxDecoration(
+        border: isLast ? null : const Border(bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(10.r),
+            decoration: BoxDecoration(color: iconBgColor, borderRadius: BorderRadius.circular(12.r)),
+            child: Icon(icon, color: iconColor, size: 20.sp),
           ),
-        ),
-      ],
+          SizedBox(width: 16.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 12.sp, fontWeight: FontWeight.w600, color: Colors.grey.shade400)),
+                SizedBox(height: 4.h),
+                Text(
+                  value,
+                  style: GoogleFonts.plusJakartaSans(fontSize: 15.sp, fontWeight: FontWeight.w700, color: valueColor),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

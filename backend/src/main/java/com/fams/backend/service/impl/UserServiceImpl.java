@@ -385,6 +385,13 @@ public class UserServiceImpl implements UserService {
         user.setPhone(request.getPhone());
         user.setDob(request.getDob());
         user.setRole(request.getRole());
+
+        // Cannot lock ADMIN or ACADEMIC_STAFF accounts
+        if (request.getStatus() == User.UserStatus.LOCKED && 
+            (request.getRole() == User.UserRole.ADMIN || request.getRole() == User.UserRole.ACADEMIC_STAFF)) {
+            throw new BadRequestException("Không thể khóa tài khoản của Quản trị viên và Phòng đào tạo");
+        }
+        
         user.setStatus(request.getStatus());
 
         if (request.getFaceDataStatus() != null) {

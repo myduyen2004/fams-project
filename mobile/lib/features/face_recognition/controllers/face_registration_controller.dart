@@ -9,11 +9,13 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:screen_brightness/screen_brightness.dart';
 import 'package:image/image.dart' as img;
 import 'package:dio/dio.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/utils/image_converter_utils.dart';
 import '../../auth/controllers/auth_controller.dart';
+import '../views/view_face_info_screen.dart';
 
 /// ============================================================
 /// Enhanced Face Registration Flow with Randomized Actions
@@ -30,6 +32,7 @@ enum FaceRegistrationState {
   initializing,
   environmentCheck,   // Phase 1: Quality validation
   livenessAction,     // Phase 2-4: Randomized actions
+  waitingFrontal,     // Phase 4.5: Wait for user to look straight before final capture
   submitting,         // Phase 5: Send to backend
   success,
   error,
@@ -102,6 +105,10 @@ class FaceRegistrationController extends GetxController {
   DateTime? _lastToastTime;  // For debouncing toast messages
   static const int _toastCooldownMs = 3000;  // 3 second cooldown (less spam)
   bool _isDetecting = false;
+  int _lastProcessTime = 0;
+  
+  // Screen Brightness
+  double? _originalBrightness;
   
   // Timing
   DateTime? _flowStartTime;
@@ -114,12 +121,25 @@ class FaceRegistrationController extends GetxController {
 
   @override
   void onClose() {
+    _restoreBrightness();
     cameraController?.dispose();
     if (_faceDetectorInitialized) {
       _faceDetector.close();
     }
     _phaseTimer?.cancel();
     super.onClose();
+  }
+
+  Future<void> _restoreBrightness() async {
+    try {
+      if (_originalBrightness != null) {
+        await ScreenBrightness().setScreenBrightness(_originalBrightness!);
+      } else {
+        await ScreenBrightness().resetScreenBrightness();
+      }
+    } catch (e) {
+      debugPrint('Could not restore brightness: $e');
+    }
   }
 
   /// Fixed action sequence (no randomization)
@@ -209,6 +229,14 @@ void _generateRandomActionSequence() {
       );
 
       await cameraController!.initialize();
+      
+      try {
+        _originalBrightness = await ScreenBrightness().current;
+        await ScreenBrightness().setScreenBrightness(1.0);
+      } catch (e) {
+        debugPrint('Could not set brightness: $e');
+      }
+
       cameraController!.startImageStream(_processImage);
       
       // Start with Phase 1: Environment Check
@@ -222,8 +250,11 @@ void _generateRandomActionSequence() {
 
   /// Process each camera frame
   Future<void> _processImage(CameraImage image) async {
-    if (_isDetecting || isProcessing.value) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    // Throttle to ~10 FPS (100ms) to reduce lag and CPU usage
+    if (_isDetecting || isProcessing.value || now - _lastProcessTime < 100) return;
     
+    _lastProcessTime = now;
     _lastCameraImage = image;
     _isDetecting = true;
 
@@ -291,6 +322,9 @@ void _generateRandomActionSequence() {
         break;
       case FaceRegistrationState.livenessAction:
         _handleLivenessAction(face);
+        break;
+      case FaceRegistrationState.waitingFrontal:
+        _handleWaitingFrontal(face);
         break;
       default:
         break;
@@ -551,8 +585,8 @@ void _generateRandomActionSequence() {
     _detectionFrameCount = 0;
     
     if (_currentActionIndex >= _actionSequence.length) {
-      // All actions completed, submit
-      _submitRegistration();
+      // All liveness actions completed → wait for frontal pose before submission
+      _startWaitingFrontal();
       return;
     }
     
@@ -567,6 +601,57 @@ void _generateRandomActionSequence() {
     progress.value = actionProgress;
     
     _phaseTimer = Timer(const Duration(seconds: 15), _handleTimeout);
+  }
+
+  // ===================== PHASE 4.5: WAIT FOR FRONTAL POSE =====================
+
+  /// After all liveness actions, ask user to look straight before final capture.
+  /// This prevents the registration photo from being taken while the head is turned.
+  void _startWaitingFrontal() {
+    _phaseTimer?.cancel();
+    _detectionFrameCount = 0;
+    
+    state.value = FaceRegistrationState.waitingFrontal;
+    currentActionName.value = 'Nhìn thẳng vào camera';
+    statusMessage.value = 'Nhìn thẳng vào camera để chụp ảnh đăng ký';
+    progress.value = 0.80;
+    frameStatus.value = FrameStatus.normal;
+    
+    _phaseTimer = Timer(const Duration(seconds: 15), _handleTimeout);
+  }
+
+  /// Check that the user's face is frontal (yaw & pitch within threshold).
+  /// When confirmed for enough frames, stop stream and take a high-res photo.
+  void _handleWaitingFrontal(Face face) {
+    final yaw = (face.headEulerAngleY ?? 0).abs();
+    final pitch = (face.headEulerAngleX ?? 0).abs();
+    
+    if (yaw > MAX_HEAD_ANGLE || pitch > MAX_HEAD_ANGLE) {
+      // Not frontal yet
+      _detectionFrameCount = 0;
+      if (yaw > MAX_HEAD_ANGLE) {
+        activeWarnings.add('Quay mặt lại thẳng');
+      }
+      if (pitch > MAX_HEAD_ANGLE) {
+        activeWarnings.add('Nhìn thẳng vào camera');
+      }
+      frameStatus.value = FrameStatus.warning;
+      return;
+    }
+    
+    // Face is frontal
+    _detectionFrameCount++;
+    frameStatus.value = FrameStatus.detected;
+    statusMessage.value = 'Giữ nguyên, đang chụp...';
+    
+    // Require 3 consecutive frontal frames to confirm stable frontal pose
+    if (_detectionFrameCount >= 3) {
+      frameStatus.value = FrameStatus.success;
+      // Don't use _captureCurrentFrame() (stream quality too low for AI)
+      // Instead, go to submit which uses takePicture() for high-res
+      // The user is confirmed frontal at this point
+      _submitRegistration();
+    }
   }
 
   void _handleLivenessAction(Face face) {
@@ -677,7 +762,9 @@ void _generateRandomActionSequence() {
     try {
       await cameraController!.stopImageStream();
       
-      // Capture final high-res image
+      // Frontal pose was confirmed by 3 consecutive stream frames in _handleWaitingFrontal.
+      // Now use takePicture() for high-res registration image.
+      // User is still looking straight at this point.
       final image = await cameraController!.takePicture();
       final bytes = await image.readAsBytes();
       final originalImage = img.decodeImage(bytes);
@@ -716,6 +803,11 @@ void _generateRandomActionSequence() {
           final authController = Get.find<AuthController>();
           await authController.fetchCurrentUser();
         } catch (_) {}
+
+        // Wait for success animation (Tween is 600ms) then navigate
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          Get.off(() => const ViewFaceInfoScreen());
+        });
       } else {
         throw Exception(response.data['message'] ?? 'Registration failed');
       }
@@ -903,20 +995,27 @@ void _generateRandomActionSequence() {
 
   /// Get current phase info for UI step indicator
   int get currentPhaseIndex {
+    // Force Obx dependency tracking on progress so the step indicator updates per action
+    final _ = progress.value;
+    
     switch (state.value) {
       case FaceRegistrationState.environmentCheck:
         return 0;
       case FaceRegistrationState.livenessAction:
         // Return index 1-4 based on current action
         return 1 + _currentActionIndex.clamp(0, 3);
+      case FaceRegistrationState.waitingFrontal:
+        return 5;
       case FaceRegistrationState.submitting:
       case FaceRegistrationState.success:
-        return 5;
+        return 6;
       default:
         return 0;
     }
   }
 
   /// Get total number of steps for UI
-  int get totalSteps => 6; // Environment + 4 actions + Submit
+  int get totalSteps => 7; // Environment + 4 actions + Frontal + Submit
+
+  // totalSteps getter moved up with currentPhaseIndex
 }

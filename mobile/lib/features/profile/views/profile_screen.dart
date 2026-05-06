@@ -127,17 +127,18 @@ class ProfileScreen extends StatelessWidget {
                           title: "Thông tin cá nhân",
                           trailing: Icon(SolarIconsOutline.altArrowRight, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2), size: 20.sp),
                         ),
-                        _buildMenuListItem(
-                          context,
-                          onTap: () => user?.hasFaceRegistered == true 
-                              ? Get.to(() => const ViewFaceInfoScreen()) 
-                              : Get.to(() => const FaceRegistrationGuideScreen()),
-                          icon: SolarIconsOutline.shieldCheck,
-                          title: "Xác thực khuôn mặt",
-                          trailing: user?.hasFaceRegistered == true 
-                              ? Text("ĐÃ XÁC THỰC", style: GoogleFonts.plusJakartaSans(color: Colors.green, fontWeight: FontWeight.w800, fontSize: 12.sp))
-                              : Icon(SolarIconsOutline.altArrowRight, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2), size: 20.sp),
-                        ),
+                        if (user != null && user.role.toUpperCase() == 'STUDENT')
+                          _buildMenuListItem(
+                            context,
+                            onTap: () => user.hasFaceRegistered == true 
+                                ? Get.to(() => const ViewFaceInfoScreen()) 
+                                : Get.to(() => const FaceRegistrationGuideScreen()),
+                            icon: SolarIconsOutline.shieldCheck,
+                            title: "Xác thực khuôn mặt",
+                            trailing: user.hasFaceRegistered == true 
+                                ? Text("ĐÃ XÁC THỰC", style: GoogleFonts.plusJakartaSans(color: Colors.green, fontWeight: FontWeight.w800, fontSize: 12.sp))
+                                : Icon(SolarIconsOutline.altArrowRight, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2), size: 20.sp),
+                          ),
                         _buildMenuListItem(
                           context,
                           onTap: () {
