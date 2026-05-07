@@ -172,7 +172,12 @@ public class AIToolServiceImpl implements AIToolService {
 
     @Override
     public Map<String, Object> getFptuKnowledgeSource() {
-        String knowledgeUrl = aiServiceBaseUrl + "/api/chat/admin/fptu-knowledge";
+        return getFptuKnowledgeSource("STUDENT");
+    }
+
+    @Override
+    public Map<String, Object> getFptuKnowledgeSource(String role) {
+        String knowledgeUrl = aiServiceBaseUrl + "/api/chat/admin/fptu-knowledge?role=" + (role != null ? role : "STUDENT");
         try {
             Map response = restTemplate.getForObject(knowledgeUrl, Map.class);
             return response != null ? response : Map.of("success", false, "message", "No response from AI service");
@@ -184,9 +189,15 @@ public class AIToolServiceImpl implements AIToolService {
 
     @Override
     public Map<String, Object> updateFptuKnowledgeSource(String content) {
+        return updateFptuKnowledgeSource(content, "STUDENT");
+    }
+
+    @Override
+    public Map<String, Object> updateFptuKnowledgeSource(String content, String role) {
         String knowledgeUrl = aiServiceBaseUrl + "/api/chat/admin/fptu-knowledge";
         Map<String, Object> payload = new HashMap<>();
         payload.put("content", content);
+        payload.put("role", role != null ? role : "STUDENT");
 
         try {
             ResponseEntity<Map> responseEntity = restTemplate.exchange(

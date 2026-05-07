@@ -19,11 +19,15 @@ import {
   Globe,
   Send,
   Clock,
-  Activity
+  Activity,
+  BookOpen,
+  Users,
+  GraduationCap
 } from 'lucide-react';
 import toast from "@utils/toast";
 import { aiToolService, AITool, AIToolTest } from '../../services/api/aiToolService';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { KnowledgeLibraryModal } from '../../components/admin/KnowledgeLibraryModal';
 
 export const AIToolManagement: React.FC = () => {
   const [tools, setTools] = useState<AITool[]>([]);
@@ -53,6 +57,8 @@ export const AIToolManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'PARAMS' | 'BODY' | 'CONSOLE'>('PARAMS');
   const [testLogs, setTestLogs] = useState<string>('');
   const [latency, setLatency] = useState<number | null>(null);
+  const [knowledgeModalOpen, setKnowledgeModalOpen] = useState(false);
+  const [knowledgeModalRole, setKnowledgeModalRole] = useState<'STUDENT' | 'LECTURER'>('STUDENT');
   // const [knowledgeSource, setKnowledgeSource] = useState<KnowledgeSourcePayload | null>(null);
   // const [knowledgeContent, setKnowledgeContent] = useState('');
   // const [knowledgeLoading, setKnowledgeLoading] = useState(true);
@@ -270,6 +276,45 @@ export const AIToolManagement: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Document Library Buttons */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button
+            onClick={() => { setKnowledgeModalRole('STUDENT'); setKnowledgeModalOpen(true); }}
+            className="group relative bg-white rounded-[20px] p-5 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100/80 flex items-center gap-4 hover:border-blue-200 hover:shadow-[0_4px_20px_rgba(59,130,246,0.08)] transition-all duration-300 active:scale-[0.98]"
+          >
+            <div className="w-[52px] h-[52px] rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20 group-hover:shadow-blue-500/30 transition-shadow">
+              <Users size={24} className="text-white" />
+            </div>
+            <div className="flex-1 text-left">
+              <div className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-1">KNOWLEDGE BASE</div>
+              <div className="text-[15px] font-bold text-slate-800">Thư viện Tài liệu Sinh viên</div>
+              <div className="text-[12px] text-slate-400 mt-0.5">fptu-information-Student.json</div>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 text-[11px] font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+              <BookOpen size={13} />
+              Mở
+            </div>
+          </button>
+
+          <button
+            onClick={() => { setKnowledgeModalRole('LECTURER'); setKnowledgeModalOpen(true); }}
+            className="group relative bg-white rounded-[20px] p-5 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100/80 flex items-center gap-4 hover:border-emerald-200 hover:shadow-[0_4px_20px_rgba(16,185,129,0.08)] transition-all duration-300 active:scale-[0.98]"
+          >
+            <div className="w-[52px] h-[52px] rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/30 transition-shadow">
+              <GraduationCap size={24} className="text-white" />
+            </div>
+            <div className="flex-1 text-left">
+              <div className="text-[10px] text-emerald-500 font-black uppercase tracking-widest mb-1">KNOWLEDGE BASE</div>
+              <div className="text-[15px] font-bold text-slate-800">Thư viện Tài liệu Giảng viên</div>
+              <div className="text-[12px] text-slate-400 mt-0.5">fpt-information-Lecturer.json</div>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 text-[11px] font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+              <BookOpen size={13} />
+              Mở
+            </div>
+          </button>
         </div>
 
         {/* Search & Filter Bar */}
@@ -974,6 +1019,13 @@ export const AIToolManagement: React.FC = () => {
             </div>
           </div>
         ), document.body)}
+
+        {/* Knowledge Library Modal */}
+        <KnowledgeLibraryModal
+          isOpen={knowledgeModalOpen}
+          onClose={() => setKnowledgeModalOpen(false)}
+          role={knowledgeModalRole}
+        />
       </div>
     </AdminLayout>
   );

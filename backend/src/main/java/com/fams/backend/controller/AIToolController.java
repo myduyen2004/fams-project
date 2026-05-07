@@ -61,12 +61,14 @@ public class AIToolController {
     }
 
     @GetMapping("/knowledge-source")
-    public ResponseEntity<Map<String, Object>> getFptuKnowledgeSource() {
-        return ResponseEntity.ok(aiToolService.getFptuKnowledgeSource());
+    public ResponseEntity<Map<String, Object>> getFptuKnowledgeSource(@RequestParam(value = "role", required = false, defaultValue = "STUDENT") String role) {
+        return ResponseEntity.ok(aiToolService.getFptuKnowledgeSource(role));
     }
 
     @PutMapping("/knowledge-source")
     public ResponseEntity<Map<String, Object>> updateFptuKnowledgeSource(@RequestBody Map<String, Object> payload) {
-        return ResponseEntity.ok(aiToolService.updateFptuKnowledgeSource(String.valueOf(payload.getOrDefault("content", ""))));
+        String content = String.valueOf(payload.getOrDefault("content", ""));
+        String role = String.valueOf(payload.getOrDefault("role", "STUDENT"));
+        return ResponseEntity.ok(aiToolService.updateFptuKnowledgeSource(content, role));
     }
 }
