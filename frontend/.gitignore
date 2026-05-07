@@ -30,3 +30,5 @@ dist-ssr
 
 # Error logs
 *_error.log
+.vercel
+.env*.local
