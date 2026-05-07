@@ -18,6 +18,7 @@ import {
 import dayjs from 'dayjs';
 import toast from "@utils/toast";
 import { ConfirmModal } from '../../components/common/ConfirmModal';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 export const LecturerRequestDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -59,21 +60,35 @@ export const LecturerRequestDetailPage: React.FC = () => {
         }
     };
 
+    const fetchRequest = async () => {
+        if (!id) return;
+        try {
+            const data = await scheduleRequestService.getRequestById(Number(id));
+            setRequest(data);
+        } catch (error) {
+            console.error(error);
+            toast.error('Không thể tải chi tiết yêu cầu');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchRequest = async () => {
-            if (!id) return;
-            try {
-                const data = await scheduleRequestService.getRequestById(Number(id));
-                setRequest(data);
-            } catch (error) {
-                console.error(error);
-                toast.error('Không thể tải chi tiết yêu cầu');
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchRequest();
     }, [id]);
+
+    // WebSocket for real-time updates
+    useWebSocket('/user/queue/notifications', (data: any) => {
+        if (Array.isArray(data)) {
+            const hasUpdate = data.some((notif: any) => 
+                notif.type === 'ACADEMIC' || notif.type === 'SCHEDULE_CHANGE'
+            );
+            if (hasUpdate) {
+                console.log('Real-time update: Request details updated');
+                fetchRequest();
+            }
+        }
+    });
 
     const formatDate = (dateString?: string) => {
         if (!dateString) return 'Không có';

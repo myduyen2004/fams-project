@@ -12,6 +12,7 @@ import { classSectionService, ClassSectionTransferResponse } from '../../service
 import apiClient from '../../services/api/authService';
 import { Major } from '../../types/major';
 import { Specialization } from '../../types/specialization';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 import { Course } from '../../types/course';
 import toast from "@utils/toast";
@@ -259,6 +260,17 @@ export const StudentAcademicRequestPage: React.FC = () => {
             document.body.style.paddingRight = '0px';
         };
     }, [showCreateDialog, showDetailDialog, infoType, requestToCancel]);
+
+    // WebSocket for real-time updates
+    useWebSocket('/user/queue/notifications', (data: any) => {
+        if (Array.isArray(data)) {
+            const hasUpdate = data.some((notif: any) => notif.type === 'ACADEMIC');
+            if (hasUpdate) {
+                console.log('Real-time update: Academic request status changed');
+                fetchRequests();
+            }
+        }
+    });
 
     useEffect(() => {
         fetchRequests();

@@ -16,6 +16,7 @@ import { StudentInfoModal } from '../../components/common/StudentInfoModal';
 import { sortGradeComponents } from '../../utils/gradeSortUtils';
 import toast from "@utils/toast";
 import { CustomSelect } from '../../components/common/CustomSelect';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 export const ExamGradeManagementPage: React.FC = () => {
 
@@ -215,6 +216,20 @@ export const ExamGradeManagementPage: React.FC = () => {
             setSaving(false);
         }
     };
+
+    // Real-time synchronization
+    useWebSocket('/user/queue/notifications', (notifications: any[]) => {
+        if (!notifications || notifications.length === 0) return;
+        
+        const hasRelevantUpdate = notifications.some(notif => 
+            notif.type === 'GRADE_SUBMITTED'
+        );
+
+        if (hasRelevantUpdate && selectedCourse && selectedSemester) {
+            console.log('Real-time update: Refreshing grades due to submission');
+            fetchGrades();
+        }
+    });
 
     const availableClasses = React.useMemo(() => {
         if (!gradeOverview?.studentGrades) return [];

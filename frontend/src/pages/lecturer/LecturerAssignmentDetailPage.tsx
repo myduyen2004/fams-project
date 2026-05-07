@@ -10,6 +10,7 @@ import {
     ArrowLeft, Clock, ExternalLink, Search, Loader2, BookOpen, Lock, X, Download, MessageSquare, ShieldAlert, SlidersHorizontal
 } from 'lucide-react';
 import toast from "@utils/toast";
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 const PAGE_SIZE = 30;
 const BATCH_CHECK_CONCURRENCY = 3;
@@ -66,6 +67,18 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
         if (!assignmentId || isNaN(assignmentId)) return;
         fetchData();
     }, [assignmentId]);
+
+    // WebSocket for real-time updates
+    useWebSocket('/user/queue/notifications', (data: any) => {
+        // Notification payload is an array of NotificationResponse
+        if (Array.isArray(data)) {
+            const hasSubmission = data.some((notif: any) => notif.type === 'SUBMISSION');
+            if (hasSubmission) {
+                console.log('Real-time update: Assignment submission received');
+                fetchData();
+            }
+        }
+    });
 
     const fetchData = async () => {
         setLoading(true);

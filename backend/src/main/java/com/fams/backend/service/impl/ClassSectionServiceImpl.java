@@ -114,9 +114,12 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         Semester semester = semesterRepository.findByCode(request.getSemesterCode())
                 .orElseThrow(() -> new RuntimeException("Học kỳ không tồn tại: " + request.getSemesterCode()));
 
+        // Remove restriction to allow creation for historical semesters
+        /*
         if (semester.getStatus() != Semester.SemesterStatus.UPCOMING) {
             throw new RuntimeException("Chỉ có thể tạo lớp học phần khi học kỳ chưa bắt đầu");
         }
+        */
 
         if (classSectionRepository.existsByClassNameIgnoreCase(request.getClassName())) {
             throw new RuntimeException("Mã lớp học phần đã tồn tại: " + request.getClassName());
@@ -162,9 +165,12 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         ClassSection classSection = classSectionRepository.findByClassNameWithDetails(className)
                 .orElseThrow(() -> new RuntimeException("Lớp học phần không tồn tại: " + className));
 
+        // Remove restriction to allow updates for historical semesters
+        /*
         if (classSection.getSemester().getStatus() != Semester.SemesterStatus.UPCOMING) {
             throw new RuntimeException("Chỉ có thể cập nhật lớp học phần khi học kỳ chưa bắt đầu");
         }
+        */
 
         if (request.getCourseCode() != null && !request.getCourseCode().equals(classSection.getCourse().getCode())) {
             Course course = courseRepository.findByCode(request.getCourseCode())
@@ -208,9 +214,12 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         ClassSection classSection = classSectionRepository.findByClassNameWithDetails(className)
                 .orElseThrow(() -> new RuntimeException("Lớp học phần không tồn tại: " + className));
 
+        // Remove restriction to allow deletion for historical semesters
+        /*
         if (classSection.getSemester().getStatus() != Semester.SemesterStatus.UPCOMING) {
             throw new RuntimeException("Chỉ có thể xóa lớp học phần khi học kỳ chưa bắt đầu");
         }
+        */
 
         classSectionRepository.delete(classSection);
         log.info("Deleted class section: {}", className);
@@ -253,9 +262,12 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         ClassSection classSection = classSectionRepository.findByClassNameWithLock(request.getClassName())
                 .orElseThrow(() -> new RuntimeException("Lớp học phần không tồn tại: " + request.getClassName()));
 
+        // Remove restriction to allow enrollment for historical semesters
+        /*
         if (classSection.getSemester().getStatus() != Semester.SemesterStatus.UPCOMING) {
             throw new RuntimeException("Chỉ có thể thêm đăng ký khi học kỳ chưa bắt đầu");
         }
+        */
 
         // Count actual enrollments from database (more reliable than currentEnrollment
         // field)
@@ -342,12 +354,17 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 .orElseThrow(() -> new RuntimeException("Đăng ký không tồn tại: " + enrollmentId));
 
         ClassSection classSection = enrollment.getClassSection();
+        /*
         Semester semester = semesterRepository.findByCode(classSection.getSemester().getCode())
                 .orElseThrow(() -> new RuntimeException("Học kỳ không tồn tại"));
+        */
 
+        // Remove restriction to allow enrollment updates for historical semesters
+        /*
         if (semester.getStatus() != Semester.SemesterStatus.UPCOMING) {
             throw new RuntimeException("Chỉ có thể cập nhật đăng ký khi học kỳ chưa bắt đầu");
         }
+        */
 
         if (request.getStatus() != null && !request.getStatus().isEmpty()) {
             try {
@@ -386,12 +403,17 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 .orElseThrow(() -> new RuntimeException("Đăng ký không tồn tại: " + enrollmentId));
 
         ClassSection classSection = enrollment.getClassSection();
+        /*
         Semester semester = semesterRepository.findByCode(classSection.getSemester().getCode())
                 .orElseThrow(() -> new RuntimeException("Học kỳ không tồn tại"));
+        */
 
+        // Remove restriction to allow enrollment deletion for historical semesters
+        /*
         if (semester.getStatus() != Semester.SemesterStatus.UPCOMING) {
             throw new RuntimeException("Chỉ có thể xóa đăng ký khi học kỳ chưa bắt đầu");
         }
+        */
 
         if (enrollment.getStatus() == Enrollment.EnrollmentStatus.ENROLLED) {
             classSection.setCurrentEnrollment(Math.max(0, classSection.getCurrentEnrollment() - 1));
@@ -534,9 +556,12 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         ClassSection targetClassSection = classSectionRepository.findByClassNameWithLock(targetClassName)
                 .orElseThrow(() -> new RuntimeException("Lớp học phần đích không tồn tại: " + targetClassName));
 
+        // Remove restriction to allow transfers for historical semesters
+        /*
         if (targetClassSection.getSemester().getStatus() != Semester.SemesterStatus.UPCOMING) {
             throw new RuntimeException("Chỉ có thể chuyển sinh viên khi học kỳ chưa bắt đầu");
         }
+        */
 
         // Check available slots
         long currentEnrollment = enrollmentRepository.countByClassSectionClassName(targetClassName);

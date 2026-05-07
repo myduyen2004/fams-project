@@ -31,6 +31,8 @@ import { scheduleRequestService } from '../../services/api/scheduleRequestServic
 import { uploadFile } from '../../services/utils/fileUploadService';
 import { useNavigate } from 'react-router-dom';
 import { CustomSelect } from '../../components/common/CustomSelect';
+import { StaticDateTimePicker } from '../../components/common/StaticDateTimePicker';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const SLOTS = [
     { id: 1, label: 'SLOT 1', time: '07:30 - 09:45' },
@@ -849,82 +851,173 @@ export const LecturerSchedulePage: React.FC = () => {
                 </div>
             )}
 
-            {/* Create Assignment Dialog */}
-            {showCreateDialog && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-lg shadow-xl border border-gray-100 dark:border-zinc-800 animate-in zoom-in-95 duration-200">
-                        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
-                            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                <Plus className="w-5 h-5 text-fpt-orange" /> Tạo bài tập mới
-                            </h2>
-                            <button onClick={() => { setShowCreateDialog(false); resetCreateForm(); }}
-                                className="text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <div className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
-                                    Tiêu đề <span className="text-red-500">*</span>
-                                </label>
-                                <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="VD: Bài tập tuần 3"
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange outline-none" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Mô tả</label>
-                                <textarea value={newDescription} onChange={e => setNewDescription(e.target.value)} placeholder="Mô tả chi tiết bài tập..." rows={3}
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange outline-none resize-none" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
-                                    <Clock className="w-3.5 h-3.5 inline mr-1" /> Hạn nộp bài
-                                </label>
-                                <input type="datetime-local" value={newDueDate} onChange={e => setNewDueDate(e.target.value)}
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange outline-none" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
-                                    <BookOpen className="w-3.5 h-3.5 inline mr-1" /> Tài liệu tham khảo
-                                </label>
-                                <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.jpg,.png"
-                                    multiple className="hidden" />
-                                <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingFile}
-                                    className="w-full px-3 py-2.5 rounded-lg border border-dashed border-gray-300 dark:border-zinc-600 bg-gray-50 dark:bg-zinc-800 text-sm text-gray-500 hover:border-fpt-orange hover:text-fpt-orange transition-colors flex items-center justify-center gap-2">
-                                    {uploadingFile ? <><Loader2 size={14} className="animate-spin" /> Đang upload...</> : <><Plus size={14} /> Thêm tài liệu (tối đa 10MB)</>}
-                                </button>
-
-                                {newRefUrls.length > 0 && (
-                                    <div className="mt-3 space-y-2">
-                                        {newRefUrls.map((url, idx) => (
-                                            <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700">
-                                                <div className="flex items-center gap-2 min-w-0">
-                                                    <FileText size={14} className="text-blue-500 flex-shrink-0" />
-                                                    <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-700 dark:text-zinc-300 hover:text-fpt-orange underline truncate">
-                                                        {newRefNames[idx] || `Tài liệu ${idx + 1}`}
-                                                    </a>
-                                                </div>
-                                                <button type="button" onClick={() => removeNewFile(idx)} className="p-1 hover:bg-red-50 dark:hover:bg-red-900/10 text-gray-400 hover:text-red-500 transition-colors rounded">
-                                                    <X size={14} />
-                                                </button>
-                                            </div>
-                                        ))}
+            {/* Create Assignment Dialog - Premium "Regular" Design */}
+            <AnimatePresence>
+                {showCreateDialog && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4"
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="bg-white dark:bg-zinc-900 rounded-[32px] shadow-2xl w-full max-w-4xl border border-gray-100 dark:border-zinc-800 max-h-[90vh] overflow-hidden flex flex-col"
+                        >
+                            <div className="flex items-center justify-between p-8 border-b border-gray-50 dark:border-zinc-800/50 sticky top-0 bg-white dark:bg-zinc-900 z-10">
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                                    <div className="p-2 bg-orange-50 dark:bg-orange-950/30 rounded-xl">
+                                        <Plus className="w-5 h-5 text-fpt-orange" />
                                     </div>
-                                )}
+                                    Tạo bài tập mới
+                                </h2>
+                                <button
+                                    onClick={() => { setShowCreateDialog(false); resetCreateForm(); }}
+                                    className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all text-gray-400 hover:text-gray-600"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
                             </div>
-                        </div>
-                        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 dark:border-zinc-800">
-                            <button onClick={() => { setShowCreateDialog(false); resetCreateForm(); }}
-                                className="px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-zinc-400 hover:text-gray-800 transition-colors">
-                                Hủy
-                            </button>
-                            <button onClick={handleCreate} disabled={creating || !newTitle.trim() || uploadingFile}
-                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-fpt-orange hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
-                                {creating ? <><Loader2 size={16} className="animate-spin" /> Đang tạo...</> : <><Plus className="w-4 h-4" /> Tạo bài tập</>}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+
+                            <div className="p-8 overflow-y-auto custom-scrollbar">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                                    <div className="space-y-6">
+                                        {/* Class Info (Read-only in Schedule context) */}
+                                        <div>
+                                            <label className="block text-[10px] uppercase font-bold tracking-widest text-gray-400 mb-2 ml-1">
+                                                Lớp học
+                                            </label>
+                                            <div className="flex items-center justify-between w-full h-[52px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/50 px-4 text-left transition-all">
+                                                <span className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                                                    {createForClassName}
+                                                </span>
+                                                <Lock size={14} className="text-gray-400" />
+                                            </div>
+                                        </div>
+
+                                        {/* Slot Info - Enhanced View */}
+                                        <div className="grid grid-cols-3 gap-3 p-4 bg-orange-50/30 dark:bg-orange-950/5 border border-orange-100/50 dark:border-orange-900/20 rounded-2xl">
+                                            <div className="text-center">
+                                                <div className="text-[9px] uppercase font-black tracking-widest text-orange-400 dark:text-orange-500 mb-1">Ngày</div>
+                                                <div className="text-sm font-bold text-gray-900 dark:text-white">
+                                                    {selectedSlot?.date ? new Date(selectedSlot.date).toLocaleDateString('vi-VN') : '—'}
+                                                </div>
+                                            </div>
+                                            <div className="text-center border-x border-orange-100 dark:border-orange-900/20">
+                                                <div className="text-[9px] uppercase font-black tracking-widest text-orange-400 dark:text-orange-500 mb-1">Slot</div>
+                                                <div className="text-sm font-bold text-gray-900 dark:text-white">{selectedSlot?.slotNumber || '—'}</div>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className="text-[9px] uppercase font-black tracking-widest text-orange-400 dark:text-orange-500 mb-1">Phòng</div>
+                                                <div className="text-sm font-bold text-gray-900 dark:text-white">{selectedSlot?.roomCode || '—'}</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Title */}
+                                        <div>
+                                            <label className="block text-[10px] uppercase font-bold tracking-widest text-gray-400 mb-2 ml-1">
+                                                Tiêu đề <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={newTitle}
+                                                onChange={e => setNewTitle(e.target.value)}
+                                                placeholder="VD: Bài tập tuần 3"
+                                                className="w-full px-4 h-[52px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white text-sm font-bold focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40"
+                                            />
+                                        </div>
+
+                                        {/* Description */}
+                                        <div>
+                                            <label className="block text-[10px] uppercase font-bold tracking-widest text-gray-400 mb-2 ml-1">Mô tả</label>
+                                            <textarea
+                                                value={newDescription}
+                                                onChange={e => setNewDescription(e.target.value)}
+                                                placeholder="Mô tả chi tiết bài tập..."
+                                                rows={3}
+                                                className="w-full px-4 py-3 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white text-sm font-medium focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 resize-none"
+                                            />
+                                        </div>
+
+                                        {/* Reference File */}
+                                        <div>
+                                            <label className="block text-[10px] uppercase font-bold tracking-widest text-gray-400 mb-2 ml-1">
+                                                <BookOpen className="w-3.5 h-3.5 inline mr-1 mb-0.5" /> Tài liệu tham khảo
+                                            </label>
+                                            <input
+                                                type="file"
+                                                ref={fileInputRef}
+                                                onChange={handleFileSelect}
+                                                accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.jpg,.png"
+                                                multiple
+                                                className="hidden"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => fileInputRef.current?.click()}
+                                                disabled={uploadingFile}
+                                                className="w-full px-4 h-[52px] rounded-2xl border-2 border-dashed border-gray-200 dark:border-zinc-700 bg-gray-50/50 dark:bg-zinc-800/50 text-sm font-bold text-gray-500 hover:border-fpt-orange hover:text-fpt-orange transition-all flex items-center justify-center gap-2"
+                                            >
+                                                {uploadingFile ? <><Loader2 size={16} className="animate-spin" /> Đang upload...</> : <><Plus size={16} /> Thêm tài liệu</>}
+                                            </button>
+
+                                            {newRefUrls.length > 0 && (
+                                                <div className="mt-4 space-y-2">
+                                                    {newRefUrls.map((url, idx) => (
+                                                        <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-orange-50/50 dark:bg-orange-950/10 border border-orange-100/50 dark:border-orange-900/20 group">
+                                                            <div className="flex items-center gap-3 min-w-0">
+                                                                <div className="p-2 bg-white dark:bg-zinc-800 rounded-lg shadow-sm">
+                                                                    <FileText size={14} className="text-blue-500" />
+                                                                </div>
+                                                                <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-gray-700 dark:text-zinc-300 hover:text-fpt-orange underline truncate">
+                                                                    {newRefNames[idx] || `Tài liệu ${idx + 1}`}
+                                                                </a>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removeNewFile(idx)}
+                                                                className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 transition-colors rounded-lg"
+                                                            >
+                                                                <X size={16} />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="sticky top-0">
+                                        <StaticDateTimePicker
+                                            label="Hạn nộp bài *"
+                                            value={newDueDate}
+                                            onChange={setNewDueDate}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-end gap-3 px-8 py-6 border-t border-gray-50 dark:border-zinc-800/50 bg-gray-50/30 dark:bg-zinc-800/20 sticky bottom-0 z-10">
+                                <button
+                                    onClick={() => { setShowCreateDialog(false); resetCreateForm(); }}
+                                    className="px-6 h-[48px] text-sm font-bold text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors"
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    onClick={handleCreate}
+                                    disabled={creating || !newTitle.trim() || uploadingFile}
+                                    className="inline-flex items-center gap-2 px-8 h-[48px] bg-fpt-orange hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-sm font-black tracking-widest transition-all shadow-lg shadow-orange-500/20 active:scale-95"
+                                >
+                                    {creating ? <><Loader2 size={18} className="animate-spin" /> Đang tạo...</> : <><Plus className="w-4 h-4" /> Tạo bài tập</>}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Download Submissions Dialog */}
             {showDownloadDialog && (

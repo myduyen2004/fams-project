@@ -1264,28 +1264,32 @@ public class StudentGradeService {
         boolean isPublished = Boolean.TRUE.equals(classSection.getGradesPublished());
 
         if (isPublished) {
-            boolean hasMissingOrZero = false;
+            // Kiểm tra thiếu điểm (per-component)
+            boolean hasMissingScore = false;
+            // Liệt: tổng tất cả cột cùng type = 0 mới fail
+            Map<GradeComponent.GradeType, Double> typeSumMap = new HashMap<>();
+            Map<GradeComponent.GradeType, Boolean> typeHasAnyScore = new HashMap<>();
+
             for (Map.Entry<GradeComponent.GradeType, List<GradeComponent>> typeEntry : componentsByType.entrySet()) {
-                double typeTotalScore = 0.0;
-                boolean hasIncludedComponent = false;
                 for (GradeComponent gc : typeEntry.getValue()) {
                     if (finalWeightsMap.containsKey(gc.getId())) {
-                        hasIncludedComponent = true;
                         Double score = finalScoresMap.get(gc.getId());
-                        if (score != null) {
-                            typeTotalScore += score;
+                        if (score == null) {
+                            hasMissingScore = true;
+                        } else {
+                            typeSumMap.merge(gc.getType(), score, (a, b) -> a + b);
+                            typeHasAnyScore.put(gc.getType(), true);
                         }
                     }
                 }
-                if (hasIncludedComponent && typeTotalScore <= 0.0) {
-                    hasMissingOrZero = true;
-                    break;
-                }
             }
+            // Chỉ liệt khi type nào đó có ít nhất 1 cột điểm và tổng = 0
+            boolean hasZeroTypeSum = typeHasAnyScore.keySet().stream()
+                    .anyMatch(type -> typeSumMap.getOrDefault(type, 0.0) <= 0.0);
 
             boolean hasFailedAttendance = checkAttendanceFailure(studentId, className, course.getNumberOfSlots());
 
-            if (hasMissingOrZero || hasFailedExam || hasFailedAttendance
+            if (hasMissingScore || hasZeroTypeSum || hasFailedExam || hasFailedAttendance
                     || (courseAverage != null && courseAverage < 5.0)) {
                 status = "FAILED";
             } else if (courseAverage != null && courseAverage >= 5.0) {
@@ -1559,35 +1563,30 @@ public class StudentGradeService {
             boolean isPublished = Boolean.TRUE.equals(cs.getGradesPublished());
 
             if (isPublished) {
-                Map<GradeComponent.GradeType, Double> typeTotalScores = new HashMap<>();
-                Map<GradeComponent.GradeType, Boolean> typeHasComponent = new HashMap<>();
+                // Kiểm tra thiếu điểm (per-component)
+                boolean hasMissingScore = false;
+                // Liệt: tổng tất cả cột cùng type = 0 mới fail
+                Map<GradeComponent.GradeType, Double> typeSumMap = new HashMap<>();
+                Map<GradeComponent.GradeType, Boolean> typeHasAnyScore = new HashMap<>();
 
                 for (GradeComponent gc : allComponents) {
                     if (weightsMap.containsKey(gc.getId())) {
-                        typeHasComponent.put(gc.getType(), true);
                         Double score = scoresMap.get(gc.getId());
-                        if (score != null) {
-                            typeTotalScores.put(gc.getType(), typeTotalScores.getOrDefault(gc.getType(), 0.0) + score);
+                        if (score == null) {
+                            hasMissingScore = true;
                         } else {
-                            typeTotalScores.put(gc.getType(), typeTotalScores.getOrDefault(gc.getType(), 0.0));
+                            typeSumMap.merge(gc.getType(), score, (a, b) -> a + b);
+                            typeHasAnyScore.put(gc.getType(), true);
                         }
                     }
                 }
-
-                boolean hasMissingOrZero = false;
-                for (Map.Entry<GradeComponent.GradeType, Boolean> typeEntry : typeHasComponent.entrySet()) {
-                    if (typeEntry.getValue()) {
-                        Double total = typeTotalScores.getOrDefault(typeEntry.getKey(), 0.0);
-                        if (total <= 0.0) {
-                            hasMissingOrZero = true;
-                            break;
-                        }
-                    }
-                }
+                // Chỉ liệt khi type nào đó có ít nhất 1 cột điểm và tổng = 0
+                boolean hasZeroTypeSum = typeHasAnyScore.keySet().stream()
+                        .anyMatch(type -> typeSumMap.getOrDefault(type, 0.0) <= 0.0);
 
                 boolean hasFailedAttendance = checkAttendanceFailure(enrollment.getStudent().getId(), cs.getClassName(),
                         course.getNumberOfSlots());
-                boolean isPassing = calculatePassStatus(courseAverage, hasMissingOrZero, hasFailedExam,
+                boolean isPassing = calculatePassStatus(courseAverage, hasMissingScore || hasZeroTypeSum, hasFailedExam,
                         hasFailedAttendance);
                 if (isPassing) {
                     status = "PASSED";

@@ -36,20 +36,20 @@ public class TimetableSlotServiceImpl implements TimetableSlotService {
                 log.info("Processing manual update for slot ID: {}", id);
 
                 TimetableSlot slot = timetableSlotRepository.findById(id)
-                                .orElseThrow(() -> new NotFoundException("Timetable slot not found with id: " + id));
+                                .orElseThrow(() -> new NotFoundException("Không tìm thấy slot thời gian với id: " + id));
 
                 // 1. Validate Room
                 Room newRoom = roomRepository.findById(request.getRoomId())
                                 .orElseThrow(() -> new BadRequestException(
-                                                "Room not found with id: " + request.getRoomId()));
+                                                "Không tìm thấy phòng với id: " + request.getRoomId()));
 
                 // 2. Validate SlotType/SlotNumber
                 Long semesterId = slot.getClassSection().getSemester().getId();
                 SlotType newSlotType = slotTypeRepository
                                 .findBySemesterIdAndSlotIndex(semesterId, request.getSlotNumber())
                                 .orElseThrow(() -> new BadRequestException(
-                                                "Invalid slot number " + request.getSlotNumber()
-                                                                + " for this semester"));
+                                                "Số slot " + request.getSlotNumber()
+                                                                + " không hợp lệ cho học kỳ này"));
 
                 // 3. Check Conflicts
                 checkConflicts(slot, request.getDate(), request.getSlotNumber(), request.getRoomId());
@@ -81,7 +81,7 @@ public class TimetableSlotServiceImpl implements TimetableSlotService {
                                                 TimetableSlot.TimetableSlotStatus.CANCELLED);
                 if (roomConflicts.stream().anyMatch(s -> !s.getId().equals(slotId))) {
                         throw new BadRequestException(
-                                        "Room is already occupied on " + newDate + " at slot " + newSlotNumber);
+                                        "Phòng đã có lớp học vào ngày " + newDate + " tại tiết " + newSlotNumber);
                 }
 
                 // Check Lecturer Conflict
@@ -92,7 +92,7 @@ public class TimetableSlotServiceImpl implements TimetableSlotService {
                                                         TimetableSlot.TimetableSlotStatus.CANCELLED);
                         if (lecturerConflicts.stream().anyMatch(s -> !s.getId().equals(slotId))) {
                                 throw new BadRequestException(
-                                                "Lecturer is already teaching on " + newDate + " at slot "
+                                                "Giảng viên đã có lịch dạy vào ngày " + newDate + " tại tiết "
                                                                 + newSlotNumber);
                         }
                 }
@@ -111,7 +111,7 @@ public class TimetableSlotServiceImpl implements TimetableSlotService {
 
                 if (classConflicts.stream().anyMatch(s -> !s.getId().equals(slotId))) {
                         throw new BadRequestException(
-                                        "Lớp " + className + " đã có tiết học vào " + newDate + " tại slot "
+                                        "Lớp " + className + " đã có tiết học vào ngày " + newDate + " tại tiết "
                                                         + newSlotNumber);
                 }
 
@@ -166,7 +166,7 @@ public class TimetableSlotServiceImpl implements TimetableSlotService {
         @Transactional(readOnly = true)
         public List<LocalDate> getLecturerTeachingDates(Long lecturerId, String semesterCode) {
                 var semester = semesterRepository.findByCode(semesterCode)
-                                .orElseThrow(() -> new NotFoundException("Semester not found: " + semesterCode));
+                                .orElseThrow(() -> new NotFoundException("Không tìm thấy học kỳ: " + semesterCode));
 
                 return timetableSlotRepository.findDistinctDatesByLecturerIdAndDateBetween(
                                 lecturerId, semester.getStartDate(), semester.getEndDate());

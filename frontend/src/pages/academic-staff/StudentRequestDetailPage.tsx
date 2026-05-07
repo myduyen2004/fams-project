@@ -15,6 +15,7 @@ import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { academicRequestService, AcademicRequest } from '../../services/api/academicRequestService';
 import dayjs from 'dayjs';
 import toast from "@utils/toast";
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 export const StudentRequestDetailPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -25,25 +26,37 @@ export const StudentRequestDetailPage = () => {
     const [isApproverAvatarBroken, setIsApproverAvatarBroken] = useState(false);
     const [note, setNote] = useState('');
 
+    const fetchRequest = async () => {
+        if (!id) return;
+        try {
+            setLoading(true);
+            setIsApproverAvatarBroken(false);
+            const data = await academicRequestService.getRequestById(parseInt(id));
+            setRequest(data);
+            setNote(data.approverNote || '');
+        } catch (error) {
+            console.error('Error fetching student request:', error);
+            toast.error('Không tìm thấy yêu cầu');
+            navigate('/academic-staff/requests');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchRequest = async () => {
-            if (!id) return;
-            try {
-                setLoading(true);
-                setIsApproverAvatarBroken(false);
-                const data = await academicRequestService.getRequestById(parseInt(id));
-                setRequest(data);
-                setNote(data.approverNote || '');
-            } catch (error) {
-                console.error('Error fetching student request:', error);
-                toast.error('Không tìm thấy yêu cầu');
-                navigate('/academic-staff/requests');
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchRequest();
     }, [id, navigate]);
+
+    // WebSocket for real-time updates
+    useWebSocket('/user/queue/notifications', (data: any) => {
+        if (Array.isArray(data)) {
+            const hasUpdate = data.some((notif: any) => notif.type === 'ACADEMIC');
+            if (hasUpdate) {
+                console.log('Real-time update: Academic request status changed');
+                fetchRequest();
+            }
+        }
+    });
 
     const handleUpdateStatus = async (status: 'APPROVED' | 'REJECTED') => {
         if (!request) return;
