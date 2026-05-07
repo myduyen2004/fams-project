@@ -15,5 +15,7 @@ public interface AIToolService {
     List<AIToolTest> getLatestTests(Long id);
     AIToolTest runTest(Long id, java.util.Map<String, Object> params);
     Map<String, Object> getFptuKnowledgeSource();
+    Map<String, Object> getFptuKnowledgeSource(String role);
     Map<String, Object> updateFptuKnowledgeSource(String content);
+    Map<String, Object> updateFptuKnowledgeSource(String content, String role);
 }

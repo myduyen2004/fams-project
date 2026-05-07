@@ -229,39 +229,33 @@ HỒ SƠ CÁ NHÂN HÓA:
 KÝ ỨC LIÊN QUAN:
 {user_memories}"""
 
-_GENERAL_CHAT_PROMPT = """Bạn là FAMS AI Assistant. Hãy trả lời bằng tiếng Việt tự nhiên, ấm áp, thông minh.
+_GENERAL_CHAT_PROMPT = """Bạn là FAMS AI Assistant, trợ lý ảo chuyên trách của Trường Đại học FPT. 
+Bạn CHỈ được trả lời dựa trên văn hóa, quy định và thông tin của Trường Đại học FPT. 
 
-Đây là câu hỏi ngoài lề hệ thống FAMS, vì vậy hãy trả lời bằng kiến thức và suy luận của AI, KHÔNG giả vờ đó là dữ liệu trong cơ sở dữ liệu FAMS.
+Nhiệm vụ của bạn:
+1. Luôn ưu tiên thông tin từ `TRI THỨC FPTU HIỆN CÓ` (Cẩm nang sinh viên FPTU).
+2. Nếu câu hỏi không có trong cẩm nang nhưng liên quan đến đời sống sinh viên, hãy trả lời dựa trên phong cách "Cóc FPT" (năng động, thực tế).
+3. ĐỐI VỚI CÁC CÂU HỎI CHUNG (ví dụ: một năm có mấy kỳ, học phí, quy định...), BẠN PHẢI MẶC ĐỊNH TRẢ LỜI THEO QUY ĐỊNH CỦA ĐẠI HỌC FPT (3 học kỳ/năm), không trả lời theo kiến thức chung bên ngoài.
 
 ROLE: {user_role}
 ROLE_GUIDANCE: {role_guidance}
 AGENT: {agent_label}
 AGENT_GUIDANCE: {agent_guidance}
-LỊCH SỬ: {history}
-CÂU HỎI: {message}
-HÔM NAY: {today}
-TRI THỨC FPTU CỤC BỘ:
+
+LỊCH SỬ TRÒ CHUYỆN:
+{history}
+
+TRI THỨC FPTU HIỆN CÓ:
 {knowledge_context}
 
-QUY TẮC:
-1. Trả lời ngắn gọn, hữu ích, tự nhiên.
-2. Nếu là phép tính đơn giản, trả lời trực tiếp kết quả.
-3. Nếu là lời khuyên đời sống, trả lời thực tế, nhẹ nhàng, tích cực.
-4. Nếu là câu hỏi thời tiết hiện tại hoặc dữ liệu thời gian thực mà bạn không có nguồn live, hãy nói rõ bạn không có dữ liệu thời tiết thời gian thực trong hệ thống.
-5. Không nhắc đến database, tool hay router.
-6. Nếu câu hỏi liên quan Trường Đại học FPT/FPTU và phần TRI THỨC FPTU CỤC BỘ có dữ liệu phù hợp, ưu tiên trả lời dựa trên đó.
-7. Nếu người dùng hỏi về FPTU nhưng TRI THỨC FPTU CỤC BỘ không có thông tin tương ứng, nói rõ bạn chưa thấy thông tin đó trong file tri thức hiện có; không tự bịa.
+Hôm nay là: {today}
 
-HỒ SƠ CÁ NHÂN HÓA:
-{user_profile}
-
-KÝ ỨC LIÊN QUAN:
-{user_memories}
-"""
+User: {message}
+FAMS AI:"""
 
 _FPTU_KNOWLEDGE_PROMPT = """Bạn là FAMS AI Assistant. Hãy trả lời ngắn gọn, rõ ràng bằng tiếng Việt.
 
-Bạn đang trả lời từ file tri thức nội bộ `fptu-information.json`.
+Bạn đang trả lời từ cẩm nang tri thức nội bộ của Trường Đại học FPT.
 
 ROLE: {user_role}
 AGENT: {agent_label}
@@ -510,13 +504,13 @@ class AnswerGenerator:
             )
             response = llm_client.complete(prompt, model)
             if is_fptu_knowledge_question(message, user_role=user_role) and knowledge_context == "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]":
-                return "Mình chưa thấy thông tin này trong file tri thức FPTU hiện có."
+                return "Tôi chưa tìm thấy thông tin cụ thể về vấn đề này trong cẩm nang sinh viên. Bạn có thể thử hỏi lại với từ khóa khác hoặc liên hệ trực tiếp với các phòng ban của trường để được hỗ trợ chính xác nhất."
             return response.strip()
 
         if intent == "knowledge_query" or tool_name in {"fpt_tool", "fptu_knowledge_lookup"}:
             knowledge_context = get_relevant_fptu_context(message, user_role=user_role)
             if knowledge_context == "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]":
-                return "Mình chưa thấy thông tin này trong file tri thức FPTU hiện có."
+                return "Tôi chưa tìm thấy thông tin cụ thể về vấn đề này trong cẩm nang sinh viên. Bạn có thể thử hỏi lại với từ khóa khác hoặc liên hệ trực tiếp với các phòng ban của trường để được hỗ trợ chính xác nhất."
             prompt = _FPTU_KNOWLEDGE_PROMPT.format(
                 user_role=user_role,
                 agent_label=get_agent_label(agent_id),
@@ -666,7 +660,7 @@ class AnswerGenerator:
                 knowledge_context=knowledge_context,
             )
             if is_fptu_knowledge_question(message, user_role=user_role) and knowledge_context == "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]":
-                yield "Mình chưa thấy thông tin này trong file tri thức FPTU hiện có."
+                yield "Tôi chưa tìm thấy thông tin cụ thể về vấn đề này trong cẩm nang sinh viên. Bạn có thể thử hỏi lại với từ khóa khác hoặc liên hệ trực tiếp với các phòng ban của trường để được hỗ trợ chính xác nhất."
                 return
             yield llm_client.complete(prompt, model).strip()
             return
@@ -674,14 +668,14 @@ class AnswerGenerator:
         if intent == "knowledge_query" or tool_name in {"fpt_tool", "fptu_knowledge_lookup"}:
             knowledge_context = get_relevant_fptu_context(message, user_role=user_role)
             if knowledge_context == "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]":
-                yield "Mình chưa thấy thông tin này trong file tri thức FPTU hiện có."
+                yield "Tôi chưa tìm thấy thông tin cụ thể về vấn đề này trong cẩm nang sinh viên. Bạn có thể thử hỏi lại với từ khóa khác hoặc liên hệ trực tiếp với các phòng ban của trường để được hỗ trợ chính xác nhất."
                 return
             prompt = _FPTU_KNOWLEDGE_PROMPT.format(
                 user_profile=user_profile_str,
                 user_memories=user_memories_str,
             )
             if is_fptu_knowledge_question(message, user_role=user_role) and knowledge_context == "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]":
-                yield "Mình chưa thấy thông tin này trong file tri thức FPTU hiện có."
+                yield "Tôi chưa tìm thấy thông tin cụ thể về vấn đề này trong cẩm nang sinh viên. Bạn có thể thử hỏi lại với từ khóa khác hoặc liên hệ trực tiếp với các phòng ban của trường để được hỗ trợ chính xác nhất."
                 return
             yield llm_client.complete(prompt, model).strip()
             return
@@ -689,7 +683,7 @@ class AnswerGenerator:
         if intent == "knowledge_query" or tool_name in {"fpt_tool", "fptu_knowledge_lookup"}:
             knowledge_context = get_relevant_fptu_context(message, user_role=user_role)
             if knowledge_context == "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]":
-                yield "Mình chưa thấy thông tin này trong file tri thức FPTU hiện có."
+                yield "Tôi chưa tìm thấy thông tin cụ thể về vấn đề này trong cẩm nang sinh viên. Bạn có thể thử hỏi lại với từ khóa khác hoặc liên hệ trực tiếp với các phòng ban của trường để được hỗ trợ chính xác nhất."
                 return
             prompt = _FPTU_KNOWLEDGE_PROMPT.format(
                 user_role=user_role,
