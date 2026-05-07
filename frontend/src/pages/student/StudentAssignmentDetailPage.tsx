@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import toast from "@utils/toast";
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 export const StudentAssignmentDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -32,6 +33,17 @@ export const StudentAssignmentDetailPage: React.FC = () => {
         if (!assignmentId || isNaN(assignmentId)) return;
         fetchSubmission();
     }, [assignmentId]);
+
+    // WebSocket for real-time updates
+    useWebSocket('/user/queue/notifications', (data: any) => {
+        if (Array.isArray(data)) {
+            const hasUpdate = data.some((notif: any) => notif.type === 'ASSIGNMENT_GRADED');
+            if (hasUpdate) {
+                console.log('Real-time update: Assignment graded');
+                fetchSubmission();
+            }
+        }
+    });
 
     const fetchSubmission = async () => {
         try {

@@ -14,6 +14,7 @@ import { studentGradeService } from '../../services/api/studentGradeService';
 import { sortGradeComponents } from '../../utils/gradeSortUtils';
 import toast from "@utils/toast";
 import { CustomSelect } from '../../components/common/CustomSelect';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 export const ResitGradeManagementPage: React.FC = () => {
     const [semesters, setSemesters] = useState<SemesterResponse[]>([]);
@@ -202,6 +203,20 @@ export const ResitGradeManagementPage: React.FC = () => {
             setSaving(false);
         }
     };
+
+    // Real-time synchronization
+    useWebSocket('/user/queue/notifications', (notifications: any[]) => {
+        if (!notifications || notifications.length === 0) return;
+        
+        const hasRelevantUpdate = notifications.some(notif => 
+            notif.type === 'GRADE_SUBMITTED'
+        );
+
+        if (hasRelevantUpdate && selectedCourse && selectedSemester) {
+            console.log('Real-time update: Refreshing resit grades due to submission');
+            fetchGrades();
+        }
+    });
 
     const availableClasses = React.useMemo(() => {
         if (!gradeOverview?.studentGrades) return [];

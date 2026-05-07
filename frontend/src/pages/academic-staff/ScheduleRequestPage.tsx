@@ -9,6 +9,7 @@ import RequestFilters from '../../components/academic-staff/request/RequestFilte
 import RequestTableRow from '../../components/academic-staff/request/RequestTableRow';
 import StudentRequestTableRow from '../../components/academic-staff/request/StudentRequestTableRow';
 import { usePagination } from '../../hooks/usePagination';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 type RequestTab = 'LECTURER' | 'STUDENT';
 
@@ -103,6 +104,17 @@ export const ScheduleRequestPage = () => {
     useEffect(() => {
         fetchRequests();
     }, [fetchRequests]);
+
+    // WebSocket for real-time updates
+    useWebSocket('/user/queue/notifications', (data: any) => {
+        if (Array.isArray(data)) {
+            const hasUpdate = data.some((notif: any) => notif.type === 'ACADEMIC');
+            if (hasUpdate) {
+                console.log('Real-time update: Academic/Schedule request received');
+                fetchRequests();
+            }
+        }
+    });
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);

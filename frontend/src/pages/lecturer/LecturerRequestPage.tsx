@@ -7,6 +7,7 @@ import toast from "@utils/toast";
 import { useNavigate } from 'react-router-dom';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Pagination } from '../../components/common/Pagination';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 export const LecturerRequestPage: React.FC = () => {
     const navigate = useNavigate();
@@ -56,6 +57,19 @@ export const LecturerRequestPage: React.FC = () => {
     useEffect(() => {
         fetchRequests();
     }, [page]);
+
+    // WebSocket for real-time updates
+    useWebSocket('/user/queue/notifications', (data: any) => {
+        if (Array.isArray(data)) {
+            const hasUpdate = data.some((notif: any) => 
+                notif.type === 'ACADEMIC' || notif.type === 'SCHEDULE_CHANGE'
+            );
+            if (hasUpdate) {
+                console.log('Real-time update: Request status changed');
+                fetchRequests();
+            }
+        }
+    });
 
     const getStatusBadge = (status: string, label: string) => {
         switch (status) {

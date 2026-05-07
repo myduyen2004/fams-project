@@ -1,7 +1,6 @@
 package com.fams.backend.service.impl;
 
 import com.fams.backend.entity.Alert;
-import com.fams.backend.entity.Semester;
 import com.fams.backend.repository.SemesterRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -64,9 +63,12 @@ public class StagingImportService {
             var semester = semesterRepository.findByCode(semesterCode)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy học kỳ: " + semesterCode));
 
+            // Remove status check to allow historical management
+            /*
             if (semester.getStatus() != Semester.SemesterStatus.UPCOMING) {
                 throw new RuntimeException("Chỉ có thể nhập lớp học phần khi học kỳ chưa bắt đầu");
             }
+            */
 
             // 2. Create staging table
             createClassSectionStagingTable(stagingTable);
@@ -126,9 +128,12 @@ public class StagingImportService {
             var semester = semesterRepository.findById(semesterId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy học kỳ"));
 
+            // Remove status check to allow historical management
+            /*
             if (semester.getStatus() != Semester.SemesterStatus.UPCOMING) {
                 throw new RuntimeException("Chỉ có thể nhập lớp học phần khi học kỳ chưa bắt đầu");
             }
+            */
             String insertSql = """
                     INSERT INTO class_sections (class_name, semester_id, course_id, lecturer_id, number_of_slots, max_students, current_enrollment, status, created_at, updated_at)
                     SELECT
@@ -215,9 +220,12 @@ public class StagingImportService {
             var semester = semesterRepository.findByCode(semesterCode)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy học kỳ: " + semesterCode));
 
+            // Removed status check to allow historical management
+            /*
             if (semester.getStatus() != Semester.SemesterStatus.UPCOMING) {
                 throw new RuntimeException("Chỉ có thể nhập lớp học phần khi học kỳ chưa bắt đầu");
             }
+            */
 
             createClassSectionStagingTable(stagingTable);
 
@@ -262,9 +270,12 @@ public class StagingImportService {
             var semester = semesterRepository.findByCode(semesterCode)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy học kỳ: " + semesterCode));
 
+            // Removed status check to allow historical management
+            /*
             if (semester.getStatus() != Semester.SemesterStatus.UPCOMING) {
                 throw new RuntimeException("Chỉ có thể nhập danh sách đăng ký khi học kỳ chưa bắt đầu");
             }
+            */
 
             createEnrollmentStagingTable(stagingTable);
 
@@ -324,9 +335,12 @@ public class StagingImportService {
             var semester = semesterRepository.findById(semesterId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy học kỳ"));
 
+            // Remove status check to allow historical management
+            /*
             if (semester.getStatus() != Semester.SemesterStatus.UPCOMING) {
                 throw new RuntimeException("Chỉ có thể nhập danh sách đăng ký khi học kỳ chưa bắt đầu");
             }
+            */
 
             // Note: enrollments table uses class_name as FK to class_sections, and
             // studentCode column
@@ -428,9 +442,11 @@ public class StagingImportService {
             var semester = semesterRepository.findByCode(semesterCode)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy học kỳ: " + semesterCode));
 
+            /*
             if (semester.getStatus() != com.fams.backend.entity.Semester.SemesterStatus.UPCOMING) {
                 throw new RuntimeException("Chỉ có thể nhập danh sách đăng ký khi học kỳ chưa bắt đầu");
             }
+            */
 
             createEnrollmentStagingTable(stagingTable);
 

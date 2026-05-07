@@ -9,8 +9,11 @@ import com.fams.backend.repository.NotificationRepository;
 import com.fams.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.fams.backend.dto.response.NotificationResponse;
+import java.util.Collections;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -29,6 +32,7 @@ public class NotificationService {
         private final NotificationReadStatusRepository notificationReadStatusRepository;
         private final UserRepository userRepository;
         private final FcmService fcmService;
+        private final SimpMessagingTemplate messagingTemplate;
 
         @Transactional
         public void createNotification(User recipient, String title, String content, Notification.NotificationType type,
@@ -44,6 +48,9 @@ public class NotificationService {
 
                 Notification saved = notificationRepository.save(notification);
                 createSingleRecipient(saved, recipient);
+
+                // Send WebSocket notification
+                sendWebSocketNotification(recipient, saved);
         }
 
         /**
@@ -155,6 +162,11 @@ public class NotificationService {
                                 log.error("Error saving notification recipients: ", e);
                                 throw e;
                         }
+
+                        // Send WebSocket notifications to all recipients
+                        for (User recipient : recipients) {
+                                sendWebSocketNotification(recipient, notification);
+                        }
                 } else {
                         log.warn("No recipients found for target type {}", notification.getTargetType());
                 }
@@ -180,7 +192,7 @@ public class NotificationService {
                 Notification notification = Notification.builder()
                                 .title(title)
                                 .content(content)
-                                .type(Notification.NotificationType.GRADE_PUBLISHED)
+                                .type(Notification.NotificationType.GRADE_SUBMITTED)
                                 .targetType(Notification.TargetType.ACADEMIC_STAFF)
                                 .targetUrl(String.format("/academic-staff/exam-grades?courseCode=%s&semesterCode=%s&className=%s",
                                                 course.getCode(),
@@ -349,6 +361,13 @@ public class NotificationService {
                                         java.util.Map.of(
                                                         "notificationId", String.valueOf(notification.getId()),
                                                         "type", "ACADEMIC"));
+
+                        // Send WebSocket notifications to academic staff
+                        for (User staff : academicStaff) {
+                                if (staff.getStatus() == User.UserStatus.ACTIVE) {
+                                        sendWebSocketNotification(staff, notification);
+                                }
+                        }
                 }
 
                 log.info("Sent notification to {} academic staff for new academic request {}",
@@ -401,6 +420,9 @@ public class NotificationService {
                                 java.util.Map.of(
                                                 "notificationId", String.valueOf(notification.getId()),
                                                 "type", "ACADEMIC"));
+
+                // Send WebSocket notification to student
+                sendWebSocketNotification(academicRequest.getStudent(), notification);
 
                 log.info("Sent notification to student {} for academic request {} status change to {}",
                                 academicRequest.getStudent().getId(), academicRequest.getId(),
@@ -464,6 +486,42 @@ public class NotificationService {
                                                 notification.getContent(),
                                                 fcmData);
                         }
+
+                        // Send WebSocket notifications to active students
+                        for (User student : students) {
+                                if (student.getStatus() == User.UserStatus.ACTIVE) {
+                                        sendWebSocketNotification(student, notification);
+                                }
+                        }
+                }
+        }
+
+        /**
+         * Helper to send WebSocket notification to a specific user
+         */
+        private void sendWebSocketNotification(User recipient, Notification notification) {
+                try {
+                        NotificationResponse response = NotificationResponse.builder()
+                                        .id(notification.getId())
+                                        .title(notification.getTitle())
+                                        .content(notification.getContent())
+                                        .type(notification.getType() != null ? notification.getType().name() : null)
+                                        .targetType(notification.getTargetType() != null ? notification.getTargetType().name() : null)
+                                        .createdAt(LocalDateTime.now())
+                                        .sentAt(notification.getSentAt())
+                                        .isRead(false)
+                                        .targetUrl(notification.getTargetUrl())
+                                        .build();
+
+                        messagingTemplate.convertAndSendToUser(
+                                        recipient.getUsername(),
+                                        "/queue/notifications",
+                                        Collections.singletonList(response));
+
+                        log.info("Sent WebSocket notification to user: {}", recipient.getUsername());
+                } catch (Exception e) {
+                        log.error("Failed to send WebSocket notification to user {}: {}", recipient.getUsername(),
+                                        e.getMessage());
                 }
         }
 }

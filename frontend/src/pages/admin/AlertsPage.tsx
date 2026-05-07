@@ -5,7 +5,7 @@ import { dashboardService } from '../../services/api/dashboardService';
 import { Alert } from '../../types/dashboard';
 import {
     Loader2, Search, Info,
-    CheckCircle2, AlertCircle, XCircle,
+    AlertCircle, XCircle,
     ChevronLeft, ChevronRight, Calendar,
     Filter, History,
     ArrowLeft, Bell, Zap, Shield, GraduationCap, ClipboardList
@@ -267,7 +267,7 @@ export const AlertsPage: React.FC = () => {
                                                             {type.label}
                                                         </span>
                                                     </div>
-                                                    {alert.isResolved ? (
+                                                    {/* {alert.isResolved ? (
                                                         <div className="flex items-center gap-1.5 text-[11px] text-emerald-500 font-bold uppercase tracking-wider">
                                                             <CheckCircle2 className="w-3.5 h-3.5" />
                                                             Đã xử lý
@@ -277,7 +277,7 @@ export const AlertsPage: React.FC = () => {
                                                             <AlertCircle className="w-3.5 h-3.5" />
                                                             Đang chờ
                                                         </div>
-                                                    )}
+                                                    )} */}
                                                 </div>
                                             </div>
                                         </div>
