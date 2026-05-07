@@ -1,5 +1,6 @@
 import apiClient from './apiClient';
 import { StudentResponse } from './academicStaffService';
+import { encryptScore, EncryptedScorePayload } from '../../utils/gradeEncryption';
 
 export interface GradeComponentInfo {
     id: number;
@@ -32,7 +33,6 @@ export interface GradeOverviewResponse {
     averageGrade: number | null;
     passRate: number | null;
     lastUpdated: string;
-    // Grade submission status
     gradesSubmitted: boolean;
     gradesSubmittedAt: string | null;
     gradesSubmittedByName: string | null;
@@ -42,6 +42,15 @@ export interface UpdateGradeRequest {
     enrollmentId: number;
     gradeComponentId: number;
     score: number | null;
+    note?: string;
+}
+
+/** Encrypted payload sent over the wire instead of raw score */
+export interface EncryptedUpdateGradeRequest {
+    enrollmentId: number;
+    gradeComponentId: number;
+    encryptedScore: string | null; // base64 AES-GCM ciphertext + 16-byte auth tag
+    iv: string | null;             // base64 12-byte random IV
     note?: string;
 }
 
@@ -66,6 +75,18 @@ export interface GradePreviewResponse {
     message: string;
 }
 
+/** Encrypt a single UpdateGradeRequest → EncryptedUpdateGradeRequest */
+async function encryptGradeRequest(request: UpdateGradeRequest): Promise<EncryptedUpdateGradeRequest> {
+    const payload: EncryptedScorePayload | null = await encryptScore(request.score);
+    return {
+        enrollmentId: request.enrollmentId,
+        gradeComponentId: request.gradeComponentId,
+        encryptedScore: payload?.encryptedScore ?? null,
+        iv: payload?.iv ?? null,
+        note: request.note,
+    };
+}
+
 export const studentGradeService = {
     /**
      * Get grade overview for a class section
@@ -76,17 +97,19 @@ export const studentGradeService = {
     },
 
     /**
-     * Update a single student grade
+     * Update a single student grade (score encrypted with AES-256-GCM before sending)
      */
     updateGrade: async (request: UpdateGradeRequest): Promise<void> => {
-        await apiClient.put('/v1/student-grades', request);
+        const encrypted = await encryptGradeRequest(request);
+        await apiClient.put('/v1/student-grades', encrypted);
     },
 
     /**
-     * Batch update student grades
+     * Batch update student grades (each score encrypted with AES-256-GCM)
      */
     updateGradesBatch: async (requests: UpdateGradeRequest[]): Promise<void> => {
-        await apiClient.post('/v1/student-grades/batch', requests);
+        const encrypted = await Promise.all(requests.map(encryptGradeRequest));
+        await apiClient.post('/v1/student-grades/batch', encrypted);
     },
 
     /**
@@ -107,16 +130,16 @@ export const studentGradeService = {
     },
 
     /**
-     * Preview grades import (validation only)
+     * Preview grades import (validation only, no DB changes)
      */
     previewGrades: async (className: string, file: File): Promise<GradePreviewResponse> => {
         const formData = new FormData();
         formData.append('file', file);
-        const response = await apiClient.post<GradePreviewResponse>(`/v1/class-sections/${className}/grades/preview`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
-        });
+        const response = await apiClient.post<GradePreviewResponse>(
+            `/v1/class-sections/${className}/grades/preview`,
+            formData,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
         return response.data;
     },
 
@@ -126,11 +149,11 @@ export const studentGradeService = {
     importGrades: async (className: string, file: File): Promise<{ success: number; failed: number; errors: string[] }> => {
         const formData = new FormData();
         formData.append('file', file);
-        const response = await apiClient.post(`/v1/class-sections/${className}/grades/import`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
-        });
+        const response = await apiClient.post(
+            `/v1/class-sections/${className}/grades/import`,
+            formData,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
         return response.data;
     },
 
@@ -143,7 +166,6 @@ export const studentGradeService = {
 
     /**
      * Get basic student information for profile popup
-     * Accessible by LECTURER, ACADEMIC_STAFF, and ADMIN
      */
     getStudentInfo: async (studentCode: string): Promise<StudentResponse> => {
         const response = await apiClient.get<StudentResponse>(`/v1/students/${studentCode}/info`);

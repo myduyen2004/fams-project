@@ -1,5 +1,6 @@
 package com.fams.backend.controller;
 
+import com.fams.backend.dto.request.EncryptedUpdateGradeRequest;
 import com.fams.backend.dto.request.UpdateGradeRequest;
 import com.fams.backend.dto.response.GradeOverviewResponse;
 import com.fams.backend.dto.response.StudentAllGradesSummaryResponse;
@@ -9,8 +10,8 @@ import com.fams.backend.dto.response.StudentResponse;
 import com.fams.backend.service.StudentGradeService;
 import com.fams.backend.entity.User;
 import com.fams.backend.repository.UserRepository;
+import com.fams.backend.util.GradeEncryptionUtil;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -30,6 +31,7 @@ public class StudentGradeController {
 
     private final StudentGradeService studentGradeService;
     private final UserRepository userRepository;
+    private final GradeEncryptionUtil gradeEncryptionUtil;
 
     /**
      * Get grade overview for a class section.
@@ -88,25 +90,31 @@ public class StudentGradeController {
     }
 
     /**
-     * Update a single student grade
+     * Update a single student grade.
+     * Score is received encrypted (AES-256-GCM) and decrypted server-side.
      */
     @PutMapping("/student-grades")
     public ResponseEntity<Void> updateGrade(
-            @Valid @RequestBody UpdateGradeRequest request,
+            @RequestBody EncryptedUpdateGradeRequest encryptedRequest,
             @AuthenticationPrincipal UserDetails userDetails) {
         Long userId = getUserId(userDetails);
+        UpdateGradeRequest request = decryptRequest(encryptedRequest);
         studentGradeService.updateGrade(request, userId);
         return ResponseEntity.ok().build();
     }
 
     /**
-     * Batch update student grades
+     * Batch update student grades.
+     * Each score is received encrypted (AES-256-GCM) and decrypted server-side.
      */
     @PostMapping("/student-grades/batch")
     public ResponseEntity<Void> updateGradesBatch(
-            @Valid @RequestBody List<UpdateGradeRequest> requests,
+            @RequestBody List<EncryptedUpdateGradeRequest> encryptedRequests,
             @AuthenticationPrincipal UserDetails userDetails) {
         Long userId = getUserId(userDetails);
+        List<UpdateGradeRequest> requests = encryptedRequests.stream()
+                .map(this::decryptRequest)
+                .collect(java.util.stream.Collectors.toList());
         studentGradeService.updateGradesBatch(requests, userId);
         return ResponseEntity.ok().build();
     }
@@ -128,6 +136,23 @@ public class StudentGradeController {
         User user = userRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return user.getId();
+    }
+
+    /**
+     * Decrypt an EncryptedUpdateGradeRequest into a plain UpdateGradeRequest.
+     * If encryptedScore/iv are null (no score entered), score is set to null.
+     */
+    private UpdateGradeRequest decryptRequest(EncryptedUpdateGradeRequest enc) {
+        Double score = null;
+        if (enc.getEncryptedScore() != null && enc.getIv() != null) {
+            score = gradeEncryptionUtil.decryptScore(enc.getEncryptedScore(), enc.getIv());
+        }
+        return UpdateGradeRequest.builder()
+                .enrollmentId(enc.getEnrollmentId())
+                .gradeComponentId(enc.getGradeComponentId())
+                .score(score)
+                .note(enc.getNote())
+                .build();
     }
 
     // ==================== STUDENT SELF-VIEW GRADE ENDPOINTS ====================
