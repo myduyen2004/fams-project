@@ -1,54 +1,91 @@
 {
   "title": "Cẩm nang sinh viên Đại học FPT",
-  "version": "Phiên bản Chi Tiết Mở Rộng v2.0 - Viết bởi Sinh Viên, Dành cho Sinh Viên",
-  "author": "Sinh viên FPT (người đã trải nghiệm)",
+  "version": "Phiên bản Chi Tiết Mở Rộng v2.0 - Viết bởi Sinh Viên, Dành cho Sinh Viên (Tích hợp Sổ tay chính thức)",
+  "author": "Sinh viên FPT (người đã trải nghiệm) & Ban biên tập Sổ tay ĐH FPT",
   "last_updated": "2025",
-  "intro": "Xin chào tân sinh viên và các bạn sinh viên FPT! Mình là một sinh viên FPT đã trải qua đủ thứ từ trượt môn, bị Not Eligible (NE), đến lần đầu đi OJT run tay phỏng vấn. Tài liệu này là tổng hợp tất cả những gì mình ước mình được ai đó nói sớm hơn khi mới vào trường. Không phải lý thuyết sách vở, mà là kinh nghiệm thực tế, đầy đủ và chi tiết nhất có thể. Phiên bản 2.0 bổ sung thêm các phần về hệ thống điểm, đăng ký môn, thư viện, y tế, tâm lý, công cụ AI, kênh liên lạc chính thức, FAQ và nhiều nội dung thiết thực khác.",
+  "intro": "Xin chào tân sinh viên và các bạn sinh viên FPT! Mình là một sinh viên FPT đã trải qua đủ thứ từ trượt môn, bị Not Eligible (NE), đến lần đầu đi OJT run tay phỏng vấn. Tài liệu này là tổng hợp tất cả những gì mình ước mình được ai đó nói sớm hơn khi mới vào trường, kết hợp với nội dung chính thức từ 'Sổ Tay Sinh Viên Tân' của Trường Đại học FPT. Không phải lý thuyết sách vở, mà là kinh nghiệm thực tế, đầy đủ và chi tiết nhất có thể. Phiên bản 2.0 bổ sung thêm các phần về hệ thống điểm, đăng ký môn, thư viện, y tế, tâm lý, công cụ AI, kênh liên lạc chính thức, FAQ và nhiều nội dung thiết thực khác.",
   "quick_contacts": {
-    "title": "Danh bạ Liên hệ Nhanh - Ai xử lý việc gì?",
+    "title": "Danh bạ Liên hệ Nhanh - Ai xử lý việc gì? (Theo Sổ tay chính thức)",
     "description": "Khi gặp vấn đề, liên hệ đúng đầu mối để tiết kiệm thời gian.",
     "contacts": [
       {
-        "department": "Phòng Học vụ (Academic Affairs)",
-        "handles": "Xếp lớp, chuyển ngành, bảo lưu, rejoin, điểm danh, cảnh báo học vụ",
-        "how": "Trực tiếp tại văn phòng hoặc ticket trên FAP"
+        "department": "Ban Tuyên sinh (P.108)",
+        "handles": "Thông tin tuyển sinh, học bổng, truyền thông",
+        "how": "Hotline: (0236) 7300 999 - Thầy Nguyễn Đăng Nghĩa"
       },
       {
-        "department": "Phòng Tài chính (Finance)",
-        "handles": "Học phí, xác nhận đã đóng tiền, học bổng, hoàn tiền",
-        "how": "Trực tiếp hoặc email kèm ảnh bill giao dịch"
+        "department": "Ban Đào tạo (P.101) - Phòng Tổ chức & Quản lý đào tạo",
+        "handles": "Xếp lớp, tổ chức đào tạo, khảo thí, xử lý học vụ (tạm ngưng, chuyển ngành, chuyển cơ sở), điểm danh, hỗ trợ học tập, thông tin OJT, học kỳ nước ngoài",
+        "how": "Cô Nguyễn Thị Uyên Trang (Trưởng phòng) - FAP hoặc trực tiếp"
       },
       {
-        "department": "Phòng Dịch vụ Sinh viên (Student Services)",
-        "handles": "Thẻ sinh viên, giấy xác nhận, Workshop, CLB, điểm rèn luyện",
-        "how": "Trực tiếp hoặc fanpage chính thức cơ sở"
+        "department": "Phòng Khảo thí (thuộc Ban Đào tạo)",
+        "handles": "Tổ chức thi, ra đề, quản lý điểm thi",
+        "how": "Cô Nguyễn Thị Minh Thảo (Trưởng phòng) - Qua FAP hoặc email"
+      },
+      {
+        "department": "Phòng Dịch vụ Sinh viên (P.101)",
+        "handles": "Thủ tục hành chính, xác nhận sinh viên, xác nhận vay vốn, bảng điểm quá trình, thẻ sinh viên, nhập học trở lại, chuyển ngành/cơ sở, đăng ký học lại/học cải thiện, tạm ngừng/tạm hoãn, thông tin học phí, BHYT, nhà trọ, phát bằng chứng chỉ",
+        "how": "Cô Trần Thụy Linh (Trưởng phòng) - Hotline: (0236) 730 8686 - trực tiếp phòng 101 hoặc online qua FAP"
+      },
+      {
+        "department": "Phòng Công tác Sinh viên (P.101)",
+        "handles": "Thông tin phụ huynh/sinh viên, hoạt động sinh viên, sự kiện văn hóa - nghệ thuật - thể thao, quản lý CLB, thông tin việc làm, khen thưởng, kỷ luật",
+        "how": "Cô Trương Hồng Công (Trưởng phòng) - Hotline: (0236) 730 8686"
+      },
+      {
+        "department": "Phòng Công nghệ Thông tin (P.104)",
+        "handles": "Hỗ trợ công nghệ, khắc phục sự cố CNTT, tài khoản, wifi, phần mềm thi",
+        "how": "Thầy Huỳnh Tấn Vinh (Trưởng phòng) - IT Support Page: https://lmsdn.fpt.edu.vn/hd"
+      },
+      {
+        "department": "Phòng Hành chính (P.104)",
+        "handles": "Hỗ trợ phòng học, trang thiết bị trong phòng học",
+        "how": "Cô Trương Thị Ngọc Thạch (Trưởng phòng)"
+      },
+      {
+        "department": "Phòng Thông tin Thư viện (P.105)",
+        "handles": "Không gian học tập, cung cấp sách tài liệu, hỗ trợ giảng dạy/học tập/nghiên cứu",
+        "how": "Cô Đoàn Thị Anh Thư (Phụ trách) - Trực tiếp hoặc website thư viện"
       },
       {
         "department": "Phòng Quan hệ Doanh nghiệp (Industry Relations)",
-        "handles": "OJT, thực tập, Job Fair, Mock Interview, CV workshop",
-        "how": "Trực tiếp, email hoặc lịch đặt hẹn trên FAP"
-      },
-      {
-        "department": "IT Support / HelpDesk",
-        "handles": "Lỗi FAP, LMS, email, tài khoản Microsoft 365, wifi campus",
-        "how": "Ticket trên FAP hoặc email helpdesk@fpt.edu.vn (tùy cơ sở)"
-      },
-      {
-        "department": "Phòng Y tế",
-        "handles": "Khám bệnh cơ bản, cấp cứu ban đầu, hỗ trợ giấy nghỉ học",
-        "how": "Trực tiếp tại phòng y tế trong campus"
+        "handles": "OJT, thực tập, Job Fair, Mock Interview, CV workshop, hợp tác doanh nghiệp",
+        "how": "Trực tiếp, email hoặc lịch hẹn trên FAP"
       },
       {
         "department": "Cố vấn Học tập (Advisor)",
         "handles": "Tư vấn lộ trình học, cảnh báo học vụ, định hướng nghề nghiệp",
         "how": "Email hoặc đặt lịch qua FAP"
-      },
-      {
-        "department": "Thư viện",
-        "handles": "Mượn/trả sách, phòng học nhóm, tài khoản cơ sở dữ liệu",
-        "how": "Trực tiếp hoặc website thư viện"
       }
     ]
+  },
+  "official_school_info": {
+    "name": "Trường Đại học FPT",
+    "established": "08/09/2006 theo Quyết định số 208/2006/QĐ-TTg của Thủ tướng Chính phủ",
+    "mission": "Xây dựng mô hình trường Đại học thế hệ mới, triết lý giáo dục hiện đại, gắn đào tạo với thực tiễn và nhu cầu nhân lực, đưa giáo dục Việt Nam lên tầm quốc tế. Phương pháp đào tạo gắn kết với doanh nghiệp, chương trình chuẩn quốc tế, sinh viên thành thạo hai ngoại ngữ, rèn luyện kỹ năng mềm, phát triển toàn diện.",
+    "achievements": [
+      "2012: Đại học Việt Nam đầu tiên đạt chứng nhận chuẩn 3 sao của QS (Quacquarelli Symonds).",
+      "2015: Tái kiểm định đạt 3.5 sao, trong đó 4 hạng mục 5 sao: Giảng dạy, Việc làm, Cơ sở vật chất, Trách nhiệm xã hội và Hoạt động cộng đồng.",
+      "2022: Có mặt trong Bảng xếp hạng đại học toàn cầu về PTBV (Impact Rankings) của Times Higher Education (THE), thứ hạng 801-1000."
+    ],
+    "campuses": [
+      "Hà Nội",
+      "Đà Nẵng",
+      "Bình Định",
+      "TP. Hồ Chí Minh",
+      "Cần Thơ"
+    ],
+    "total_students": "Hơn 50.000",
+    "academic_calendar": {
+      "semesters_per_year": 3,
+      "semester_names": [
+        "Spring (Học kỳ Xuân): Bắt đầu từ tháng 1",
+        "Summer (Học kỳ Hạ): Bắt đầu từ tháng 5",
+        "Fall (Học kỳ Thu): Bắt đầu từ tháng 9"
+      ],
+      "note": "Một năm học tại FPTU có 3 học kỳ chính"
+    }
   },
   "pillars": [
     {
@@ -208,21 +245,25 @@
           "content": "GPA quyết định học bổng, OJT, tốt nghiệp và thậm chí cả cơ hội nghề nghiệp. Hiểu hệ thống điểm giúp bạn biết mình đang ở đâu và cần làm gì.",
           "subsections": [
             {
-              "subtitle": "Cách tính điểm môn học",
+              "subtitle": "Thang điểm đánh giá chính thức (Theo Quy chế Đào tạo ĐH FPT)",
               "details": [
-                "Cấu trúc điểm thông thường: Attendance (10%) + Assignment/Lab (20-30%) + Midterm - PE (20-30%) + Final Exam - FE (40-50%). Tỷ lệ cụ thể tùy từng môn, xem trong course outline.",
-                "Điểm chữ: A (4.0), B+ (3.5), B (3.0), C+ (2.5), C (2.0), D+ (1.5), D (1.0), F (0).",
-                "Điều kiện đậu môn: Đạt tối thiểu D (1.0) ở thang 4, hoặc 50/100 điểm tùy môn. Một số môn yêu cầu đậu cả PE và FE riêng lẻ.",
-                "Điểm FE phải đạt tối thiểu 4/10 (hoặc theo quy định môn). Nếu FE < 4 thì trượt môn dù điểm thành phần cao."
+                "Điểm được cho theo thang điểm 10. Thang điểm chữ và thang điểm 4 chỉ mang tính chất tham khảo, chuyển đổi khi cần thiết.",
+                "Thang điểm chính thức hệ 10 cùng cách xếp loại:",
+                "Xuất sắc: 9,0 - 10,0 (A+, 4.0)",
+                "Giỏi: 8,5 - cận 9,0 (A, 3.75); 8,0 - cận 8,5 (A-, 3.5)",
+                "Khá: 7,5 - cận 8,0 (B+, 3.25); 7,0 - cận 7,5 (B, 3.0)",
+                "Trung bình khá: 6,5 - cận 7,0 (B-, 2.75); 6,0 - cận 6,5 (C+, 2.5)",
+                "Trung bình: 5,5 - cận 6,0 (C, 2.25); 5,0 - cận 5,5 (C-, 2.0)",
+                "Không đạt: Dưới 5,0 (F, 0)"
               ]
             },
             {
-              "subtitle": "Cách tính GPA",
+              "subtitle": "Cách tính điểm trung bình",
               "details": [
-                "GPA = Tổng (điểm chữ × số tín chỉ) / Tổng số tín chỉ đã học.",
-                "GPA tích lũy (Cumulative GPA) tính trên toàn bộ các môn đã học từ kỳ 1.",
-                "GPA kỳ (Semester GPA) chỉ tính trong kỳ hiện tại.",
-                "Môn học lại: Điểm mới thay thế điểm cũ trong bảng điểm GPA. Điểm cũ vẫn hiển thị nhưng không tính vào GPA."
+                "Điểm đánh giá bộ phận và điểm thi cuối học phần được quy đổi theo thang điểm 10, làm tròn đến một chữ số thập phân.",
+                "Điểm học phần là tổng điểm của tất cả các điểm đánh giá bộ phận và thi cuối học phần nhân với trọng số tương ứng. Làm tròn đến một chữ số thập phân.",
+                "Điểm trung bình học kỳ hay điểm trung bình tích lũy = Tổng (điểm học phần * số tín chỉ) / Tổng số tín chỉ (không tính tiếng Anh chuẩn bị, GDQP, GDTC, OJT). Làm tròn 2 chữ số thập phân.",
+                "Điểm học phần, điểm trung bình được sử dụng để xét học bổng, khen thưởng, xếp loại sinh viên, xét và xếp loại tốt nghiệp."
               ]
             },
             {
@@ -288,8 +329,8 @@
               "subtitle": "Điều kiện đi OJT",
               "details": [
                 "Hoàn thành các môn cơ sở ngành theo đúng lộ trình (thường sau kỳ 5-6).",
-                "Đạt Level 6 tiếng Anh trong chương trình dự bị ngôn ngữ của FPT.",
-                "Không nợ quá số tín chỉ quy định (thường không quá 10 tín chỉ).",
+                "Đạt trình độ tiếng Anh theo quy định (thường là hoàn thành chương trình tiếng Anh dự bị hoặc chứng chỉ tương đương).",
+                "Hoàn thành tối thiểu 90% tổng số tín chỉ của các học phần chuyên môn (không bao gồm GDTC, GDQP) trước OJT.",
                 "GPA tổng thể ít nhất đạt mức trung bình (GPA > 2.0 theo thang 4)."
               ],
               "tip": "Đừng đợi đến lúc đủ điều kiện mới chuẩn bị CV. Hãy làm CV từ kỳ 3-4, tham gia các sự kiện Job Fair để có cái nhìn thực tế về yêu cầu thị trường."
@@ -324,7 +365,7 @@
         },
         {
           "id": 11,
-          "title": "Quy định & Kỷ luật",
+          "title": "Quy định & Kỷ luật (Theo Sổ tay chính thức)",
           "table": {
             "headers": [
               "Vi phạm",
@@ -335,12 +376,12 @@
               [
                 "Vắng >20% tiết học",
                 "Tự động",
-                "Cấm thi (Not Eligible), học lại môn"
+                "Cấm thi (Not Eligible - NE), học lại môn"
               ],
               [
                 "Gian lận thi cử lần 1",
                 "Trung bình",
-                "Điểm 0 môn đó, cảnh cáo học vụ"
+                "Điểm 0 môn đó, cảnh cáo học vụ, phạt vi phạm 100% học phí môn"
               ],
               [
                 "Gian lận thi cử lần 2",
@@ -406,7 +447,7 @@
           "content": "Chương trình tiếng Anh dự bị của FPT (thường gọi là Little UK) là một trong những điểm đặc trưng nhất và... gian nan nhất đối với nhiều sinh viên khi mới vào trường.",
           "details": [
             "Placement Test: Tân sinh viên bắt buộc làm bài xếp lớp để vào 1 trong 6 level, hoặc được miễn hoàn toàn nếu có IELTS >= 6.0.",
-            "Mỗi level kéo dài 1 học kỳ. Bạn phải hoàn thành cả 6 level (hoặc các level được phân công) để đủ điều kiện làm đồ án tốt nghiệp.",
+            "Mỗi level kéo dài 1 học kỳ. Bạn phải hoàn thành cả 6 level (hoặc các level được phân công) để đủ điều kiện học chuyên môn và làm đồ án tốt nghiệp.",
             "Trượt level: Phải đóng tiền học lại toàn bộ level đó vào kỳ tiếp theo.",
             "Jump level: Nếu bạn có chứng chỉ quốc tế (IELTS, TOEFL, Cambridge...) đạt chuẩn trong quá trình học, làm đơn xin nhảy level để tiết kiệm thời gian.",
             "Giáo trình chính: Top Notch và Summit, kết hợp các hoạt động Presentation, Debate, và Communication Lab.",
@@ -430,12 +471,13 @@
           "title": "Đồ án Tốt nghiệp (Capstone Project)",
           "content": "Capstone Project là đỉnh điểm của toàn bộ hành trình học tập tại FPT. Đây là cơ hội để bạn ứng dụng toàn bộ kiến thức đã học vào một sản phẩm/dự án thực tế.",
           "details": [
-            "Điều kiện: Hoàn thành OJT, đạt chuẩn đầu ra tiếng Anh (Level 6 hoặc tương đương), hoàn thành tất cả môn chuyên ngành bắt buộc.",
+            "Điều kiện: Hoàn thành OJT, đạt chuẩn đầu ra tiếng Anh, hoàn thành tất cả môn chuyên ngành bắt buộc, tích lũy đủ 80% số tín chỉ chương trình (không kể GDTC và OJT).",
+            "Khóa luận được đăng ký theo nhóm 4-5 sinh viên. Trường xem xét phê duyệt trường hợp ngoài số lượng.",
             "Chọn giảng viên hướng dẫn: Hãy liên hệ giảng viên từ sớm (ngay khi hoàn thành OJT). Giảng viên giỏi thường được đặt chỗ rất sớm.",
             "Thay đổi đề tài: Chỉ được trong 2-4 tuần đầu và phải có sự đồng ý của giảng viên hướng dẫn.",
             "Mock Defense: Bước bắt buộc để đánh giá chất lượng trước khi ra hội đồng. Hãy chuẩn bị kỹ như thể đây là buổi bảo vệ thật.",
-            "Trượt đồ án: Phải đăng ký lại toàn bộ vào kỳ tiếp theo, thường với đề tài mới.",
-            "Nhóm Capstone: Thường 4-6 người. Phân công rõ ràng vai trò PM, Developer, Tester, Designer từ đầu để tránh xung đột cuối kỳ."
+            "Trượt đồ án: Phải đăng ký lại toàn bộ vào kỳ tiếp theo (làm lại Khóa luận).",
+            "Nhóm Capstone: Phân công rõ ràng vai trò PM, Developer, Tester, Designer từ đầu để tránh xung đột cuối kỳ."
           ],
           "warning": "Đừng bắt đầu code/làm sản phẩm trước khi có đề cương rõ ràng và được duyệt. Nhiều nhóm bị yêu cầu làm lại từ đầu do không bám sát yêu cầu ban đầu."
         },
@@ -457,7 +499,7 @@
               [
                 "Cảnh báo học vụ liên tiếp",
                 "2 kỳ liên tiếp không cải thiện",
-                "Có thể bị đình chỉ học tập"
+                "Có thể bị đình chỉ học tập (buộc thôi học)"
               ],
               [
                 "Vắng nhiều",
@@ -467,7 +509,7 @@
               [
                 "Nợ học phí",
                 "Sau deadline",
-                "Làm đơn gia hạn ngay trên FAP"
+                "Làm đơn gia hạn ngay trên FAP hoặc liên hệ Tài chính"
               ],
               [
                 "Trượt nhiều môn",
@@ -484,16 +526,27 @@
           "content": "Là sinh viên FPT, bạn được cung cấp nhiều tài khoản và phần mềm miễn phí. Đừng để lãng phí những quyền lợi này!",
           "subsections": [
             {
-              "subtitle": "Tài khoản được cấp khi nhập học",
+              "subtitle": "Tài khoản Email FPT (@fpt.edu.vn)",
               "details": [
-                "Email FPT (@fpt.edu.vn hoặc @fe.edu.vn): Dùng để nhận thông báo quan trọng từ trường. PHẢI kiểm tra thường xuyên.",
-                "Tài khoản FAP: Mã sinh viên + mật khẩu mặc định (thường ngày sinh). Đổi ngay khi nhận.",
-                "Microsoft 365 Education: Email FPT cho phép kích hoạt Word, Excel, PowerPoint, Teams, OneDrive 1TB hoàn toàn miễn phí.",
-                "Tài khoản LMS (Learning Management System): Nơi tải tài liệu môn học, nộp assignment và xem thông báo từ giảng viên."
+                "Mỗi sinh viên được cấp 01 tài khoản email dạng ID@fpt.edu.vn. Công thức ID = Tên + Kí tự đầu của Họ và Tên đệm + MSSV (VD: Cao Văn Huy, MSSV DE180136 → HuyCVde180136@fpt.edu.vn).",
+                "Mật khẩu khởi tạo: 123@123a. Lần đăng nhập đầu phải đổi mật khẩu (tối thiểu 8 ký tự, gồm chữ, số, ký tự đặc biệt, không chứa tên account).",
+                "Truy cập mail.fpt.edu.vn để đăng nhập và đổi mật khẩu. Khuyến khích bật xác thực 2 bước tại myaccount.google.com/security.",
+                "Đây là tài khoản Google nên dùng được Drive, Meet, Calendar, và đặc biệt là Microsoft 365 Education (Word, Excel, Teams, OneDrive 1TB) miễn phí.",
+                "PHẢI kiểm tra email này hàng ngày vì tất cả thông báo học vụ, thi cử, học phí đều gửi về đây."
               ]
             },
             {
-              "subtitle": "Phần mềm & dịch vụ miễn phí cho sinh viên IT",
+              "subtitle": "Tài khoản nội bộ FPTU Đà Nẵng (ví dụ: de180136)",
+              "details": [
+                "Dùng để đăng nhập wifi FPT University tại campus, đăng nhập hệ thống LMS (https://lmsdn.fpt.edu.vn), và các phần mềm thi EOS, SEB, PEA.",
+                "Mật khẩu khởi tạo: 123@123a. Phải thay đổi ngay để kích hoạt.",
+                "Tài khoản này bắt buộc thay đổi mật khẩu mỗi 42 ngày. Hệ thống gửi email cảnh báo 7 ngày trước khi hết hạn và có thêm 3 ngày gia hạn, nếu không đổi sẽ bị khóa.",
+                "Có thể đổi mật khẩu qua Self Service Password: https://resetdn.fpt.edu.vn hoặc đăng nhập wifi lần đầu trên Windows."
+              ],
+              "warning": "Tuyệt đối không để lộ tài khoản nội bộ cho người khác. Mọi gian lận thi cử xuất phát từ tài khoản của bạn, bạn sẽ chịu trách nhiệm."
+            },
+            {
+              "subtitle": "Phần mềm & dịch vụ miễn phí cho sinh viên",
               "details": [
                 "GitHub Student Developer Pack: Đăng ký tại education.github.com với email FPT → Nhận hàng chục phần mềm, cloud credit, domain miễn phí.",
                 "JetBrains (IntelliJ, PyCharm, WebStorm...): Miễn phí 1 năm, gia hạn được khi còn là sinh viên.",
@@ -506,13 +559,27 @@
             {
               "subtitle": "Wifi & Mạng campus",
               "details": [
-                "Mạng wifi: Kết nối bằng tài khoản FAP. SSID thường là 'FPT-Student' hoặc tên cơ sở cụ thể.",
+                "Mạng wifi: Kết nối bằng tài khoản nội bộ (MSSV). SSID thường là 'FPT-Student' hoặc 'FPT University'.",
                 "VPN: Một số tài nguyên học thuật yêu cầu kết nối qua VPN của trường. Liên hệ IT Support để được cấp phát.",
-                "Hạn mức dữ liệu: Một số cơ sở có giới hạn lưu lượng hàng tháng cho mỗi tài khoản.",
-                "Lỗi wifi: Báo ngay IT Support kèm vị trí phòng/tòa nhà để được xử lý nhanh nhất."
+                "Hỗ trợ IT: Phòng CNTT (P.104) cung cấp live support chatbox trên IT Support Page (https://lmsdn.fpt.edu.vn/hd). Giờ hỗ trợ: 8:00-12:00 và 13:00-17:00 các ngày làm việc."
               ]
             }
           ]
+        },
+        {
+          "id": "CNTT_KhuyenCao",
+          "title": "Khuyến cáo Công nghệ Thông tin từ Trường",
+          "content": "Trường khuyến cáo sinh viên dùng Windows 10 hoặc Windows 11 trên laptop cá nhân để tương thích tốt với các hệ thống và phần mềm thi. Phần mềm thi EOS chỉ dùng được trên Windows, không có bản dành cho MacOS hay Linux. Nếu dùng Macbook bắt buộc phải cài song song Windows 10/11 trên máy thật (chỉ thực hiện được trên Macbook CPU Intel, không dùng được trên Apple M1/M2).",
+          "download_links": {
+            "SEB": "https://lmsdn.fpt.edu.vn/hd/seb/",
+            "EOS": "https://lmsdn.fpt.edu.vn/hd/eos/",
+            "PEA": "https://lmsdn.fpt.edu.vn/hd/pea/"
+          },
+          "laptop_advice": {
+            "nganh_thiet_ke_do_hoa": "CPU Core i5 trở lên, RAM >= 6GB, SSD >= 256GB + HDD >= 1TB, VGA card rời >= 4GB (khuyến cáo Core i7).",
+            "nganh_ky_thuat_phan_mem": "CPU Core i5, RAM >= 8GB, SSD >= 128GB + HDD >= 512GB, không cần VGA rời.",
+            "nganh_con_lai": "CPU Core i3, RAM >= 8GB (tối thiểu), không cần VGA rời. Nên dùng SSD để tăng tốc độ."
+          }
         }
       ]
     },
@@ -524,24 +591,43 @@
       "groups": [
         {
           "id": 4,
-          "title": "Học phí & Tài chính",
-          "content": "Học phí FPT được tính theo tín chỉ và điều chỉnh hàng năm. Việc quản lý học phí tốt là kỹ năng sống quan trọng không kém gì kỹ năng chuyên môn.",
+          "title": "Học phí & Tài chính (Theo Quy định chính thức)",
+          "content": "Học phí FPT được tính theo tín chỉ và điều chỉnh hàng năm, biên độ điều chỉnh giữa 2 năm liên tiếp không quá 10%. Số lần nộp học phí được công bố tại tuyển sinh là cố định.",
           "details": [
-            "Hạn đóng học phí: Thông báo qua email và FAP, thường trước 1-2 tuần khi kỳ mới bắt đầu.",
-            "Đóng muộn: Tài khoản FAP có thể bị khóa một số chức năng như đăng ký môn, xem điểm thi.",
-            "Nộp nhầm học phí: Liên hệ ngay phòng Tài chính kèm theo ảnh chụp bill giao dịch. Quá trình điều chỉnh thường mất 3-5 ngày làm việc.",
-            "Học phí học lại: Tính theo số tín chỉ của môn đó tại thời điểm đăng ký học lại, không phải thời điểm học lần đầu.",
-            "Nộp tiền qua App: Quét mã QR trên FAP để đảm bảo tiền vào đúng mã sinh viên. Chuyển khoản thủ công có nguy cơ sai mã."
+            "Học phí kỳ định hướng: Đợt nộp đầu tiên khi nhập học bao gồm học phí kỳ định hướng và một mức tiếng Anh chuẩn bị.",
+            "Hạn đóng học phí: Tối thiểu 05 ngày trước ngày đầu tiên của kỳ học chính thức, 03 ngày trước đối với học tiếng Anh dự bị.",
+            "Đóng muộn: Nếu không đóng đúng hạn, trường coi như sinh viên chủ động thôi học, xóa lớp và ban hành quyết định thôi học tự nguyện.",
+            "Phí học lại: Học lại sớm (ngay trong kỳ hoặc kỳ tiếp theo) bằng 50% học phí môn. Học lại thông thường bằng 100% học phí môn.",
+            "Phạt vi phạm thi: Sinh viên vi phạm quy chế thi bị phạt 100% học phí môn.",
+            "Học bổng bị thu hồi: Nếu phải học lại, sinh viên học bổng phải nộp thêm phí thu hồi học bổng = học phí môn * % học bổng được cấp."
           ],
           "subsections": [
             {
-              "subtitle": "Hỗ trợ tài chính và vay vốn",
+              "subtitle": "Bảo lưu, hoàn trả học phí",
               "details": [
-                "Vay vốn Ngân hàng Chính sách Xã hội: Sinh viên thuộc hộ nghèo/cận nghèo có thể vay lãi suất thấp. Cần giấy xác nhận sinh viên từ trường + giấy tờ hộ nghèo từ địa phương.",
-                "Trả góp học phí: Một số kỳ trường cho phép chia 2-3 đợt đóng. Hỏi phòng Tài chính trước kỳ để biết chính sách cụ thể.",
-                "Học bổng từ doanh nghiệp: FPT Software, Viettel, các công ty đối tác thường có học bổng riêng cho sinh viên FPT xuất sắc. Theo dõi thông báo trên FAP và fanpage trường."
+                "Thôi học trước ngày bắt đầu: hoàn 80% học phí thực nộp.",
+                "Thôi học trong 2 tuần đầu: hoàn 50% học phí thực nộp.",
+                "Thôi học sau 2 tuần: không hoàn trả.",
+                "Đã nộp học phí rồi xin bảo lưu: học phí được bảo lưu, khi quay lại sẽ trừ vào học phí phải nộp.",
+                "Nộp dư học phí: chuyển sang kỳ tiếp theo, nếu dư quá tổng học phí toàn khóa thì hoàn trả."
+              ]
+            },
+            {
+              "subtitle": "Chuyển ngành, chuyển cơ sở",
+              "details": [
+                "Chuyển ngành: nộp học phí theo biểu phí ngành mới. Hoàn lại học phí thực nộp cho các môn chưa học ở ngành cũ. Không được duy trì học bổng/ưu đãi cũ (trừ chuyển chuyên ngành hẹp được bảo lưu).",
+                "Chuyển cơ sở: nộp học phí theo biểu phí cơ sở mới. Được bảo lưu học bổng nếu chính sách áp dụng toàn quốc, nếu chỉ áp dụng vùng miền thì phải hoàn lại ưu đãi."
+              ]
+            },
+            {
+              "subtitle": "Phương thức thanh toán qua Ví FAP",
+              "details": [
+                "Mỗi sinh viên có một ví FAP duy nhất. Sinh viên tự tạo khoản nộp (Choose paid items), sau đó nạp tiền vào ví và đến hạn trường tự động trừ.",
+                "Cần đảm bảo đủ số dư trước deadline, nếu thiếu sẽ bị xóa lớp và thôi học tự nguyện.",
+                "Phí nhập học lại nếu bị thôi học vì nợ học phí: 2.300.000đ + thủ tục nhập học lại.",
+                "Thanh toán qua cổng điện tử https://dng.fpt.edu.vn/Invoice hoặc ViettelPay."
               ],
-              "tip": "Đặt nhắc nhở học phí sớm 2 tuần trước deadline. Nhiều bạn bị khóa tài khoản chỉ vì quên đóng tiền trong kỳ bận rộn làm đồ án."
+              "tip": "Nếu không thấy học phí hiển thị trên FAP, hãy kiểm tra bạn có đang trong diện bảo lưu, tạm ngưng, đã đóng đủ hay chờ lớp không. Nếu không, liên hệ ngay phòng Dịch vụ sinh viên hoặc Kế toán trước deadline."
             }
           ]
         },
@@ -559,7 +645,7 @@
               [
                 "Học bổng Cóc Vàng",
                 "Điểm số cao nhất khối ngành/kỳ",
-                "Tiền mặt/Quà tặng giá trị cao"
+                "Tiền mặt/Quà tặng giá trị cao, vinh danh tại lễ tôn vinh"
               ],
               [
                 "Học bổng khuyến học",
@@ -586,7 +672,8 @@
           "details": [
             "Giữ học bổng: Duy trì GPA mức khá/giỏi, không trượt môn nào trong kỳ, không bị kỷ luật từ mức cảnh cáo trở lên.",
             "Điểm rèn luyện: Yêu cầu để xét vinh danh. Tham gia CLB, Workshop, sự kiện trường là cách tốt nhất để tích lũy.",
-            "Honor Night: Sự kiện vinh danh sinh viên giỏi/xuất sắc mỗi kỳ. Bạn sẽ được nhận giấy khen và quà lưu niệm từ Ban giám hiệu."
+            "Lễ tôn vinh sinh viên (Honor Night): Tổ chức mỗi học kỳ, sinh viên nhận giấy khen, phần thưởng theo quy định.",
+            "Danh hiệu khen thưởng: Cóc Vàng, Sinh viên xuất sắc, Sinh viên giỏi, Sinh viên hoạt động phong trào xuất sắc. Tối đa 5 CLB được khen thưởng mỗi kỳ."
           ]
         },
         {
@@ -678,7 +765,7 @@
             "Điều kiện ngôn ngữ: Tối thiểu Level 6 tiếng Anh hoặc tương đương theo yêu cầu của trường đối tác.",
             "Hỗ trợ Visa: Nhà trường hỗ trợ thư mời và hướng dẫn chuẩn bị hồ sơ tài chính cho visa du học ngắn hạn.",
             "Công nhận tín chỉ: Các môn học tại nước ngoài được quy đổi tương đương vào bảng điểm tại Việt Nam nếu đạt yêu cầu.",
-            "Một số đối tác tiêu biểu: Đại học tại Nhật Bản, Hàn Quốc, Úc, Phần Lan, Mỹ... (danh sách cập nhật theo từng năm)."
+            "Các chương trình cụ thể (theo Sổ tay): Study Abroad (Malaysia, Philippines, Úc - 4-5 tuần), Eng 6 Overseas (Thái Lan, Malaysia, Philippines, Úc, Nhật Bản - 3-6 tháng), Semester Abroad (Hàn Quốc, Nhật Bản, Singapore, Đức... - 4-6 tháng), Semester Exchange (Thái Lan, Malaysia, Philippines - 25-30 ngày), Intensive Course (Malaysia, Philippines, Singapore, Nhật Bản - 3-8 tháng), OJT Overseas (Thái Lan, Singapore, Malaysia - 4-7 ngày), Fieldtrip, Observation trip, Cultural Exchange Programs."
           ],
           "tip": "Chuẩn bị hồ sơ tài chính cho visa (sao kê ngân hàng 3-6 tháng) ngay từ kỳ 3-4 nếu bạn có ý định tham gia Global Program. Đây là yếu tố khiến nhiều bạn bị từ chối visa vào phút chót."
         },
@@ -729,6 +816,321 @@
             "Đăng ký: Qua link Google Form hoặc app MyFAP. Đến đúng giờ để được điểm danh và nhận Certificate.",
             "Đề xuất chủ đề: Bạn có thể đề xuất chủ đề Workshop cho phòng Dịch vụ sinh viên.",
             "Các chủ đề Workshop phổ biến và có giá trị: Phỏng vấn xin việc, Public Speaking, Design Thinking, Startup Pitching, Personal Branding."
+          ]
+        },
+        {
+          "id": "SuKienTrongNam",
+          "title": "Sự kiện trong năm (Theo Sổ tay)",
+          "content": "Lịch các sự kiện nổi bật theo học kỳ, giúp bạn tham gia và tích lũy điểm rèn luyện.",
+          "table": {
+            "headers": [
+              "Học kỳ",
+              "Tháng",
+              "Tên Sự kiện",
+              "Loại chương trình"
+            ],
+            "rows": [
+              [
+                "Spring",
+                "Tháng 1",
+                "Hoạt động thiện nguyện: Sâu âm vắng cao",
+                "Cộng đồng"
+              ],
+              [
+                "Spring",
+                "Tháng 1",
+                "Hội Cúc Xuân",
+                "Giải trí"
+              ],
+              [
+                "Spring",
+                "Tháng 2",
+                "Valentine's Day",
+                "Giải trí"
+              ],
+              [
+                "Spring",
+                "Tháng 2",
+                "Leadership",
+                "Kỹ năng"
+              ],
+              [
+                "Spring",
+                "Tháng 3",
+                "Hoạt động chào mừng ngày 8/3",
+                "Giải trí"
+              ],
+              [
+                "Spring",
+                "Tháng 3",
+                "Triển lãm ngành TKĐH",
+                "Học thuật, cộng đồng"
+              ],
+              [
+                "Spring",
+                "Tháng 3",
+                "Giải Olympic thể thao SV",
+                "Thể thao"
+              ],
+              [
+                "Spring",
+                "Tháng 3",
+                "Cuộc thi lập trình",
+                "Học thuật"
+              ],
+              [
+                "Spring",
+                "Tháng 3",
+                "7 ngày trải nghiệm",
+                "Trải nghiệm"
+              ],
+              [
+                "Spring",
+                "Tháng 4",
+                "FPTU's Short Film",
+                "Giải trí"
+              ],
+              [
+                "Spring",
+                "Tháng 4",
+                "48h chuyển động",
+                "Trải nghiệm"
+              ],
+              [
+                "Spring",
+                "Tháng 4",
+                "Talkshow khối ngành Kinh tế",
+                "Học thuật, cộng đồng"
+              ],
+              [
+                "Spring",
+                "Tháng 4",
+                "Seminar khối ngành Kỹ thuật",
+                "Học thuật"
+              ],
+              [
+                "Spring",
+                "Tháng 5",
+                "Cuộc thi Tiếng Nhật",
+                "Học thuật"
+              ],
+              [
+                "Spring",
+                "Tháng 5",
+                "World Environment Day",
+                "Trải nghiệm"
+              ],
+              [
+                "Spring",
+                "Tháng 5",
+                "Hoạt động tình nguyện 'Nụ cười trong em'",
+                "Cộng đồng"
+              ],
+              [
+                "Spring",
+                "Tháng 6",
+                "Giải đấu Viviann 'Cúc Vương'",
+                "Thể thao"
+              ],
+              [
+                "Spring",
+                "Tháng 6",
+                "Cuộc thi F-Shark",
+                "Học thuật"
+              ],
+              [
+                "Summer",
+                "Tháng 6",
+                "Đêm trình diễn Nhạc cụ truyền thống",
+                "Giải trí"
+              ],
+              [
+                "Summer",
+                "Tháng 6",
+                "Cuộc thi Dance Sport",
+                "Thể thao"
+              ],
+              [
+                "Summer",
+                "Tháng 7",
+                "Cuộc thi Debate",
+                "Học thuật"
+              ],
+              [
+                "Summer",
+                "Tháng 7",
+                "Softskill Course",
+                "Kỹ năng"
+              ],
+              [
+                "Summer",
+                "Tháng 7",
+                "Lễ tốt nghiệp",
+                "Trải nghiệm"
+              ],
+              [
+                "Summer",
+                "Tháng 7",
+                "48h chuyển động",
+                "Trải nghiệm"
+              ],
+              [
+                "Summer",
+                "Tháng 8",
+                "7 ngày trải nghiệm",
+                "Trải nghiệm"
+              ],
+              [
+                "Summer",
+                "Tháng 8",
+                "Leadership Camp",
+                "Kỹ năng"
+              ],
+              [
+                "Summer",
+                "Tháng 8",
+                "Hoạt động 'Trung thu cho em'",
+                "Cộng đồng"
+              ],
+              [
+                "Fall",
+                "Tháng 8",
+                "Welcome day TSV",
+                "Sự kiện lớn"
+              ],
+              [
+                "Fall",
+                "Tháng 9",
+                "Lễ Khai Giảng",
+                "Sự kiện lớn"
+              ],
+              [
+                "Fall",
+                "Tháng 9",
+                "Orientation Week TSV",
+                "Sự kiện lớn"
+              ],
+              [
+                "Fall",
+                "Tháng 9",
+                "Brothers and Sisters",
+                "Kỹ năng"
+              ],
+              [
+                "Fall",
+                "Tháng 9",
+                "Halloween",
+                "Giải trí"
+              ],
+              [
+                "Fall",
+                "Tháng 10",
+                "Rèn luyện tập trung (Hoạt động TDTT, Đêm nhạc Mùa áo trắng, Army Night Party, Flashmob, Biggame, sự kiện CLB...)",
+                "Sự kiện lớn"
+              ],
+              [
+                "Fall",
+                "Tháng 10",
+                "FPT Uni DN's Talent",
+                "Giải trí"
+              ],
+              [
+                "Fall",
+                "Tháng 10",
+                "Amazing Searching Skill",
+                "Học thuật"
+              ],
+              [
+                "Fall",
+                "Tháng 10",
+                "Đêm nhạc chào đón TSV Con đường khát vọng",
+                "Sự kiện lớn"
+              ],
+              [
+                "Fall",
+                "Tháng 10",
+                "Leadership Seminar",
+                "Kỹ năng"
+              ],
+              [
+                "Fall",
+                "Tháng 11",
+                "Club Day",
+                "Sự kiện lớn"
+              ],
+              [
+                "Fall",
+                "Tháng 11",
+                "F-Camp",
+                "Sự kiện lớn"
+              ],
+              [
+                "Fall",
+                "Tháng 11",
+                "Hoạt động chào mừng ngày nhà giáo VN",
+                "Sự kiện lớn"
+              ],
+              [
+                "Fall",
+                "Tháng 12",
+                "Christmas Party",
+                "Giải trí"
+              ],
+              [
+                "Fall",
+                "Tháng 12",
+                "Survival Camp",
+                "Trải nghiệm"
+              ],
+              [
+                "Fall",
+                "Tháng 12",
+                "Đêm nhạc Open Mic",
+                "Giải trí"
+              ],
+              [
+                "Fall",
+                "Tháng 12",
+                "Miss and Mr. FPTUDN",
+                "Thể thao"
+              ],
+              [
+                "Fall",
+                "Tháng 12",
+                "7 ngày trải nghiệm",
+                "Trải nghiệm"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "DanhSachCLB",
+          "title": "Danh sách Câu lạc bộ (Theo Sổ tay chính thức)",
+          "content": "23 CLB chính thức tại FPTU Đà Nẵng, bao gồm các nhóm học thuật, năng khiếu, thể thao, cộng đồng.",
+          "clubs": [
+            "FPT Visual Art (FVA)",
+            "CLB Tiếng Trung (WAN-FCC)",
+            "English Flame Club (EFLAME)",
+            "ASTRA Debate Club",
+            "FUDA Japanese Club (Mini JC)",
+            "FPTU Developer Club (DEVER)",
+            "Security Research Club (SRC)",
+            "CLB Nghiên cứu & Khởi Nghiệp (RES-UP)",
+            "FPTU Hospitality & Tourism Skills (HTS)",
+            "EVO Club (CLB Năng Khiếu)",
+            "FPTU Media (FUM)",
+            "Name Your Soul Club (NYS)",
+            "Dance For Passion Club (DFP)",
+            "Traditional Instrument Abide (TIA)",
+            "FPTU Football Club (FUFC)",
+            "FUDN Vovinam Club (FVC)",
+            "FPTU Badminton Club (FUB)",
+            "CLB Bóng Chuyền FUDN (FUV)",
+            "CLB Bóng rổ FUDA Hoops Gene (FHG)",
+            "FU Environment Club (FEN)",
+            "CLB Kỹ năng FPTU Đà Nẵng (RANWF)",
+            "Google Developer Student Clubs (GDSC)",
+            "CLB Thiện Nguyện FPT's Kindness Krew (F2K)"
           ]
         }
       ]
@@ -797,37 +1199,48 @@
         },
         {
           "id": "NEW4",
-          "title": "Thư Viện & Tài Nguyên Học Tập",
+          "title": "Thư Viện & Tài Nguyên Học Tập (Theo Sổ tay chính thức)",
           "content": "Thư viện FPT không chỉ là nơi mượn sách. Đây là một trong những tài nguyên học tập quý giá nhất mà nhiều sinh viên chưa tận dụng hết.",
           "subsections": [
             {
+              "subtitle": "Nguồn tài nguyên",
+              "details": [
+                "Bộ sưu tập in: Gần 16.000 bản sách giáo trình và tài liệu tham khảo chuyên ngành CNTT, tài chính, kinh tế, đồ họa, kỹ năng mềm, từ điển, bách khoa toàn thư.",
+                "Cơ sở dữ liệu Books24x7: Hơn 30.000 sách tham khảo, tạp chí, báo cáo nghiên cứu với 3 bộ sưu tập ITPro, BusinessPro, EngineeringPro. Hợp tác với 65 nhà xuất bản hàng đầu.",
+                "Tài liệu nội sinh DSpace: Bài báo khoa học, giáo trình trực tuyến, tài nguyên môn học, đồ án tốt nghiệp do ĐH FPT phát hành. Truy cập đọc mọi nơi, riêng tài liệu hạn chế cần liên hệ thủ thư.",
+                "Cơ sở dữ liệu NASATI: Khoa học và công nghệ, truy cập qua https://db.vista.gov.vn, liên hệ thư viện để tải toàn văn."
+              ]
+            },
+            {
               "subtitle": "Dịch vụ thư viện",
               "details": [
-                "Mượn sách: Thẻ sinh viên = thẻ thư viện. Mỗi sinh viên được mượn 3-5 cuốn/lần, thời hạn 2-4 tuần tùy loại sách.",
-                "Gia hạn sách: Thực hiện online qua website thư viện trước khi sách đến hạn. Trả muộn bị phạt tiền/điểm.",
-                "Đặt trước sách đang được mượn: Đăng ký vào danh sách chờ (waitlist) trên hệ thống thư viện.",
-                "Phòng học nhóm: Đặt trước qua website hoặc trực tiếp tại quầy thư viện. Thường miễn phí với sinh viên.",
-                "In ấn, scan, photocopy: Có dịch vụ tại thư viện với giá ưu đãi sinh viên."
+                "Không gian học tập chung, mượn/trả tài liệu, truy cập nguồn tài nguyên điện tử, đề nghị bổ sung tài liệu, hỗ trợ giảng dạy/học tập/nghiên cứu, truy cập Internet miễn phí."
               ]
             },
             {
-              "subtitle": "Cơ sở dữ liệu học thuật",
+              "subtitle": "Hướng dẫn tìm sách",
               "details": [
-                "IEEE Xplore: Tài liệu kỹ thuật và công nghệ thông tin hàng đầu thế giới. Truy cập miễn phí qua mạng campus.",
-                "ScienceDirect / Scopus: Nghiên cứu khoa học tổng quát. Đăng nhập bằng email FPT.",
-                "ProQuest: Luận văn và báo cáo nghiên cứu. Hỏi thủ thư để được hướng dẫn truy cập.",
-                "Springer / Wiley: Sách giáo khoa và tài liệu chuyên ngành dạng PDF miễn phí.",
-                "Google Scholar: Miễn phí, kết hợp với Unpaywall extension để tải bài báo miễn phí hợp pháp."
+                "Vào https://libol.fpt.edu.vn/Opac, tìm theo tên, lấy ký hiệu xếp giá (Call Number) và Mã thư viện (FUDN), sau đó lấy sách trên giá theo nhãn.",
+                "Ví dụ: 'Software Engineering 9' của Ian Sommerville có Call Number 005.1 S697 (005.1: ngôn ngữ lập trình, S697: Cutter).",
+                "Tài liệu được phân loại theo DDC, xếp tăng dần từ 000-999 bao gồm Cutter."
+              ]
+            },
+            {
+              "subtitle": "Hướng dẫn sử dụng CSDL Books24x7",
+              "details": [
+                "Truy cập https://library.books24x7.com, nhấp Register, điền email FPT, đồng ý điều khoản, nhập username/password được cấp qua email. Lần đầu phải đổi mật khẩu.",
+                "Khi không ở trường, cấu hình proxy: Address 210.245.80.74, Port 3128."
+              ]
+            },
+            {
+              "subtitle": "Chính sách mượn trả & phí phạt",
+              "details": [
+                "Xuất trình thẻ SV khi mượn/trả. Tài liệu tham khảo: mượn tối đa 10 cuốn/lần, 7 ngày (tiếng Việt) hoặc 14 ngày (ngoại văn), gia hạn tối đa 4 lần.",
+                "Tài liệu giáo trình: sinh viên mượn đủ số môn trong kỳ, trả sau khi học xong.",
+                "Phí quá hạn: 5.000đ/ tài liệu/ ngày. Hỏng/mất: Phí đền sách = giá bìa + phí quá hạn (nếu phí quá hạn > giá bìa thì lấy giá bìa).",
+                "Quy trình nộp phạt: Trả sách → bị khóa thẻ → nộp phạt tại thu ngân → thủ thư mở khóa."
               ],
-              "tip": "Khi viết báo cáo/đồ án, dùng citation manager như Zotero (miễn phí) để quản lý tài liệu tham khảo tự động. Tiết kiệm hàng giờ so với làm thủ công."
-            },
-            {
-              "subtitle": "Học liệu online được hỗ trợ",
-              "details": [
-                "Coursera for Campus: Một số khóa học Coursera miễn phí với email FPT (tùy từng kỳ trường có hợp tác).",
-                "LinkedIn Learning: Kiểm tra nếu trường có subscription. Hàng nghìn khóa học kỹ năng mềm và kỹ thuật.",
-                "YouTube giáo dục: CS50 (Harvard), MIT OpenCourseWare, freeCodeCamp - miễn phí và chất lượng cao."
-              ]
+              "tip": "Kiểm tra sách ngay khi mượn, nếu phát hiện hư hỏng báo ngay để tránh bị đền khi trả."
             }
           ]
         },
@@ -931,7 +1344,7 @@
         {
           "id": 22,
           "title": "Câu Lạc Bộ & Hoạt Động Ngoại Khóa",
-          "content": "FPT có hệ sinh thái CLB cực kỳ phong phú, từ CLB kỹ thuật (F-Code, AI Club) đến CLB nghệ thuật, thể thao, tình nguyện...",
+          "content": "FPT có hệ sinh thái CLB cực kỳ phong phú, từ CLB kỹ thuật (F-Code, AI Club) đến CLB nghệ thuật, thể thao, tình nguyện... (Xem danh sách 23 CLB chính thức ở mục III)",
           "details": [
             "Tuyển thành viên: Các CLB lớn (F-Code, Cóc Sài Gòn...) có quy trình tuyển dụng gắt gao gồm CV, vòng phỏng vấn và thử thách thực tế.",
             "Thành lập CLB mới: Cần ít nhất 10 thành viên, một giảng viên bảo trợ và phải nộp đề án tại phòng Dịch vụ sinh viên.",
@@ -995,12 +1408,23 @@
           "id": 29,
           "title": "Văn hóa Cóc - Bản sắc FPT",
           "details": [
-            "Linh vật Cóc: Tượng trưng cho sự kiên trì, thông minh và tinh thần 'Cày cuốc' của dân công nghệ FPT.",
+            "Linh vật Cóc: Được chọn dựa trên 10 lý do (Ngôn ngữ học, Giáo dục học, Xã hội học, Sáng tạo học, Khí tượng học, Võ học, Nông nghiệp học, Dinh dưỡng học, Động vật học, Kinh tế học). Tượng trưng cho sự kiên trì, thông minh, bản lĩnh và tinh thần 'Cày cuốc'.",
             "F-Camp: Trại tân sinh viên tổ chức đầu mỗi khóa. Đây là nơi bạn gặp OG (Old Generation), học văn hóa trường và kết bạn thân thiết nhất.",
             "Áo cam FPT: Niềm tự hào của sinh viên. Mặc áo cam vào các ngày lễ hội, sự kiện quan trọng.",
             "Giải thưởng Cóc Vàng: Vinh dự cao nhất mỗi kỳ. Tên các Cóc Vàng được ghi danh tại bảng vàng của trường.",
             "Tòa Alpha: Kiến trúc ô vuông độc đáo là địa điểm sống ảo và chụp kỷ yếu được yêu thích nhất campus.",
-            "NG - OG (New Generation - Old Generation): Hệ thống mentor-mentee không chính thức nhưng rất mạnh tại FPT. Tìm một OG tốt từ kỳ đầu tiên có thể thay đổi cả hành trình đại học của bạn."
+            "NG - OG (New Generation - Old Generation): Hệ thống mentor-mentee không chính thức nhưng rất mạnh tại FPT. Tìm một OG tốt từ kỳ đầu tiên có thể thay đổi cả hành trình đại học của bạn.",
+            "Bài hát truyền thống: 'FPT Dòng sông lời thề', 'Bài ca sinh viên', 'Đại đoàn FPT', 'Bên nhau thanh xuân này'."
+          ]
+        },
+        {
+          "id": "NoiQuy",
+          "title": "Nội quy Sinh viên (Theo Sổ tay chính thức)",
+          "details": [
+            "Xuất trình thẻ sinh viên khi vào trường. Nếu quên/mất, làm thẻ tạm thời tại quầy dịch vụ sinh viên.",
+            "Có ý thức bảo vệ và giữ gìn tài sản nhà trường.",
+            "Tuân thủ nghiêm túc giờ học theo thời khóa biểu, tôn trọng và cư xử có văn hóa với thầy cô, cán bộ.",
+            "Đảm bảo 80% thời lượng quy định của học phần. Điểm danh bắt buộc. Vắng quá số buổi cho phép sẽ không được công nhận học phần."
           ]
         }
       ]
@@ -1013,7 +1437,7 @@
       "groups": [
         {
           "id": 12,
-          "title": "Hướng dẫn Thi - Exam Guide Đầy Đủ",
+          "title": "Hướng dẫn Thi - Exam Guide Đầy Đủ (Theo Sổ tay)",
           "subsections": [
             {
               "subtitle": "Trước khi thi",
@@ -1021,7 +1445,8 @@
                 "Kiểm tra lịch thi, phòng thi và mã đề trên FAP ít nhất 3 ngày trước.",
                 "Sạc đầy pin laptop, mang theo sạc. Cài và test SEB phiên bản mới nhất.",
                 "Đến phòng thi trước 15 phút để kiểm tra máy tính và ổn định tâm lý.",
-                "Mang thẻ sinh viên. Không có thẻ → ra phòng Dịch vụ sinh viên xin giấy xác nhận ngay khi đến trường."
+                "Mang thẻ sinh viên. Không có thẻ → ra phòng Dịch vụ sinh viên xin giấy xác nhận ngay khi đến trường.",
+                "Đối với thi online từ xa, giám thị mời vào link phòng thi trước giờ mở đề 30 phút. Đi trễ sau 5 phút không được dự thi."
               ]
             },
             {
@@ -1041,6 +1466,14 @@
                 "Quên nộp Assignment: Hệ thống LMS đóng đúng giờ, không có ngoại lệ kỹ thuật. Hãy mail cho giảng viên giải thích lý do."
               ]
             }
+          ]
+        },
+        {
+          "id": "PhucTra",
+          "title": "Phúc tra bài thi",
+          "details": [
+            "Sinh viên có quyền phúc tra bài thi trong thời gian quy định (xem thông báo lịch thi).",
+            "Gửi đơn phúc tra và theo dõi tình trạng đơn qua hệ thống FAP."
           ]
         },
         {
@@ -1276,6 +1709,18 @@
           "tip": "Tạo checklist tốt nghiệp cá nhân trên Notion hoặc Google Sheets và cập nhật theo tiến độ mỗi kỳ. Nhiều bạn phát hiện thiếu điều kiện tốt nghiệp rất trễ vì không theo dõi hệ thống."
         },
         {
+          "id": "XepLoaiTotNghiep",
+          "title": "Xếp loại bằng tốt nghiệp (Theo Quy chế)",
+          "details": [
+            "Xuất sắc: GPA tích lũy từ 9,0 trở lên (thang 10).",
+            "Giỏi: GPA từ 8,0 đến cận 9,0.",
+            "Khá: GPA từ 7,0 đến cận 8,0.",
+            "Trung bình khá: GPA từ 6,0 đến cận 7,0.",
+            "Trung bình: GPA từ 5,0 đến cận 6,0.",
+            "Hạng tốt nghiệp bị giảm một mức nếu: (1) Khối lượng học lại vượt quá 5% tổng tín chỉ toàn khóa; (2) Bị kỷ luật từ cảnh cáo cấp trường trở lên."
+          ]
+        },
+        {
           "id": "NEW11",
           "title": "Mạng Lưới Alumni & Sau Tốt Nghiệp",
           "content": "Mạng lưới alumni FPT là một tài sản vô giá. Hàng chục nghìn cựu sinh viên FPT đang làm việc tại FPT Software, VNG, Tiki, các công ty nước ngoài và startup khắp nơi.",
@@ -1337,6 +1782,18 @@
       {
         "q": "Làm sao để biết mình có đủ điều kiện tốt nghiệp chưa?",
         "a": "Trên FAP có mục 'Graduation Progress' hoặc tương tự - kiểm tra định kỳ mỗi kỳ. Ngoài ra: (1) Hoàn thành toàn bộ môn trong curriculum, (2) Qua Level 6 tiếng Anh, (3) Hoàn thành OJT, (4) Qua Vovinam và Nhạc cụ, (5) Có chứng chỉ GDQP, (6) Không nợ học phí. Gặp Advisor để rà soát checklist cụ thể."
+      },
+      {
+        "q": "Mình muốn phúc tra điểm, quy trình thế nào?",
+        "a": "Thời hạn phúc tra là 3 ngày sau khi có điểm FE. Làm đơn trên FAP và theo dõi trạng thái đơn. Đừng chờ đợi quá lâu vì hết hạn sẽ không được xét."
+      },
+      {
+        "q": "Sinh viên năm nhất có thể tham CLB không?",
+        "a": "Có, hầu hết CLB đều chào đón tân sinh viên. Tuy nhiên, một số CLB lớn có thể yêu cầu qua vòng tuyển chọn. Nên tham gia 1-2 CLB từ sớm để làm quen và tích lũy điểm rèn luyện."
+      },
+      {
+        "q": "Làm thế nào để gia hạn mượn sách thư viện?",
+        "a": "Liên hệ thư viện qua email, điện thoại, fanpage, hoặc đến trực tiếp trước khi sách quá hạn. Tài liệu chỉ được gia hạn nếu chưa hết hạn."
       }
     ]
   },
@@ -1370,7 +1827,7 @@
       },
       {
         "term": "GPA",
-        "definition": "Grade Point Average - điểm trung bình tích lũy (thang 4)"
+        "definition": "Grade Point Average - điểm trung bình tích lũy (thang 4 hoặc 10)"
       },
       {
         "term": "PE",
@@ -1394,7 +1851,7 @@
       },
       {
         "term": "Capstone",
-        "definition": "Đồ án tốt nghiệp cuối khóa"
+        "definition": "Đồ án tốt nghiệp cuối khóa (Khóa luận/Đồ án/Luận văn tốt nghiệp)"
       },
       {
         "term": "Advisor",
@@ -1443,8 +1900,16 @@
       {
         "term": "BHYT",
         "definition": "Bảo Hiểm Y Tế - bắt buộc với sinh viên"
+      },
+      {
+        "term": "Tín chỉ",
+        "definition": "Đơn vị đo khối lượng kiến thức. 1 tín chỉ = 15 tiết lý thuyết / 30 tiết thực hành / 50 giờ thực tập / 50 giờ làm tiểu luận, kèm 30 tiết tự học."
+      },
+      {
+        "term": "Học phần",
+        "definition": "Khối lượng kiến thức trọn vẹn, thường 2-4 tín chỉ, có mã số riêng. Gồm bắt buộc và tự chọn."
       }
     ]
   },
-  "conclusion": "4 năm đại học FPT là một hành trình dài, nhiều thử thách nhưng cũng đầy ắp kỷ niệm và cơ hội. Hãy học thật sự, tham gia tích cực vào cộng đồng, và đừng ngại tìm kiếm sự hỗ trợ khi cần. Tài liệu này sẽ được cập nhật liên tục - nếu bạn có thông tin mới hoặc kinh nghiệm muốn đóng góp, hãy chia sẻ với cộng đồng. Chúc bạn thành công trên con đường phía trước -- Cóc ơi, cố lên! 🍀"
+  "conclusion": "4 năm đại học FPT là một hành trình dài, nhiều thử thách nhưng cũng đầy ắp kỷ niệm và cơ hội. Hãy học thật sự, tham gia tích cực vào cộng đồng, và đừng ngại tìm kiếm sự hỗ trợ khi cần. Tài liệu này đã tổng hợp đầy đủ nội dung từ 'Sổ Tay Sinh Viên Tân' chính thức của Nhà trường cùng những kinh nghiệm thực tế. Hy vọng bạn sẽ luôn giữ vững tinh thần lạc quan, sáng tạo và kiên cường như linh vật Cóc. Chúc bạn thành công trên con đường phía trước -- Cóc ơi, cố lên! 🍀"
 }

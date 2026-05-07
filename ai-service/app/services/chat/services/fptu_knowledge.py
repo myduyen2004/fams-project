@@ -68,6 +68,27 @@ _DIRECT_HINTS = (
     "advisor",
     "ne",
     "not eligible",
+    "hotline",
+    "lien he",
+    "so dien thoai",
+    "phone",
+    "ban tuyen sinh",
+    "phong dich vu sinh vien",
+    "phong dao tao",
+    "phong cong tac sinh vien",
+    "thu vien",
+    "y te",
+    "tam ly",
+    "an ninh",
+    "bao ve",
+    "spring",
+    "summer",
+    "fall",
+    "hoc ky xuan",
+    "hoc ky ha",
+    "hoc ky thu",
+    "hoc ky",
+    "ky hoc",
 )
 
 _PHRASE_BRIDGES: Dict[str, Set[str]] = {
@@ -164,6 +185,17 @@ _TOPIC_HINTS: Dict[str, Set[str]] = {
         "bai bao",
         "xuat ban",
     },
+    "contacts": {
+        "hotline",
+        "lien he",
+        "danh ba",
+        "so dien thoai",
+        "contact",
+        "department",
+        "phong ban",
+        "ban tuyen sinh",
+        "dich vu sinh vien",
+    },
 }
 
 _STOPWORDS: Set[str] = {
@@ -190,7 +222,6 @@ _STOPWORDS: Set[str] = {
     "giup",
     "hay",
     "hien",
-    "hoc",
     "hoi",
     "how",
     "information",
@@ -274,6 +305,27 @@ def _collect_strings(value: Any) -> List[str]:
             "items",
             "headers",
             "rows",
+            # New keys for extended knowledge
+            "contacts",
+            "department",
+            "handles",
+            "how",
+            "name",
+            "established",
+            "mission",
+            "achievements",
+            "campuses",
+            "total_students",
+            "academic_calendar",
+            "semesters_per_year",
+            "semester_names",
+            "clubs",
+            "questions",
+            "terms",
+            "q",
+            "a",
+            "term",
+            "definition",
         ):
             if key in value:
                 parts.extend(_collect_strings(value[key]))
@@ -368,6 +420,7 @@ def _build_documents_from(knowledge: Dict[str, Any]) -> List[Dict[str, Any]]:
         )
 
     add_doc(["Giới thiệu"], knowledge.get("intro"))
+    add_doc(["Thông tin chính thức"], knowledge.get("official_school_info"))
     add_doc(["Danh bạ liên hệ"], knowledge.get("quick_contacts"))
 
     for pillar_index, pillar in enumerate(knowledge.get("pillars") or [], start=1):

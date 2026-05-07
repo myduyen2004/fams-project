@@ -45,6 +45,18 @@
             }
         ]
     },
+    "official_school_info": {
+        "name": "Trường Đại học FPT",
+        "academic_calendar": {
+            "semesters_per_year": 3,
+            "semester_names": [
+                "Spring (Học kỳ Xuân): Tháng 1 - Tháng 4",
+                "Summer (Học kỳ Hạ): Tháng 5 - Tháng 8",
+                "Fall (Học kỳ Thu): Tháng 9 - Tháng 12"
+            ],
+            "note": "Hệ thống đào tạo của FPTU chia làm 3 học kỳ chính mỗi năm, giúp sinh viên có thể hoàn thành chương trình học linh hoạt và sớm hơn so với các trường 2 kỳ."
+        }
+    },
     "pillars": [
         {
             "id": "I",
