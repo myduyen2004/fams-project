@@ -566,6 +566,18 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
         submissionRepository.save(submission);
         log.info("Lecturer comment updated: submissionId={}, lecturer={}", submissionId, lecturerId);
 
+        // Notify student
+        String title = "Giảng viên đã nhận xét bài tập: " + assignment.getTitle();
+        String content = "Giảng viên " + assignment.getCreatedBy().getFullName() + " đã để lại nhận xét cho bài nộp của em trong bài tập \"" + assignment.getTitle() + "\".";
+        notificationService.createNotification(
+                submission.getStudent(),
+                title,
+                content,
+                Notification.NotificationType.ASSIGNMENT_GRADED,
+                "/student/assignments",
+                assignment.getCreatedBy()
+        );
+
         return toSubmissionResponse(submission);
     }
 

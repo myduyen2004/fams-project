@@ -10,6 +10,7 @@ import { Pagination } from '../../components/common/Pagination';
 import toast from "@utils/toast";
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { Loader2 } from 'lucide-react';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 type StatusFilter = 'ALL' | 'NOT_SUBMITTED' | 'SUBMITTED' | 'OVERDUE';
 const PAGE_SIZE = 10;
@@ -66,6 +67,19 @@ export const StudentAssignmentPage: React.FC = () => {
             .then(classes => setEnrolledClasses(classes.sort()))
             .catch(() => { });
     }, [fetchAssignments]);
+
+    // WebSocket for real-time updates
+    useWebSocket('/user/queue/notifications', (data: any) => {
+        if (Array.isArray(data)) {
+            const hasUpdate = data.some((notif: any) => 
+                notif.type === 'NEW_ASSIGNMENT' || notif.type === 'ASSIGNMENT_GRADED'
+            );
+            if (hasUpdate) {
+                console.log('Real-time update: New assignment or assignment graded');
+                fetchAssignments();
+            }
+        }
+    });
 
     const filteredAssignments = useMemo(() => {
         return assignments.filter(a => {

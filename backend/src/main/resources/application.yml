@@ -98,6 +98,13 @@ jwt:
     expiration: 86400000 # 24 hours in milliseconds
     refresh-expiration: 604800000 # 7 days
 
+# ---------------- Grade Encryption Configuration ----------------
+# Must match VITE_GRADE_ENCRYPTION_KEY in the frontend .env files
+# Override in production via GRADE_ENCRYPTION_KEY environment variable
+grade:
+    encryption:
+        key: ${GRADE_ENCRYPTION_KEY:fams-grade-aes256-secret-key-2024}
+
 # ---------------- AI Service Configuration ----------------
 ai-service:
     url: http://ai-service:5000

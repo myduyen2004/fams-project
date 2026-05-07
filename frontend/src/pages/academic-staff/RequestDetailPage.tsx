@@ -17,6 +17,7 @@ import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import dayjs from 'dayjs';
 import toast from "@utils/toast";
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 export const RequestDetailPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -32,26 +33,38 @@ export const RequestDetailPage = () => {
         status: 'APPROVED' | 'REJECTED' | null;
     }>({ isOpen: false, status: null });
 
+    const fetchRequest = async () => {
+        if (!id) return;
+        try {
+            setLoading(true);
+            setIsRequesterAvatarBroken(false);
+            setIsApproverAvatarBroken(false);
+            const data = await academicStaffService.getScheduleRequestById(parseInt(id));
+            setRequest(data);
+            setNote(data.approverNote || '');
+        } catch (error) {
+            console.error('Error fetching request:', error);
+            toast.error('Không tìm thấy yêu cầu');
+            navigate('/academic-staff/requests');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchRequest = async () => {
-            if (!id) return;
-            try {
-                setLoading(true);
-                setIsRequesterAvatarBroken(false);
-                setIsApproverAvatarBroken(false);
-                const data = await academicStaffService.getScheduleRequestById(parseInt(id));
-                setRequest(data);
-                setNote(data.approverNote || '');
-            } catch (error) {
-                console.error('Error fetching request:', error);
-                toast.error('Không tìm thấy yêu cầu');
-                navigate('/academic-staff/requests');
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchRequest();
     }, [id, navigate]);
+
+    // WebSocket for real-time updates
+    useWebSocket('/user/queue/notifications', (data: any) => {
+        if (Array.isArray(data)) {
+            const hasUpdate = data.some((notif: any) => notif.type === 'ACADEMIC');
+            if (hasUpdate) {
+                console.log('Real-time update: Request details updated');
+                fetchRequest();
+            }
+        }
+    });
 
     const handleUpdateStatus = async (status: 'APPROVED' | 'REJECTED') => {
         if (!request) return;

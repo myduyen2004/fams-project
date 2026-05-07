@@ -247,7 +247,7 @@ export const NewsManagementPage = () => {
                         />
                       </td>
                       <td className="px-6 py-5">
-                        <div className="font-black text-gray-900 dark:text-white text-sm group-hover:text-fpt-orange transition-colors max-w-md truncate">
+                        <div className="font-bold text-gray-900 dark:text-white text-sm group-hover:text-fpt-orange transition-colors max-w-md truncate">
                           {item.title}
                         </div>
                       </td>

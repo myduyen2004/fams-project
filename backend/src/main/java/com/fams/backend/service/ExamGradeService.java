@@ -244,16 +244,24 @@ public class ExamGradeService {
             boolean isCoursePublished = Boolean.TRUE.equals(enrollment.getClassSection().getGradesPublished());
 
             if (isCoursePublished) {
-                boolean hasMissingOrZero = false;
-                for (Map.Entry<Long, Double> entry : weightsForCalc.entrySet()) {
-                    Double score = scoresForCalc.get(entry.getKey());
-                    if (score == null || score <= 0.0) {
-                        hasMissingOrZero = true;
-                        break;
+                // Kiểm tra thiếu điểm (score == null) — vẫn dùng per-component
+                boolean hasMissingScore = weightsForCalc.entrySet().stream()
+                        .anyMatch(entry -> scoresForCalc.get(entry.getKey()) == null);
+
+                // Liệt: tổng tất cả cột cùng type (không phải resit) = 0 mới fail
+                Map<GradeComponent.GradeType, Double> typeSumMap = new HashMap<>();
+                for (GradeComponent gc : allComponents) {
+                    if (!Boolean.TRUE.equals(gc.getIsResit()) && gc.getType() != GradeComponent.GradeType.RESIT
+                            && !replacedByResitIds.contains(gc.getId())) {
+                        Double score = scoresForCalc.get(gc.getId());
+                        if (score != null) {
+                            typeSumMap.merge(gc.getType(), score, (a, b) -> a + b);
+                        }
                     }
                 }
+                boolean hasZeroTypeSum = typeSumMap.values().stream().anyMatch(sum -> sum <= 0.0);
 
-                if (hasMissingOrZero || hasFailedExam || (finalGrade != null && finalGrade < 5.0)) {
+                if (hasMissingScore || hasZeroTypeSum || hasFailedExam || (finalGrade != null && finalGrade < 5.0)) {
                     status = "FAILED";
                 } else if (finalGrade != null && finalGrade >= 5.0) {
                     status = "PASSED";
@@ -619,7 +627,7 @@ public class ExamGradeService {
                             Double currentAverage = GradeCalculator.calculateAverage(currentScoresMap, currentWeightsMap);
 
                             boolean hasFailedExam = false;
-                            boolean hasZeroScore = false;
+                            // Check for FE < 4.0
                             for (GradeComponent gc : allCourseComponents) {
                                 if (gc.getType() == GradeComponent.GradeType.FINAL_EXAM) {
                                     Double score = currentScoresMap.get(gc.getId());
@@ -627,14 +635,18 @@ public class ExamGradeService {
                                         hasFailedExam = true;
                                     }
                                 }
-                                
+                            }
+                            // Liệt: tổng tất cả cột cùng type (không phải resit) = 0
+                            Map<GradeComponent.GradeType, Double> typeSumMap = new HashMap<>();
+                            for (GradeComponent gc : allCourseComponents) {
                                 if (!Boolean.TRUE.equals(gc.getIsResit()) && gc.getType() != GradeComponent.GradeType.RESIT) {
                                     Double score = currentScoresMap.get(gc.getId());
-                                    if (score != null && score <= 0.0) {
-                                        hasZeroScore = true;
+                                    if (score != null) {
+                                        typeSumMap.merge(gc.getType(), score, (a, b) -> a + b);
                                     }
                                 }
                             }
+                            boolean hasZeroScore = typeSumMap.values().stream().anyMatch(sum -> sum <= 0.0);
 
                             if (currentAverage != null && currentAverage >= 5.0 && !hasFailedExam && !hasZeroScore) {
                                 errorMsg = "Sinh viên đã ĐẠT (" + String.format("%.1f", currentAverage) + "), không được thi lại";
@@ -810,7 +822,7 @@ public class ExamGradeService {
                             new HashMap<>());
 
                     boolean hasFailedExam = false;
-                    boolean hasZeroScore = false;
+                    // Check for FE < 4.0
                     for (GradeComponent gc : allCourseComponents) {
                         if (gc.getType() == GradeComponent.GradeType.FINAL_EXAM) {
                             Double score = currentScoresMap.get(gc.getId());
@@ -818,15 +830,18 @@ public class ExamGradeService {
                                 hasFailedExam = true;
                             }
                         }
-                        
-                        // Check for automatic fail due to 0 score in ANY mandatory component
+                    }
+                    // Liệt: tổng tất cả cột cùng type (không phải resit) = 0
+                    Map<GradeComponent.GradeType, Double> typeSumMap = new HashMap<>();
+                    for (GradeComponent gc : allCourseComponents) {
                         if (!Boolean.TRUE.equals(gc.getIsResit()) && gc.getType() != GradeComponent.GradeType.RESIT) {
                             Double score = currentScoresMap.get(gc.getId());
-                            if (score != null && score <= 0.0) {
-                                hasZeroScore = true;
+                            if (score != null) {
+                                typeSumMap.merge(gc.getType(), score, (a, b) -> a + b);
                             }
                         }
                     }
+                    boolean hasZeroScore = typeSumMap.values().stream().anyMatch(sum -> sum <= 0.0);
 
                     Double currentAverage = GradeCalculator.calculateAverage(currentScoresMap, currentWeightsMap);
                     if (currentAverage != null && currentAverage >= 5.0 && !hasFailedExam && !hasZeroScore) {
@@ -1174,7 +1189,7 @@ public class ExamGradeService {
                 .collect(java.util.stream.Collectors.toMap(GradeComponent::getId, GradeComponent::getWeight));
 
         boolean hasFailedExam = false;
-        boolean hasZeroScore = false;
+        // Check for FE < 4.0
         for (GradeComponent gc : allGradeComponents) {
             if (gc.getType() == GradeComponent.GradeType.FINAL_EXAM) {
                 Double score = scoresForCalc.get(gc.getId());
@@ -1182,15 +1197,18 @@ public class ExamGradeService {
                     hasFailedExam = true;
                 }
             }
-            
-            // Check for automatic fail due to 0 score in ANY mandatory component
+        }
+        // Liệt: tổng tất cả cột cùng type (không phải resit) = 0
+        Map<GradeComponent.GradeType, Double> typeSumMap = new HashMap<>();
+        for (GradeComponent gc : allGradeComponents) {
             if (!Boolean.TRUE.equals(gc.getIsResit()) && gc.getType() != GradeComponent.GradeType.RESIT) {
                 Double score = scoresForCalc.get(gc.getId());
-                if (score != null && score <= 0.0) {
-                    hasZeroScore = true;
+                if (score != null) {
+                    typeSumMap.merge(gc.getType(), score, (a, b) -> a + b);
                 }
             }
         }
+        boolean hasZeroScore = typeSumMap.values().stream().anyMatch(sum -> sum <= 0.0);
 
         Double currentAverage = GradeCalculator.calculateAverage(scoresForCalc, weightsForCalc);
 

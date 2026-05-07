@@ -1,7 +1,5 @@
 package com.fams.backend.service.impl;
 
-import com.fams.backend.entity.Alert;
-
 import com.fams.backend.entity.Semester;
 import com.fams.backend.repository.SemesterRepository;
 import org.apache.poi.ss.usermodel.*;

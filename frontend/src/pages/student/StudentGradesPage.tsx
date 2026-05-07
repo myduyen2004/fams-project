@@ -6,6 +6,7 @@ import { GraduationCap, AlertCircle, Loader2, BookOpen } from 'lucide-react';
 import { studentMyGradeService, StudentCourseOption, StudentGradeDetailResponse, GradeCategory } from '../../services/api/studentMyGradeService';
 import { sortGradeCategories } from '../../utils/gradeSortUtils';
 import { CustomSelect } from '../../components/common/CustomSelect';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 interface SemesterOption {
     id: number;
@@ -132,25 +133,43 @@ export const StudentGradesPage: React.FC = () => {
         }
     };
 
+    // Real-time synchronization
+    useWebSocket('/user/queue/notifications', (notifications: any[]) => {
+        if (!notifications || notifications.length === 0) return;
+        
+        const hasRelevantUpdate = notifications.some(notif => 
+            notif.type === 'GRADE_PUBLISHED'
+        );
+
+        if (hasRelevantUpdate && selectedClassName) {
+            console.log('Real-time update: Refreshing grades due to publication');
+            fetchGrades(selectedClassName);
+            fetchCourses(); // Also refresh courses list as it might have changed
+        }
+    });
+
     const formatGrade = (value: number | null, isPublished: boolean): string => {
         if (!isPublished) return '-';
         if (value === null) return '-';
         return value.toFixed(1);
     };
 
-    // Check if any grade item has 0 points (excluding Total rows)
+    // Liệt: tổng tất cả các item trong cùng 1 category (cùng type) = 0 thì mới fail
     const hasZeroGrade = (gradeCategories: GradeCategory[]): boolean => {
         for (const category of gradeCategories) {
-            for (const item of category.items) {
-                if (item.itemName !== 'Total' && item.isPublished && item.value === 0) {
-                    return true;
-                }
+            const publishedItems = category.items.filter(
+                item => item.itemName !== 'Total' && item.isPublished && item.value !== null
+            );
+            if (publishedItems.length === 0) continue;
+            const categorySum = publishedItems.reduce((sum, item) => sum + (item.value ?? 0), 0);
+            if (categorySum <= 0) {
+                return true;
             }
         }
         return false;
     };
 
-    // Determine pass status: average >= 5.0 AND no zero grades
+    // Determine pass status: average >= 5.0 AND no zero-sum categories (liệt)
     const calculatePassStatus = (average: number | null, gradeCategories: GradeCategory[]): 'PASSED' | 'FAILED' | 'PENDING' => {
         if (average === null) return 'PENDING';
         if (average >= 5 && !hasZeroGrade(gradeCategories)) {

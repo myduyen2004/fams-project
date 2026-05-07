@@ -16,6 +16,7 @@ import toast from "@utils/toast";
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { StaticDateTimePicker } from '../../components/common/StaticDateTimePicker';
 import { SelectionActionBar } from '../../components/academic-staff/SelectionActionBar';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 export const LecturerAssignmentPage: React.FC = () => {
     const user = authService.getUser();
@@ -186,6 +187,17 @@ export const LecturerAssignmentPage: React.FC = () => {
             setAssignments([]);
         }
     }, [classes, selectedSemester, user?.id, fetchAllData]);
+
+    // WebSocket for real-time updates
+    useWebSocket('/user/queue/notifications', (data: any) => {
+        if (Array.isArray(data)) {
+            const hasSubmission = data.some((notif: any) => notif.type === 'SUBMISSION');
+            if (hasSubmission) {
+                console.log('Real-time update: Assignment submission received');
+                fetchAllData();
+            }
+        }
+    });
 
 
     // Fetch slots for selected class in create modal
