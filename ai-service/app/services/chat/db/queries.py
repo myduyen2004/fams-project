@@ -2037,6 +2037,15 @@ TEMPLATES: dict[str, str] = {
         WHERE  c.code = %s AND u.code = %s AND s.code = %s
         RETURNING class_name
     """,
+    "count_user_messages_today": """
+        SELECT COUNT(*) as count
+        FROM ai_chat_messages m
+        JOIN ai_chat_sessions s ON m.session_id = s.id
+        WHERE s.user_id = %s
+          AND m.role = 'USER'
+          AND m.created_at >= CURRENT_DATE
+          AND m.created_at < CURRENT_DATE + INTERVAL '1 day'
+    """
 }
 
 

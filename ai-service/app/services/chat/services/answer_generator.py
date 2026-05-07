@@ -28,6 +28,8 @@ from app.services.chat.services.fptu_knowledge import (
     is_fptu_knowledge_question,
 )
 from app.services.chat.services.llm_client import llm_client
+from app.services.chat.services.profiler_service import get_user_profile
+from app.services.chat.services.memory_service import get_relevant_memories
 
 # ✅ NEW: Mapping từ data_tool → count_tool
 TOOL_COUNT_MAP: Dict[str, str] = {
@@ -219,7 +221,13 @@ LOẠI CÂU HỎI → TRẢ LỜI:
 - yes_no → ✅/❌ + 1 câu
 - table → COPY toàn bộ bảng
 
-ĐỊNH DẠNG: **In đậm** giá trị quan trọng. Emoji: 📋 📊 🏫 👨‍🏫 👨‍🎓 📌"""
+ĐỊNH DẠNG: **In đậm** giá trị quan trọng. Emoji: 📋 📊 🏫 👨‍🏫 👨‍🎓 📌
+
+HỒ SƠ CÁ NHÂN HÓA:
+{user_profile}
+
+KÝ ỨC LIÊN QUAN:
+{user_memories}"""
 
 _GENERAL_CHAT_PROMPT = """Bạn là FAMS AI Assistant. Hãy trả lời bằng tiếng Việt tự nhiên, ấm áp, thông minh.
 
@@ -243,6 +251,12 @@ QUY TẮC:
 5. Không nhắc đến database, tool hay router.
 6. Nếu câu hỏi liên quan Trường Đại học FPT/FPTU và phần TRI THỨC FPTU CỤC BỘ có dữ liệu phù hợp, ưu tiên trả lời dựa trên đó.
 7. Nếu người dùng hỏi về FPTU nhưng TRI THỨC FPTU CỤC BỘ không có thông tin tương ứng, nói rõ bạn chưa thấy thông tin đó trong file tri thức hiện có; không tự bịa.
+
+HỒ SƠ CÁ NHÂN HÓA:
+{user_profile}
+
+KÝ ỨC LIÊN QUAN:
+{user_memories}
 """
 
 _FPTU_KNOWLEDGE_PROMPT = """Bạn là FAMS AI Assistant. Hãy trả lời ngắn gọn, rõ ràng bằng tiếng Việt.
@@ -431,12 +445,29 @@ class AnswerGenerator:
         model: Optional[str] = None,
         today: Optional[str] = None,
         user_role: str = "STUDENT",
+        user_id: Optional[int] = None,
     ) -> str:
         intent    = (intent_data.get("intent") or "").strip().lower()
         tool_name = intent_data.get("toolName") or ""
         entities  = intent_data.get("entities") or {}
         today     = today or datetime.now().strftime("%Y-%m-%d")
         agent_id  = intent_data.get("agent") or (get_tool_agent(tool_name) if tool_name else detect_agent(message))
+
+        # ✅ NEW: Fetch Profile & Memory
+        user_profile_str = "[Trống]"
+        user_memories_str = "[Không có ký ức liên quan]"
+        
+        if user_id:
+            profile = get_user_profile(user_id)
+            if profile:
+                summary = profile.get("summary") or "[Chưa có]"
+                interests = profile.get("interests") or "[]"
+                style = profile.get("communication_style") or "[Chưa có]"
+                state = profile.get("emotional_state") or "[Chưa có]"
+                tools = profile.get("preferred_tools") or "[]"
+                user_profile_str = f"Tóm tắt: {summary}\n- Sở thích: {interests}\n- Phong cách: {style}\n- Tâm trạng: {state}\n- Công cụ hay dùng: {tools}"
+            
+            user_memories_str = get_relevant_memories(user_id, message) or "[Không có ký ức liên quan]"
 
         # ── Fast-path: no LLM needed ─────────────────────────────────────
         if intent == "permission_denied":
@@ -474,6 +505,8 @@ class AnswerGenerator:
                 message=message,
                 today=today,
                 knowledge_context=knowledge_context,
+                user_profile=user_profile_str,
+                user_memories=user_memories_str,
             )
             response = llm_client.complete(prompt, model)
             if is_fptu_knowledge_question(message, user_role=user_role) and knowledge_context == "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]":
@@ -490,6 +523,8 @@ class AnswerGenerator:
                 message=message,
                 today=today,
                 knowledge_context=knowledge_context,
+                user_profile=user_profile_str,
+                user_memories=user_memories_str,
             )
             return llm_client.complete(prompt, model).strip()
 
@@ -538,6 +573,8 @@ class AnswerGenerator:
             tool              = display_tool,
             tool_result       = serialized,
             today             = today,
+            user_profile      = user_profile_str,
+            user_memories     = user_memories_str,
         )
         try:
             logger.debug(f"[AnswerGen] Prompt length: {len(prompt)} chars")
@@ -563,12 +600,29 @@ class AnswerGenerator:
         model: Optional[str] = None,
         today: Optional[str] = None,
         user_role: str = "STUDENT",
+        user_id: Optional[int] = None,
     ) -> Generator[str, None, None]:
         intent    = (intent_data.get("intent") or "").strip().lower()
         tool_name = intent_data.get("toolName") or ""
         entities  = intent_data.get("entities") or {}  # ✅ NEW
         today     = today or datetime.now().strftime("%Y-%m-%d")
         agent_id  = intent_data.get("agent") or (get_tool_agent(tool_name) if tool_name else detect_agent(message))
+
+        # ✅ NEW: Fetch Profile & Memory
+        user_profile_str = "[Trống]"
+        user_memories_str = "[Không có ký ức liên quan]"
+        
+        if user_id:
+            profile = get_user_profile(user_id)
+            if profile:
+                summary = profile.get("summary") or "[Chưa có]"
+                interests = profile.get("interests") or "[]"
+                style = profile.get("communication_style") or "[Chưa có]"
+                state = profile.get("emotional_state") or "[Chưa có]"
+                tools = profile.get("preferred_tools") or "[]"
+                user_profile_str = f"Tóm tắt: {summary}\n- Sở thích: {interests}\n- Phong cách: {style}\n- Tâm trạng: {state}\n- Công cụ hay dùng: {tools}"
+            
+            user_memories_str = get_relevant_memories(user_id, message) or "[Không có ký ức liên quan]"
 
         # Fast-path
         if intent == "permission_denied":
@@ -623,11 +677,28 @@ class AnswerGenerator:
                 yield "Mình chưa thấy thông tin này trong file tri thức FPTU hiện có."
                 return
             prompt = _FPTU_KNOWLEDGE_PROMPT.format(
+                user_profile=user_profile_str,
+                user_memories=user_memories_str,
+            )
+            if is_fptu_knowledge_question(message, user_role=user_role) and knowledge_context == "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]":
+                yield "Mình chưa thấy thông tin này trong file tri thức FPTU hiện có."
+                return
+            yield llm_client.complete(prompt, model).strip()
+            return
+
+        if intent == "knowledge_query" or tool_name in {"fpt_tool", "fptu_knowledge_lookup"}:
+            knowledge_context = get_relevant_fptu_context(message, user_role=user_role)
+            if knowledge_context == "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]":
+                yield "Mình chưa thấy thông tin này trong file tri thức FPTU hiện có."
+                return
+            prompt = _FPTU_KNOWLEDGE_PROMPT.format(
                 user_role=user_role,
                 agent_label=get_agent_label(agent_id),
                 message=message,
                 today=today,
                 knowledge_context=knowledge_context,
+                user_profile=user_profile_str,
+                user_memories=user_memories_str,
             )
             yield llm_client.complete(prompt, model).strip()
             return
@@ -672,6 +743,8 @@ class AnswerGenerator:
             tool              = display_tool,
             tool_result       = serialized,
             today             = today,
+            user_profile      = user_profile_str,
+            user_memories     = user_memories_str,
         )
         try:
             logger.debug(f"[AnswerGen] Stream prompt length: {len(prompt)} chars")

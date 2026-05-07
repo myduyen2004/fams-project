@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
-import { Send, Bot, User, Loader2, History, ChevronRight, Activity, ExternalLink, PanelLeftClose, PanelLeft, Plus, Sparkles, FileSpreadsheet, Trash2 } from 'lucide-react';
+import { Send, Bot, User, Loader2, History, ChevronRight, Activity, ExternalLink, PanelLeftClose, PanelLeft, Plus, Sparkles, FileSpreadsheet, Trash2, Calendar, List, BookOpen, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -303,6 +303,31 @@ export const ChatPage: React.FC = () => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const lastUserIdRef = useRef<string | null>(null);
 
+    const getSuggestions = useCallback(() => {
+        if (userRole === 'STUDENT') {
+            return [
+                { text: "Học kỳ hiện tại", icon: <Calendar className="w-4 h-4" /> },
+                { text: "Lịch học hôm nay", icon: <Clock className="w-4 h-4" /> },
+                { text: "Tỉ lệ chuyên cần của tôi", icon: <Calendar className="w-4 h-4" /> },
+                { text: "Danh sách điểm", icon: <List className="w-4 h-4" /> }
+            ];
+        }
+        if (userRole === 'LECTURER') {
+            return [
+                { text: "Học kỳ hiện tại", icon: <Calendar className="w-4 h-4" /> },
+                { text: "Lịch dạy hôm nay", icon: <Clock className="w-4 h-4" /> },
+                { text: "Lịch dạy tuần này", icon: <Calendar className="w-4 h-4" /> },
+                { text: "Danh sách lớp học", icon: <BookOpen className="w-4 h-4" /> }
+            ];
+        }
+        return [
+            { text: "Danh sách sinh viên ngành IT", icon: <User className="w-4 h-4" /> },
+            { text: "Giảng viên chuyên ngành Software", icon: <Sparkles className="w-4 h-4" /> },
+            { text: "Tra cứu lớp học kỳ Fall 2023", icon: <History className="w-4 h-4" /> },
+            { text: "Thống kê số lượng sinh viên", icon: <Activity className="w-4 h-4" /> }
+        ];
+    }, [userRole]);
+
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
@@ -388,10 +413,10 @@ export const ChatPage: React.FC = () => {
         const emptySession = sessions.find(s => {
             const title = (s.title || "").trim().toLowerCase();
             return (
-                title === "" || 
-                title === "không có tiêu đề" || 
-                title === "chat mới" || 
-                title === "new chat" || 
+                title === "" ||
+                title === "không có tiêu đề" ||
+                title === "chat mới" ||
+                title === "new chat" ||
                 title === "new chat session" ||
                 title === "phiên chat mới" ||
                 title === "cuộc trò chuyện mới" ||
@@ -762,12 +787,7 @@ export const ChatPage: React.FC = () => {
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full mt-4">
-                                        {[
-                                            { text: "Danh sách sinh viên ngành IT", icon: <User className="w-4 h-4" /> },
-                                            { text: "Giảng viên chuyên ngành Software", icon: <Sparkles className="w-4 h-4" /> },
-                                            { text: "Tra cứu lớp học kỳ Fall 2023", icon: <History className="w-4 h-4" /> },
-                                            { text: "Thống kê số lượng sinh viên", icon: <Activity className="w-4 h-4" /> }
-                                        ].map(suggestion => (
+                                        {getSuggestions().map(suggestion => (
                                             <button
                                                 key={suggestion.text}
                                                 onClick={() => handleSendMessage(suggestion.text)}
