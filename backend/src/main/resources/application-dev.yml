@@ -3,24 +3,40 @@ spring:
     name: FAMS Backend
   
   datasource:
-    url: jdbc:postgresql://localhost:5432/fams_db
-    username: fams_user
-    password: fams_password
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/fams_db
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres123}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 100
+      minimum-idle: 20
     
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: ${JPA_DDL_AUTO:none}
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        physical_naming_strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+        jdbc:
+          batch_size: 100
+          order_inserts: true
+          order_updates: true
 
   data:
     redis:
-      host: localhost
+      host: ${REDIS_HOST:localhost}
       port: 6379
+
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/fams_notifications?authSource=admin}
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    out-of-order: true
 
 server:
   port: 8080
@@ -28,7 +44,7 @@ server:
 app:
   environment: development
   cors:
-    allowed-origins: http://localhost:5173,http://localhost:3000
+    allowed-origins: http://localhost:5173,http://localhost:3000,https://*.vercel.app,https://*.ngrok-free.app,https://*.ngrok-free.dev
   
 logging:
   level:

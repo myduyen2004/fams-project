@@ -5,7 +5,6 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -16,19 +15,23 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "enrollments", indexes = {
         @Index(name = "idx_enrollment_class_name", columnList = "class_name"),
-        @Index(name = "idx_enrollment_student_code", columnList = "studentCode"),
+        @Index(name = "idx_enrollment_student_code", columnList = "student_code"),
         @Index(name = "idx_enrollment_student", columnList = "student_id"),
         @Index(name = "idx_enrollment_status", columnList = "status")
 }, uniqueConstraints = {
         @UniqueConstraint(name = "uk_class_student", columnNames = { "class_name", "student_id" })
 })
-@Data
+@Getter
+@Setter
+@ToString(exclude = { "classSection" })
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class Enrollment {
 
     @Id
+    @EqualsAndHashCode.Include
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -38,17 +41,13 @@ public class Enrollment {
     private ClassSection classSection;
 
     // MSSV - lưu trực tiếp để dễ query
-    @Column(nullable = false, length = 20)
+    @Column(name = "student_code", nullable = false, length = 20)
     private String studentCode;
 
     // Sinh viên - FK tới User
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)
     private User student;
-
-    // Ngày đăng ký
-    @Column(nullable = false)
-    private LocalDate enrolledAt;
 
     // Trạng thái đăng ký
     @Enumerated(EnumType.STRING)

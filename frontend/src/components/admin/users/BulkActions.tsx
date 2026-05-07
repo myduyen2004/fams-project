@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Trash2, Zap, Filter } from 'lucide-react';
 
 interface BulkActionsProps {
   selectedCount: number;
@@ -19,24 +19,29 @@ export const BulkActions: React.FC<BulkActionsProps> = React.memo(({
   if (selectedCount === 0) return null;
 
   return (
-    <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/20 rounded-lg flex items-center justify-between animate-in fade-in slide-in-from-top-2">
-      <span className="text-sm font-medium text-fpt-orange">Đã chọn {selectedCount} tài khoản</span>
-      <div className="flex gap-2">
+    <div className="p-3 bg-orange-50 dark:bg-orange-950/30 border border-orange-100 dark:border-orange-900/30 rounded-2xl flex items-center justify-between mb-6 animate-in slide-in-from-top-4 duration-300 shadow-sm">
+      <div className="flex items-center gap-3 ml-2">
+        <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center text-fpt-orange">
+            <Filter size={16} />
+        </div>
+        <span className="text-sm font-bold text-orange-700 dark:text-orange-400">Đã chọn {selectedCount} tài khoản</span>
+      </div>
+      <div className="flex gap-3">
         <button 
           onClick={onDelete}
           disabled={isDeleting}
-          className="px-4 py-1.5 text-sm bg-white dark:bg-zinc-800 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-2"
+          className="h-[44px] px-6 text-sm bg-white dark:bg-zinc-900 border-2 border-red-100 dark:border-red-900/30 text-red-600 rounded-2xl font-bold hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-200 transition-all flex items-center gap-2 disabled:opacity-50 shadow-sm active:scale-95"
         >
-          {isDeleting && <Loader2 size={14} className="animate-spin" />}
-          {selectedCount === 1 ? 'Xóa' : 'Xóa hàng loạt'}
+          {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+          <span>Xóa đã chọn</span>
         </button>
         <button 
           onClick={onActivate}
           disabled={isActivating}
-          className="px-4 py-1.5 text-sm bg-fpt-orange text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2"
+          className="h-[44px] px-8 text-sm bg-fpt-orange text-white rounded-2xl font-bold hover:bg-orange-600 transition-all shadow-lg shadow-fpt-orange/20 flex items-center gap-2 disabled:opacity-50 active:scale-95"
         >
-          {isActivating && <Loader2 size={14} className="animate-spin" />}
-          {selectedCount === 1 ? 'Kích hoạt' : 'Kích hoạt hàng loạt'}
+          {isActivating ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+          <span>Kích hoạt ngay</span>
         </button>
       </div>
     </div>
@@ -44,3 +49,4 @@ export const BulkActions: React.FC<BulkActionsProps> = React.memo(({
 });
 
 BulkActions.displayName = 'BulkActions';
+

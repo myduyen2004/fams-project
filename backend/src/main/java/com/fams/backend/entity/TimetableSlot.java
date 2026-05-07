@@ -14,16 +14,17 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "timetable_slots", indexes = {
-        @Index(name = "idx_timetable_slot_class", columnList = "class_section_id"),
+        @Index(name = "idx_timetable_slot_class", columnList = "class_name"),
         @Index(name = "idx_timetable_slot_room", columnList = "room_id"),
         @Index(name = "idx_timetable_slot_date", columnList = "date"),
-        @Index(name = "idx_timetable_slot_day", columnList = "dayOfWeek")
+        @Index(name = "idx_timetable_slot_day", columnList = "day_of_week")
 })
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class TimetableSlot {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

@@ -45,14 +45,33 @@ public class Room {
     @Column(length = 50)
     private String building;
 
+    // Mô tả phòng (e.g., "Có máy chiếu", "Gần thang máy")
+    @Column(length = 500)
+    private String description;
+
     // Tầng
     private Integer floor;
+
+    // Grid position fields for floor plan layout
+    @Column(name = "grid_row")
+    private Integer gridRow;
+
+    @Column(name = "grid_col")
+    private Integer gridCol;
+
+    @Column(name = "grid_row_span")
+    @Builder.Default
+    private Integer gridRowSpan = 1;
+
+    @Column(name = "grid_col_span")
+    @Builder.Default
+    private Integer gridColSpan = 1;
 
     // Loại phòng
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
-    private RoomType type = RoomType.LECTURE;
+    private RoomType type = RoomType.CLASSROOM;
 
     // Trạng thái
     @Enumerated(EnumType.STRING)
@@ -74,15 +93,14 @@ public class Room {
     private LocalDateTime updatedAt;
 
     public enum RoomType {
-        LECTURE, // Phòng học lý thuyết
-        LAB, // Phòng thực hành
-        MEETING, // Phòng họp
-        AUDITORIUM // Hội trường
+        PSEUDO_ROOM, // Phòng giả
+        CLASSROOM, // Phòng học lý thuyết
+        COMPUTER_LAB, // Phòng thực hành máy tính
     }
 
     public enum RoomStatus {
         ACTIVE,
         MAINTENANCE,
-        INACTIVE
+        INACTIVE, AVAILABLE
     }
 }

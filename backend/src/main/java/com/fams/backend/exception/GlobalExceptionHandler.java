@@ -18,6 +18,12 @@ import java.io.StringWriter;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DataAccessException;
+import org.springframework.orm.jpa.JpaSystemException;
+import org.springframework.transaction.TransactionSystemException;
+import com.fams.backend.util.DatabaseErrorTranslator;
 
 @RestControllerAdvice
 @Slf4j
@@ -120,10 +126,24 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle RuntimeException (business logic errors from service layer)
+     */
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException ex) {
+        log.error("Runtime error: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                ex.getMessage());
+        return ResponseEntity.badRequest().body(error);
+    }
+
+    /**
      * Handle Generic Exception
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex, HttpServletRequest request) {
+        System.err.println("DEBUG: GlobalExceptionHandler caught exception: " + ex);
+        ex.printStackTrace(); // Print full stack trace to stderr
         log.error("Internal server error", ex);
 
         // Send Discord notification for production errors
@@ -141,6 +161,37 @@ public class GlobalExceptionHandler {
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau");
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
+    /**
+     * Handle AuthorizationDeniedException
+     */
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAuthorizationDenied(AuthorizationDeniedException ex) {
+        log.error("Access denied: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.FORBIDDEN.value(),
+                "Bạn không có quyền thực hiện hành động này");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
+    /**
+     * Handle Database Errors (FK violations, unique constraints, etc.)
+     */
+    @ExceptionHandler({
+        DataIntegrityViolationException.class,
+        DataAccessException.class,
+        JpaSystemException.class,
+        TransactionSystemException.class
+    })
+    public ResponseEntity<ErrorResponse> handleDatabaseErrors(Exception ex) {
+        log.error("Database or Transaction error: {}", ex.getMessage());
+        String friendlyMessage = DatabaseErrorTranslator.translate(ex);
+        
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                friendlyMessage);
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
     /**

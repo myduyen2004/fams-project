@@ -1,7 +1,8 @@
 services:
   postgres:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: fams-postgres
+    restart: always
     ports:
       - "5432:5432"
     environment:
@@ -22,6 +23,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: fams-redis
+    restart: always
     ports:
       - "6379:6379"
     healthcheck:
@@ -32,16 +34,49 @@ services:
     networks:
       - fams-network
 
+  mongodb:
+    image: mongo:7-jammy
+    container_name: fams-mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_ROOT_USERNAME:-fams_user}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_ROOT_PASSWORD:-fams_pass}
+      MONGO_INITDB_DATABASE: ${MONGODB_DATABASE:-fams_read_status}
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: [ "CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fams-network
+
   ai-service:
     build:
       context: ./ai-service
       dockerfile: Dockerfile
-    container_name: fams-ai-service
-    ports:
-      - "5001:5000"
+    restart: always
+    volumes:
+      - ./ai-service:/app
     environment:
       - PORT=5000
       - TZ=Asia/Ho_Chi_Minh
+      - DB_HOST=postgres
+      - DB_NAME=fams_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres123
+      - DB_PORT=5432
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - COHERE_API_KEY=${COHERE_API_KEY}
+      - COHERE_EMBED_MODEL=${COHERE_EMBED_MODEL:-embed-multilingual-v3.0}
+      - COHERE_EMBED_DIM=${COHERE_EMBED_DIM:-1024}
+      - JINA_API_KEY=${JINA_API_KEY}
+      - JINA_IMAGE_EMBED_MODEL=${JINA_IMAGE_EMBED_MODEL:-jina-clip-v2}
+      - JINA_IMAGE_EMBED_DIM=${JINA_IMAGE_EMBED_DIM:-1024}
+      - GROQ_COMMENT_MODEL=${GROQ_COMMENT_MODEL:-llama-3.1-8b-instant}
     networks:
       - fams-network
     healthcheck:
@@ -50,12 +85,31 @@ services:
       timeout: 10s
       retries: 3
 
+  ai-lb:
+    image: nginx:alpine
+    container_name: fams-ai-lb
+    restart: always
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      ai-service:
+        condition: service_healthy
+    networks:
+      - fams-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:5000/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: fams-backend
-    restart: unless-stopped
+    restart: always
     ports:
       - "8080:8080"
     env_file: .env
@@ -63,28 +117,53 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
       - DB_HOST=postgres
       - REDIS_HOST=redis
-      - AI_SERVICE_URL=http://ai-service:5001
+      - MONGODB_URI=${MONGODB_URI:-mongodb://fams_user:fams_pass@mongodb:27017/fams_read_status?authSource=admin}
+      - AI_SERVICE_URL=http://ai-lb:5000
       - TZ=Asia/Ho_Chi_Minh
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000,https://*.vercel.app,https://*.ngrok-free.app,https://*.ngrok-free.dev,https://*.ngrok.io}
+      # Firebase secret mounted at runtime - never committed to git
+      - FIREBASE_CONFIG_PATH=/app/secrets/firebase-adminsdk.json
+    volumes:
+      # Each developer/server must place firebase-adminsdk.json in backend/src/main/resources/
+      - ./backend/src/main/resources/firebase-adminsdk.json:/app/secrets/firebase-adminsdk.json:ro
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      ai-service:
+      mongodb:
+        condition: service_healthy
+      ai-lb:
         condition: service_healthy
     networks:
       - fams-network
+  #  frontend:
+  #    image: node:20-alpine
+  #    container_name: fams-frontend
+  #    working_dir: /app
+  #    volumes:
+  #      - ./frontend:/app
+  #      - /app/node_modules # Don't overwrite container node_modules with host ones
+  #    ports:
+  #      - "5173:5173"
+  #    environment:
+  #      - VITE_API_URL=http://localhost:8080/api
+  #      - VITE_WS_URL=ws://localhost:8080/ws
+  #      - CHOKIDAR_USEPOLLING=true
+  #    command: npm run dev -- --host
+  #    networks:
+  #      - fams-network
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        - VITE_API_URL=http://localhost:8080/api
-        - VITE_WS_URL=http://localhost:8080/ws
-    container_name: fams-frontend
-    ports:
-      - "80:80"
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: fams-ngrok
+    restart: always
+    command:
+      - "http"
+      - "--domain=nonprotrusive-crimpier-eula.ngrok-free.dev"
+      - "backend:8080"
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
     depends_on:
       - backend
     networks:
@@ -92,6 +171,9 @@ services:
 
 volumes:
   postgres_data:
+  mongodb_data:
+  maven-repo:
+  backend-target:
 
 
 networks:

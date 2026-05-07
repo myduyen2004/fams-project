@@ -7,6 +7,10 @@ spring:
     username: ${NEON_PROD_DB_USER}
     password: ${NEON_PROD_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 100
+      minimum-idle: 20
+      connection-timeout: 30000
     
   jpa:
     hibernate:
@@ -15,11 +19,18 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 100
+          order_inserts: true
+          order_updates: true
 
   data:
     redis:
       host: redis
       port: 6379
+
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://mongodb:27017/fams_notifications?authSource=admin}
 
   # Flyway for safe production migrations
   flyway:
@@ -36,7 +47,7 @@ server:
 app:
   environment: production
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://fams-edu.online,https://www.fams-edu.online}
+    allowed-origins: ${ALLOWED_ORIGINS:https://fams-edu.online,https://www.fams-edu.online,https://*.vercel.app,https://*.ngrok-free.app,https://*.ngrok-free.dev}
   discord:
     webhook-url: ${DISCORD_WEBHOOK_URL}
     enabled: true
@@ -45,3 +56,4 @@ logging:
   level:
     root: WARN
     com.fams.backend: INFO
+    org.hibernate.SQL: WARN

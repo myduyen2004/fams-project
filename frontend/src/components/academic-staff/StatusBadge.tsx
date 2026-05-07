@@ -57,3 +57,4 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, variant = 'def
 };
 
 export default StatusBadge;
+

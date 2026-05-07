@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Moon, Sun, User, Lock } from "lucide-react";
 import { authService } from "../../services/api/authService";
-import toast from "react-hot-toast";
+import toast from "@utils/toast";
 import COLORS from "../../config/colors";
 
 export const Login: React.FC = () => {
@@ -45,10 +45,10 @@ export const Login: React.FC = () => {
 
       // Check if password change required (first login)
       const { role, isPasswordChanged } = response.user;
-      
+
       if (isPasswordChanged === false && role !== "ADMIN") {
         // First login - force password change
-        navigate("/change-password", { 
+        navigate("/change-password", {
           replace: true,
           state: { firstLogin: true }
         });
@@ -67,10 +67,10 @@ export const Login: React.FC = () => {
       } else {
         navigate("/dashboard");
       }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       const message = error.response?.data?.message || "Đăng nhập thất bại";
-      
+
       toast.error(message, {
         style: {
           background: isDark ? COLORS.background.dark : COLORS.background.light,
@@ -97,12 +97,12 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen flex ${isDark ? "dark" : ""}`}>
+    <div className={`min-h-screen flex bg-white dark:bg-zinc-900 ${isDark ? "dark" : ""}`}>
       {/* Left Panel - Orange Welcome */}
       <div className="hidden lg:flex w-[45%] relative overflow-hidden rounded-tr-[160px] rounded-br-[160px]">
         {/* Background */}
         {/* Decorative Shape */}
-        <div className="absolute inset-0 bg-gradient-to-br from-fpt-orange to-primary-600">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#F26F21] to-[#EA5C36]">
           {/* Wave Decorations */}
           <svg className="absolute bottom-0 left-0 w-full h-48 opacity-20" viewBox="0 0 1440 320" preserveAspectRatio="none">
             <path fill="#ffffff" fillOpacity="1" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,144C960,149,1056,139,1152,122.7C1248,107,1344,85,1392,74.7L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
@@ -194,7 +194,7 @@ export const Login: React.FC = () => {
                 }
                 placeholder="Tài khoản"
                 disabled={isLoading}
-                className="w-full bg-primary-50 dark:bg-zinc-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 border border-neutral-200 dark:border-zinc-700 rounded-lg py-3.5 pl-4 pr-10 focus:ring-2 focus:ring-fpt-orange focus:border-transparent focus:bg-white dark:focus:bg-zinc-700 transition-all duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full h-[52px] bg-gray-50/50 dark:bg-zinc-800/50 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl px-4 pr-10 focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               />
             </div>
 
@@ -212,7 +212,7 @@ export const Login: React.FC = () => {
                 }
                 placeholder="Mật khẩu"
                 disabled={isLoading}
-                className="w-full bg-primary-50 dark:bg-zinc-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 border border-neutral-200 dark:border-zinc-700 rounded-lg py-3.5 pl-4 pr-10 focus:ring-2 focus:ring-fpt-orange focus:border-transparent focus:bg-white dark:focus:bg-zinc-700 transition-all duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full h-[52px] bg-gray-50/50 dark:bg-zinc-800/50 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl px-4 pr-10 focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               />
             </div>
 
@@ -232,7 +232,7 @@ export const Login: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex justify-center items-center py-3.5 px-4 border border-transparent rounded-lg shadow-md text-base font-bold text-white bg-fpt-orange hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-fpt-orange dark:focus:ring-offset-zinc-900 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className="w-full h-[52px] flex justify-center items-center px-4 border border-transparent rounded-2xl shadow-lg shadow-orange-500/20 text-base font-bold text-white bg-fpt-orange hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 {isLoading ? (
                   <>
@@ -267,10 +267,11 @@ export const Login: React.FC = () => {
 
           {/* Footer */}
           <div className="mt-8 text-center text-xs text-gray-400 dark:text-gray-500">
-            © 2025 FPT University. All rights reserved.
+            © 2026 FPT University. All rights reserved.
           </div>
         </div>
       </div>
     </div>
   );
 };
+

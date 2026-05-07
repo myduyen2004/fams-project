@@ -3,6 +3,7 @@ package com.fams.backend.service.impl;
 import com.fams.backend.dto.request.LoginRequest;
 import com.fams.backend.dto.response.LoginResponse;
 import com.fams.backend.entity.AccessLog;
+import com.fams.backend.entity.Alert;
 import com.fams.backend.entity.User;
 import com.fams.backend.entity.UserSession;
 import com.fams.backend.exception.BadRequestException;
@@ -16,7 +17,6 @@ import com.fams.backend.dto.request.ResetPasswordRequest;
 import com.fams.backend.dto.request.VerifyOtpRequest;
 import com.fams.backend.service.EmailService;
 import com.fams.backend.service.GeoLocationService;
-import com.fams.backend.service.UserActivityService;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,8 +28,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
+import org.springframework.security.core.GrantedAuthority;
 
 /**
  * @author MyDuyen
@@ -49,7 +50,9 @@ public class AuthService implements UserDetailsService {
     private final DashboardBroadcastService dashboardBroadcastService;
     private final EmailService emailService;
     private final StringRedisTemplate redisTemplate;
-    private final UserActivityService userActivityService;
+    private final SystemLogService systemLogService;
+    private final com.fams.backend.repository.UserPermissionRepository userPermissionRepository;
+    private final AlertService alertService;
 
     private static final String OTP_PREFIX = "otp:";
     private static final long OTP_EXPIRY_MINUTES = 10;
@@ -57,8 +60,40 @@ public class AuthService implements UserDetailsService {
     /**
      * Đăng nhập
      */
-    @Transactional
+    /**
+     * Đăng nhập (với xử lý geolocation bên ngoài transaction)
+     */
     public LoginResponse login(LoginRequest request, jakarta.servlet.http.HttpServletRequest httpRequest) {
+        log.info("AuthService.login start - username: {}", request.getUsername());
+
+        // 1. Lấy vị trí từ IP (Bên ngoài transaction để tránh treo connection pool)
+        String ipAddress = getClientIP(httpRequest);
+        log.info("Client IP: {}", ipAddress);
+
+        GeoLocationService.LocationData location = geoLocationService.getLocationFromIP(ipAddress);
+        log.info("Location fetched: {}", location.getProvince());
+
+        // 2. Gọi logic login chính (Bên trong transaction)
+        log.info("Calling performLogin...");
+        LoginResponse response = performLogin(request, httpRequest, ipAddress, location);
+        log.info("performLogin completed successfully");
+
+        // 3. Broadcast update bên ngoài transaction để tránh deadlock/treo connection
+        // pool
+        try {
+            log.info("Triggering async dashboard broadcast...");
+            dashboardBroadcastService.broadcastUpdate();
+        } catch (Exception e) {
+            log.error("Failed to broadcast login update", e);
+        }
+
+        log.info("AuthService.login end - returning response");
+        return response;
+    }
+
+    @Transactional
+    public LoginResponse performLogin(LoginRequest request, jakarta.servlet.http.HttpServletRequest httpRequest,
+            String ipAddress, GeoLocationService.LocationData location) {
         String username = request.getUsername();
         log.info("Login attempt | username={}", username);
 
@@ -73,11 +108,13 @@ public class AuthService implements UserDetailsService {
         }
 
         // 2. Tìm user theo username (with profiles for response)
-        User user = userRepository.findByUsernameWithProfiles(username)
-                .orElseThrow(() -> {
-                    log.warn("Login failed | username={} | reason=USER_NOT_FOUND", username);
-                    return new UnauthorizedException("Tài khoản hoặc mật khẩu không đúng");
-                });
+        User user = userRepository.findByUsernameWithProfiles(username).orElse(null);
+
+        if (user == null) {
+            log.warn("Login failed | username={} | reason=USER_NOT_FOUND", username);
+            trackLoginFailure(username);
+            throw new UnauthorizedException("Tài khoản hoặc mật khẩu không đúng");
+        }
 
         // 3. Kiểm tra status
         if (user.getStatus() == User.UserStatus.INACTIVE) {
@@ -92,37 +129,27 @@ public class AuthService implements UserDetailsService {
         }
 
         // 4. Verify password
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+        boolean matches = passwordEncoder.matches(request.getPassword(), user.getPassword());
+        if (!matches) {
             log.warn("Login failed | username={} | reason=INVALID_PASSWORD | userId={}",
                     username, user.getId());
+            trackLoginFailure(username);
             throw new UnauthorizedException("Tài khoản hoặc mật khẩu không đúng");
         }
+
+        // 4.5. Success - Reset failures
+        resetLoginFailures(username);
+        systemLogService.logLoginSuccess(username);
 
         // 5. Generate JWT token
         String token = jwtUtil.generateToken(user.getUsername());
 
-        // 6. Create user session and access log (via separate service for resilience)
-        String ipAddress = getClientIP(httpRequest);
-        String userAgent = httpRequest.getHeader("User-Agent");
+        // 6. Create user session and access log (Đã có location từ bên ngoài)
+        log.info("Creating user session...");
+        createUserSession(user, ipAddress, httpRequest.getHeader("User-Agent"), location);
 
-        try {
-            userActivityService.createUserSession(user, ipAddress, userAgent);
-        } catch (Exception e) {
-            log.error("Failed to create user session during login flow | userId={}", user.getId());
-        }
-
-        try {
-            userActivityService.createAccessLog(user, ipAddress, userAgent);
-        } catch (Exception e) {
-            log.error("Failed to create access log during login flow | userId={}", user.getId());
-        }
-
-        // 7. Broadcast update (wrapped in try-catch for resilience)
-        try {
-            dashboardBroadcastService.broadcastUpdate();
-        } catch (Exception e) {
-            log.error("Failed to broadcast dashboard update after login | username={}", username, e);
-        }
+        log.info("Creating access log...");
+        createAccessLog(user, ipAddress, httpRequest.getHeader("User-Agent"), location);
 
         // 7. Create response
         log.info("Login successful | username={} | userId={} | role={}",
@@ -132,6 +159,59 @@ public class AuthService implements UserDetailsService {
                 .type("Bearer")
                 .user(LoginResponse.fromUser(user))
                 .build();
+    }
+
+    /**
+     * Create user session with geolocation data
+     */
+    private void createUserSession(User user, String ipAddress, String userAgent,
+            GeoLocationService.LocationData location) {
+        try {
+            // Create session
+            UserSession session = UserSession.builder()
+                    .user(user)
+                    .ipAddress(ipAddress)
+                    .province(location.getProvince())
+                    .city(location.getCity())
+                    .latitude(location.getLatitude())
+                    .longitude(location.getLongitude())
+                    .loginTime(java.time.LocalDateTime.now())
+                    .lastActivityTime(java.time.LocalDateTime.now())
+                    .isActive(true)
+                    .userAgent(userAgent)
+                    .build();
+
+            userSessionRepository.save(session);
+
+            log.info("User session created | userId={} | ip={} | province={}",
+                    user.getId(), ipAddress, location.getProvince());
+
+        } catch (Exception e) {
+            log.error("Failed to create user session | userId={}", user.getId(), e);
+            // Don't fail login if session creation fails
+        }
+    }
+
+    /**
+     * Create access log for dashboard
+     */
+    private void createAccessLog(User user, String ipAddress, String userAgent,
+            GeoLocationService.LocationData location) {
+        try {
+            AccessLog accessLog = AccessLog.builder()
+                    .user(user)
+                    .location(location.getProvince() + ", " + location.getCity())
+                    .status("Đang hoạt động")
+                    .ipAddress(ipAddress)
+                    .userAgent(userAgent)
+                    .accessTime(java.time.LocalDateTime.now())
+                    .build();
+
+            accessLogRepository.save(accessLog);
+            log.info("Access log created | userId={} | ip={}", user.getId(), ipAddress);
+        } catch (Exception e) {
+            log.error("Failed to create access log | userId={}", user.getId(), e);
+        }
     }
 
     /**
@@ -153,10 +233,21 @@ public class AuthService implements UserDetailsService {
     }
 
     /**
-     * Logout (invalidate active sessions)
+     * Logout
      */
-    @Transactional
     public void logout() {
+        performLogout();
+
+        // Broadcast update outside transaction
+        try {
+            dashboardBroadcastService.broadcastUpdate();
+        } catch (Exception e) {
+            log.error("Failed to broadcast logout update", e);
+        }
+    }
+
+    @Transactional
+    public void performLogout() {
         try {
             String username = org.springframework.security.core.context.SecurityContextHolder.getContext()
                     .getAuthentication().getName();
@@ -180,9 +271,6 @@ public class AuthService implements UserDetailsService {
                         accessLogRepository.save(logEntry);
                     });
 
-            // Broadcast update
-            dashboardBroadcastService.broadcastUpdate();
-
             log.info("Logout successful | username={} | invalidatedSessions={}", username, activeSessions.size());
         } catch (Exception e) {
             log.error("Error during logout", e);
@@ -195,10 +283,18 @@ public class AuthService implements UserDetailsService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
 
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
+
+        // Add granted permissions as authorities
+        userPermissionRepository.findPermissionsByUserId(user.getId()).stream()
+                .map(p -> new SimpleGrantedAuthority(p.name()))
+                .forEach(authorities::add);
+
         return new org.springframework.security.core.userdetails.User(
                 user.getUsername(),
                 user.getPassword(),
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())));
+                authorities);
     }
 
     /**
@@ -235,9 +331,11 @@ public class AuthService implements UserDetailsService {
         }
 
         if (!storedOtp.equals(request.getOtp())) {
+            trackOtpFailure(request.getEmail());
             throw new BadRequestException("Mã OTP không chính xác");
         }
 
+        resetOtpFailures(request.getEmail());
         return true;
     }
 
@@ -259,5 +357,52 @@ public class AuthService implements UserDetailsService {
         // Delete OTP after use
         redisTemplate.delete(OTP_PREFIX + request.getEmail());
         log.info("Password reset successful for email: {}", request.getEmail());
+        systemLogService.logPasswordChanged(user.getUsername());
+    }
+
+    private void trackLoginFailure(String username) {
+        String key = "login_failures:" + username;
+        Long failures = redisTemplate.opsForValue().increment(key);
+        redisTemplate.expire(key, 30, java.util.concurrent.TimeUnit.MINUTES);
+        log.info("Login failure tracked for user: {} | Count: {}", username, failures);
+        
+        if (failures != null && failures >= 5) {
+            systemLogService.logBruteForceWarning(username, failures.intValue());
+            
+            // Generate system alert
+            alertService.createAlert(
+                "Cảnh báo bảo mật: Brute Force",
+                String.format("Phát hiện %d lần đăng nhập thất bại liên tiếp cho tài khoản: %s. Khuyến nghị kiểm tra ngay.", failures.intValue(), username),
+                Alert.AlertLevel.CRITICAL,
+                Alert.AlertType.SECURITY,
+                userRepository.findByUsername(username).orElse(null)
+            );
+        } else {
+            systemLogService.logLoginFailed(username);
+        }
+    }
+
+    private void resetLoginFailures(String username) {
+        redisTemplate.delete("login_failures:" + username);
+    }
+
+    private void trackOtpFailure(String email) {
+        String key = "otp_failures:" + email;
+        Long failures = redisTemplate.opsForValue().increment(key);
+        redisTemplate.expire(key, 10, java.util.concurrent.TimeUnit.MINUTES);
+
+        if (failures != null && failures >= 5) {
+            alertService.createAlert(
+                "Cảnh báo bảo mật: OTP Brute Force",
+                String.format("Phát hiện %d lần nhập sai OTP liên tiếp cho email: %s.", failures.intValue(), email),
+                Alert.AlertLevel.CRITICAL,
+                Alert.AlertType.SECURITY,
+                userRepository.findByEmail(email).orElse(null)
+            );
+        }
+    }
+
+    private void resetOtpFailures(String email) {
+        redisTemplate.delete("otp_failures:" + email);
     }
 }

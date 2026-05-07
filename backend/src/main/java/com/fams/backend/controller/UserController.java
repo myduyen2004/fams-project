@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.data.web.PageableDefault;
 
 @RestController
 @RequestMapping("/api/users")
@@ -31,7 +32,7 @@ public class UserController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String role,
             @RequestParam(required = false) String status,
-            Pageable pageable) {
+            @PageableDefault(size = 30) Pageable pageable) {
         log.info("GET /users | search={}, role={}, status={}", search, role, status);
         return ResponseEntity.ok(userService.getAllUsers(search, role, status, pageable));
     }
@@ -71,11 +72,39 @@ public class UserController {
     }
 
     @PostMapping("/activate")
-    @Operation(summary = "Kích hoạt hàng loạt tài khoản người dùng")
+    @Operation(summary = "Kích hoạt hàng loạt tài khoản người dùng theo ID")
     public ResponseEntity<Void> activateUsers(@RequestBody java.util.List<Long> ids) {
         log.info("POST /users/activate | ids={}", ids);
         userService.activateUsers(ids);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/activate-all")
+    @Operation(summary = "Kích hoạt tất cả tài khoản người dùng đang ở trạng thái INACTIVE")
+    public ResponseEntity<Void> activateAllUsers() {
+        log.info("POST /users/activate-all");
+        userService.activateAllInactiveUsers();
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/activation/progress")
+    @Operation(summary = "Lấy trạng thái kích hoạt hiện tại")
+    public ResponseEntity<Object> getActivationProgress() {
+        String username = org.springframework.security.core.context.SecurityContextHolder.getContext()
+                .getAuthentication().getName();
+        Object progress = userService.getActivationProgress(username);
+        if (progress == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(progress);
+    }
+
+    @PostMapping("/import/preview")
+    @Operation(summary = "Xem trước dữ liệu import trước khi thực hiện")
+    public ResponseEntity<com.fams.backend.dto.response.PreviewImportResponse> previewImport(
+            @RequestParam("file") MultipartFile file) {
+        log.info("POST /users/import/preview | filename={}", file.getOriginalFilename());
+        return ResponseEntity.ok(userService.previewImportFile(file));
     }
 
     @PostMapping("/import")
@@ -118,5 +147,44 @@ public class UserController {
             @PathVariable String jobId) {
         log.info("GET /users/import-job/{}", jobId);
         return ResponseEntity.ok(userService.getImportJobStatus(jobId));
+    }
+
+    @GetMapping("/import-job/active")
+    @Operation(summary = "Lấy import job đang hoạt động (nếu có)")
+    public ResponseEntity<com.fams.backend.dto.response.ImportJobResponse> getActiveImportJob() {
+        log.info("GET /users/import-job/active");
+        com.fams.backend.dto.response.ImportJobResponse activeJob = userService.getActiveImportJob();
+        if (activeJob == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(activeJob);
+    }
+
+    @PostMapping("/import-job/cleanup")
+    @Operation(summary = "Dọn dẹp các import job bị kẹt (PENDING/PROCESSING)")
+    public ResponseEntity<Void> cleanupStuckJobs() {
+        log.info("POST /users/import-job/cleanup");
+        userService.cleanupStuckJobs();
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/import-job/cancel")
+    @Operation(summary = "Hủy tiến trình import hiện tại của người dùng")
+    public ResponseEntity<Void> cancelImportJob() {
+        log.info("POST /users/import-job/cancel");
+        userService.cancelMyActiveImportJob();
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/import/sample")
+    @Operation(summary = "Tải xuống file mẫu (ZIP)")
+    public ResponseEntity<byte[]> downloadSample() {
+        log.info("GET /users/import/sample");
+        byte[] content = userService.downloadSampleFile();
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"user_import_sample.zip\"")
+                .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
+                .body(content);
     }
 }

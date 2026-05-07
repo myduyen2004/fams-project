@@ -21,7 +21,9 @@ public interface UserService {
 
     void activateUsers(java.util.List<Long> ids);
 
-    void changePassword(String username, String newPassword);
+    void activateAllInactiveUsers();
+
+    void changePassword(String username, String currentPassword, String newPassword);
 
     UserResponse updateMyProfile(String username, com.fams.backend.dto.request.UpdateProfileRequest request,
             MultipartFile avatar);
@@ -34,4 +36,16 @@ public interface UserService {
     String importZipAsync(byte[] fileBytes, String filename, String importMode);
 
     com.fams.backend.dto.response.ImportJobResponse getImportJobStatus(String jobId);
+
+    com.fams.backend.dto.response.ImportJobResponse getActiveImportJob();
+
+    void cleanupStuckJobs();
+
+    void cancelMyActiveImportJob();
+
+    com.fams.backend.dto.response.PreviewImportResponse previewImportFile(MultipartFile file);
+
+    Object getActivationProgress(String username);
+
+    byte[] downloadSampleFile();
 }

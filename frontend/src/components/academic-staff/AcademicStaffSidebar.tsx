@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Home,
   Calendar,
   FolderOpen,
   FileText,
-  Bell,
+  Newspaper,
   CheckSquare,
-  List,
-  AlertTriangle,
-  Settings,
   Clock,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  List as ListIcon,
+  LayoutDashboard,
+  User
 } from 'lucide-react';
+
 import { authService } from '../../services/api/authService';
 import { ConfirmModal } from '../common/ConfirmModal';
 
@@ -51,7 +51,7 @@ export const AcademicStaffSidebar: React.FC = () => {
     {
       id: 'dashboard',
       label: 'Dashboard',
-      icon: <Home size={20} />,
+      icon: <LayoutDashboard size={20} />,
       path: '/academic-staff/dashboard'
     },
     {
@@ -65,12 +65,14 @@ export const AcademicStaffSidebar: React.FC = () => {
       label: 'Quản lý',
       icon: <FolderOpen size={20} />,
       submenu: [
-        { label: 'Chuyên ngành', path: '/academic-staff/majors' },
+        { label: 'Ngành', path: '/academic-staff/majors' },
+        { label: 'Môn học', path: '/academic-staff/courses' },
         { label: 'Lớp học', path: '/academic-staff/classes' },
-        { label: 'Tài khoản', path: '/academic-staff/accounts' },
         { label: 'Giảng viên', path: '/academic-staff/lecturers' },
         { label: 'Sinh viên', path: '/academic-staff/students' },
-        { label: 'Kết quả học tập', path: '/academic-staff/academic-results' }
+        { label: 'Điểm thi', path: '/academic-staff/exam-grades' },
+        { label: 'Thi lại', path: '/academic-staff/resit-grades' },
+        { label: 'Phân quyền', path: '/academic-staff/permissions' }
       ]
     },
     {
@@ -81,10 +83,11 @@ export const AcademicStaffSidebar: React.FC = () => {
     },
     {
       id: 'announcements',
-      label: 'Cài đặt thông báo',
-      icon: <Bell size={20} />,
-      path: '/academic-staff/announcements'
+      label: 'Quản lý tin tức',
+      icon: <Newspaper size={20} />,
+      path: '/academic-staff/news-management'
     },
+
     {
       id: 'attendance',
       label: 'Cài đặt điểm danh',
@@ -94,17 +97,18 @@ export const AcademicStaffSidebar: React.FC = () => {
     {
       id: 'lists',
       label: 'Danh sách',
-      icon: <List size={20} />,
+      icon: <ListIcon size={20} />,
       submenu: [
         { label: 'Phòng học', path: '/academic-staff/rooms' },
-        { label: 'Học kỳ', path: '/academic-staff/semesters' }
+        { label: 'Học kỳ', path: '/academic-staff/semesters' },
+        { label: 'WiFi Access Point', path: '/academic-staff/wifi-aps' }
       ]
     },
     {
-      id: 'alerts',
-      label: 'Cảnh báo',
-      icon: <AlertTriangle size={20} />,
-      path: '/academic-staff/alerts'
+      id: 'logs',
+      label: 'Nhật ký hệ thống',
+      icon: <Clock size={20} />,
+      path: '/academic-staff/logs'
     }
   ];
 
@@ -120,12 +124,15 @@ export const AcademicStaffSidebar: React.FC = () => {
 
   const isActive = (path?: string) => {
     if (!path) return false;
-    return location.pathname === path;
+    if (path === '/academic-staff/news-management' && location.pathname.startsWith('/academic-staff/news/')) {
+      return true;
+    }
+    return location.pathname === path || (path !== '/academic-staff/dashboard' && location.pathname.startsWith(path + '/'));
   };
 
   const isSubmenuActive = (submenu?: SubMenuItem[]) => {
     if (!submenu) return false;
-    return submenu.some(subItem => location.pathname === subItem.path);
+    return submenu.some(subItem => isActive(subItem.path));
   };
 
   const handleMenuClick = (item: MenuItem) => {
@@ -138,9 +145,7 @@ export const AcademicStaffSidebar: React.FC = () => {
 
   return (
     <div
-      className={`fixed left-0 top-0 h-screen bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800 transition-all duration-300 z-50 ${
-        isExpanded ? 'w-64' : 'w-16'
-      }`}
+      className={`fixed left-0 top-0 h-screen bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800 transition-all duration-300 z-[50] ${isExpanded ? 'w-64' : 'w-16'}`}
       onMouseEnter={() => setIsExpanded(true)}
       onMouseLeave={() => {
         setIsExpanded(false);
@@ -149,9 +154,9 @@ export const AcademicStaffSidebar: React.FC = () => {
     >
       <div className="flex flex-col h-full">
         {/* Logo Section */}
-        <div 
+        <div
           onClick={() => navigate('/academic-staff/dashboard')}
-          className="h-16 flex items-center justify-center border-b border-gray-200 dark:border-zinc-800 px-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors"
+          className="h-16 flex items-center justify-center border-b border-gray-200 dark:border-zinc-800 px-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors select-none"
           title="Về trang chủ"
         >
           {isExpanded ? (
@@ -183,11 +188,10 @@ export const AcademicStaffSidebar: React.FC = () => {
             <div key={item.id} className="mb-1">
               <button
                 onClick={() => handleMenuClick(item)}
-                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group ${
-                  isActive(item.path) || isSubmenuActive(item.submenu)
-                    ? 'bg-fpt-orange text-white'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-fpt-orange hover:text-white'
-                }`}
+                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group ${isActive(item.path) || isSubmenuActive(item.submenu)
+                  ? 'bg-fpt-orange text-white'
+                  : 'text-fpt-orange hover:bg-fpt-orange hover:text-white'
+                  }`}
                 title={!isExpanded ? item.label : ''}
               >
                 <div className={`flex-shrink-0 transition-colors duration-200 ${isActive(item.path) || isSubmenuActive(item.submenu) ? 'text-white font-bold' : 'text-fpt-orange group-hover:text-white'}`}>
@@ -201,9 +205,7 @@ export const AcademicStaffSidebar: React.FC = () => {
                     {item.submenu && (
                       <ChevronDown
                         size={16}
-                        className={`transition-transform duration-200 ${
-                          openSubmenu === item.id ? 'rotate-180' : ''
-                        }`}
+                        className={`transition-transform duration-200 ${openSubmenu === item.id ? 'rotate-180' : ''}`}
                       />
                     )}
                   </>
@@ -217,11 +219,10 @@ export const AcademicStaffSidebar: React.FC = () => {
                     <button
                       key={subItem.path}
                       onClick={() => navigate(subItem.path)}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 group ${
-                        isActive(subItem.path)
-                          ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange font-medium'
-                          : 'text-gray-600 dark:text-gray-400 hover:bg-fpt-orange hover:text-white'
-                      }`}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 group ${isActive(subItem.path)
+                        ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange font-medium'
+                        : 'text-fpt-orange hover:bg-fpt-orange hover:text-white'
+                        }`}
                     >
                       <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${isActive(subItem.path) ? 'bg-current' : 'bg-fpt-orange group-hover:bg-white'}`}></div>
                       <span className="whitespace-nowrap">{subItem.label}</span>
@@ -237,29 +238,18 @@ export const AcademicStaffSidebar: React.FC = () => {
         <div className="border-t border-gray-200 dark:border-zinc-800 p-2 space-y-1">
           <button
             onClick={() => navigate('/academic-staff/profile')}
-            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-fpt-orange hover:text-white transition-all duration-200 group ${location.pathname === '/academic-staff/profile' ? 'bg-fpt-orange text-white' : ''}`}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-fpt-orange hover:bg-fpt-orange hover:text-white transition-all duration-200 group ${location.pathname === '/academic-staff/profile' ? 'bg-fpt-orange text-white' : ''}`}
             title={!isExpanded ? 'Hồ sơ cá nhân' : ''}
           >
             <div className={`flex-shrink-0 transition-colors duration-200 ${location.pathname === '/academic-staff/profile' ? 'text-white' : 'text-fpt-orange group-hover:text-white'}`}>
-              <Settings size={20} />
+              <User size={20} />
             </div>
             {isExpanded && <span className={`text-sm font-medium whitespace-nowrap ${location.pathname === '/academic-staff/profile' ? 'text-white' : ''}`}>Hồ sơ cá nhân</span>}
           </button>
 
           <button
-            onClick={() => navigate('/academic-staff/logs')}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-fpt-orange hover:text-white transition-all duration-200 group"
-            title={!isExpanded ? 'Nhật ký hệ thống' : ''}
-          >
-            <div className={`flex-shrink-0 transition-colors duration-200 ${location.pathname.startsWith('/academic-staff/logs') ? 'text-white' : 'text-fpt-orange group-hover:text-white'}`}>
-              <Clock size={20} />
-            </div>
-            {isExpanded && <span className="text-sm font-medium whitespace-nowrap">Nhật ký hệ thống</span>}
-          </button>
-
-          <button
             onClick={() => setShowLogoutModal(true)}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-fpt-orange hover:text-white transition-all duration-200 group"
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-fpt-orange hover:bg-fpt-orange hover:text-white transition-all duration-200 group"
             title={!isExpanded ? 'Đăng xuất' : ''}
           >
             <div className="flex-shrink-0 text-fpt-orange group-hover:text-white transition-colors duration-200">
@@ -269,7 +259,7 @@ export const AcademicStaffSidebar: React.FC = () => {
           </button>
         </div>
       </div>
-      
+
       <ConfirmModal
         isOpen={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
@@ -283,3 +273,4 @@ export const AcademicStaffSidebar: React.FC = () => {
     </div>
   );
 };
+

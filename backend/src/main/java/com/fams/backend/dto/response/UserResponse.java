@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 @Data
 @Builder
@@ -22,6 +23,7 @@ public class UserResponse implements Serializable {
     private String fullName;
     private String email;
     private String phone;
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dob;
     private User.UserRole role;
     private String roleName;
@@ -29,11 +31,30 @@ public class UserResponse implements Serializable {
     private User.FaceDataStatus faceDataStatus;
     private String avatar;
     private Boolean isPasswordChanged;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updatedAt;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime lastLogin;
+
+    // Academic & Profile fields
+    private String department;
+    private String expertise;
+    private String bio;
+
+    // Student specific fields (optional)
+    private String major;
+    private Long majorId;
+    private String specialization;
+    private Long specializationId;
+    private String subSpecialization;
+    private Long subSpecializationId;
+    private String course;
+    private Double gpa;
 
     public static UserResponse fromUser(User user) {
-        return UserResponse.builder()
+        UserResponse builder = UserResponse.builder()
                 .id(user.getId())
                 .code(user.getCode())
                 .username(user.getUsername())
@@ -50,6 +71,30 @@ public class UserResponse implements Serializable {
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();
+
+        if (user.getRole() == User.UserRole.STUDENT && user.getStudentProfile() != null) {
+            var profile = user.getStudentProfile();
+            builder.setCourse(profile.getCourse());
+            builder.setGpa(profile.getGpa());
+            if (profile.getMajor() != null) {
+                builder.setMajor(profile.getMajor().getName());
+                builder.setMajorId(profile.getMajor().getId());
+            }
+            if (profile.getSpecialization() != null) {
+                builder.setSpecialization(profile.getSpecialization().getName());
+                builder.setSpecializationId(profile.getSpecialization().getId());
+            }
+            if (profile.getSubSpecialization() != null) {
+                builder.setSubSpecialization(profile.getSubSpecialization().getName());
+                builder.setSubSpecializationId(profile.getSubSpecialization().getId());
+            }
+        } else if (user.getRole() == User.UserRole.LECTURER && user.getLecturerProfile() != null) {
+            var profile = user.getLecturerProfile();
+            builder.setDepartment(profile.getDepartment());
+            builder.setExpertise(profile.getExpertise());
+            builder.setBio(profile.getBio());
+        }
+        return builder;
     }
 
     private static String getRoleDisplayName(User.UserRole role) {

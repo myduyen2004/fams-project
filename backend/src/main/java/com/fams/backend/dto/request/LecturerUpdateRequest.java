@@ -13,6 +13,8 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 public class LecturerUpdateRequest extends UserRequest {
     private String department;
+    private String major;
+    private String specialization;
     private String expertise;
     private String bio;
 }

@@ -11,8 +11,8 @@ import java.util.Map;
 
 public interface LecturerService {
 
-    Page<LecturerResponse> getAllLecturers(String search, String status, String department, Boolean hasProfile,
-            Pageable pageable);
+    Page<LecturerResponse> getAllLecturers(String search, String status, String department,
+            String major, String specialization, Boolean hasProfile, Pageable pageable);
 
     LecturerResponse getLecturerById(Long id);
 
@@ -27,7 +27,7 @@ public interface LecturerService {
     LecturerResponse updateLecturer(Long id, com.fams.backend.dto.request.LecturerUpdateRequest request,
             MultipartFile avatar);
 
-    byte[] exportLecturers(String department, String status);
+    byte[] exportLecturers(String department, String major, String specialization, String status);
 
     Map<String, Object> importLecturers(MultipartFile file);
 

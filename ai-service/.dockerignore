@@ -1,0 +1,13 @@
+**/__pycache__
+**/*.pyc
+**/.git
+**/.env
+**/venv
+**/.vscode
+**/.idea
+**/logs
+**/data
+**/ml_models
+**/tests/__pycache__
+**/*.db
+**/*.sqlite3

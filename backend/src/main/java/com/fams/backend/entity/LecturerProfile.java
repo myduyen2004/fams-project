@@ -23,6 +23,14 @@ public class LecturerProfile {
     @Column(length = 100)
     private String department;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "major_id")
+    private Major major;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "specialization_id")
+    private Specialization specialization;
+
     @Column(length = 100)
     private String expertise;
 

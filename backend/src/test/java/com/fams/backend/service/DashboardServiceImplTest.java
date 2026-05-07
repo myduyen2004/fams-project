@@ -1,9 +1,12 @@
 package com.fams.backend.service;
 
 import com.fams.backend.dto.response.*;
+import com.fams.backend.dto.response.DashboardNotificationResponse;
 import com.fams.backend.entity.AccessLog;
+import com.fams.backend.entity.AcademicRequest;
 import com.fams.backend.entity.Alert;
 import com.fams.backend.entity.Notification;
+import com.fams.backend.entity.ScheduleRequest;
 import com.fams.backend.entity.SystemLog;
 import com.fams.backend.entity.User;
 import com.fams.backend.repository.*;
@@ -33,7 +36,13 @@ class DashboardServiceImplTest {
     @Mock
     private NotificationRepository notificationRepository;
     @Mock
+    private UserNotificationService notificationService;
+    @Mock
     private SystemLogRepository systemLogRepository;
+    @Mock
+    private ScheduleRequestRepository scheduleRequestRepository;
+    @Mock
+    private AcademicRequestRepository academicRequestRepository;
 
     @InjectMocks
     private DashboardServiceImpl dashboardService;
@@ -43,12 +52,17 @@ class DashboardServiceImplTest {
         when(userRepository.countByRole(User.UserRole.STUDENT)).thenReturn(50L);
         when(userRepository.countByRole(User.UserRole.LECTURER)).thenReturn(10L);
         when(userRepository.count()).thenReturn(60L);
+        when(scheduleRequestRepository.countByStatus(ScheduleRequest.RequestStatus.PENDING)).thenReturn(5L);
+        when(academicRequestRepository.countByStatus(AcademicRequest.RequestStatus.PENDING)).thenReturn(3L);
+        when(alertRepository.count()).thenReturn(2L);
 
         DashboardStatsResponse stats = dashboardService.getStatistics();
 
         assertEquals(50, stats.getTotalStudents());
         assertEquals(10, stats.getTotalUsers());
         assertEquals(60, stats.getTotalAccounts());
+        assertEquals(8, stats.getTotalApplications());
+        assertEquals(2, stats.getTotalBehaviors());
     }
 
     @Test
@@ -92,18 +106,21 @@ class DashboardServiceImplTest {
 
     @Test
     void whenGetNotifications_thenReturnMappedList() {
-        Notification notification = new Notification();
-        notification.setTitle("New Message");
-        notification.setContent("Hello");
-        notification.setType(Notification.NotificationType.SYSTEM);
-        notification.setStatus(Notification.NotificationStatus.SENT);
-        notification.setCreatedAt(LocalDateTime.now());
+        NotificationResponse response = NotificationResponse.builder()
+                .id(100L)
+                .title("New Message")
+                .content("Hello")
+                .type(Notification.NotificationType.SYSTEM.name())
+                .status("SENT")
+                .createdAt(LocalDateTime.now())
+                .isRead(false)
+                .build();
+        when(notificationService.getMyNotifications()).thenReturn(Collections.singletonList(response));
 
-        when(notificationRepository.findTop5ByOrderByCreatedAtDesc())
-                .thenReturn(Collections.singletonList(notification));
+        // Act
+        List<DashboardNotificationResponse> results = dashboardService.getNotifications();
 
-        List<NotificationResponse> results = dashboardService.getNotifications();
-
+        // Assert
         assertFalse(results.isEmpty());
         assertEquals("New Message", results.get(0).getTitle());
         assertFalse(results.get(0).getIsRead());

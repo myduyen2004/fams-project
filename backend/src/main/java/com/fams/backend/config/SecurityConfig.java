@@ -12,12 +12,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.Arrays;
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -26,9 +21,7 @@ import java.util.List;
 public class SecurityConfig {
 
         private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
-        @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins}")
-        private String allowedOrigins;
+        private final CorsConfigurationSource corsConfigurationSource;
 
         // Cấu hình security chính
         @Bean
@@ -38,7 +31,30 @@ public class SecurityConfig {
                                 .csrf(AbstractHttpConfigurer::disable)
 
                                 // Enable CORS
-                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+
+                                // Security Headers
+                                .headers(headers -> headers
+                                                // Chống Clickjacking: ngăn iframe embed trang web
+                                                .frameOptions(frame -> frame.deny())
+                                                // Chống MIME sniffing: buộc browser tôn trọng Content-Type
+                                                .contentTypeOptions(contentType -> {})
+                                                // XSS Protection header (legacy nhưng vẫn hữu ích cho IE)
+                                                .xssProtection(xss -> xss.headerValue(
+                                                                org.springframework.security.web.header.writers.XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
+                                                // HTTP Strict Transport Security: buộc dùng HTTPS
+                                                .httpStrictTransportSecurity(hsts -> hsts
+                                                                .includeSubDomains(true)
+                                                                .maxAgeInSeconds(31536000))
+                                                // Content-Security-Policy: hạn chế nguồn tải tài nguyên
+                                                .contentSecurityPolicy(csp -> csp
+                                                                .policyDirectives("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https: wss:; frame-ancestors 'none'"))
+                                                // Referrer Policy: hạn chế thông tin referrer gửi đi
+                                                .referrerPolicy(referrer -> referrer
+                                                                .policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                                                // Permissions Policy: tắt các API không cần thiết
+                                                .permissionsPolicy(permissions -> permissions
+                                                                .policy("camera=(), microphone=(), geolocation=(self), payment=()")))
 
                                 // Session management
                                 .sessionManagement(session -> session
@@ -56,16 +72,31 @@ public class SecurityConfig {
                                                                 "/api/auth/**", // auth with /api prefix
                                                                 "/api/map/**", // map endpoints
                                                                 "/api/v1/semesters/**", // semester endpoints
+                                                                "/api/v1/class-sections/**", // class section endpoints
+                                                                "/api/v1/files/**", // file download endpoints
                                                                 "/api-docs/**",
                                                                 "/swagger-ui/**",
                                                                 "/swagger-ui.html",
                                                                 "/v3/api-docs/**",
                                                                 "/actuator/health",
-                                                                "/ws/**" // WebSocket endpoint
-                                                ).permitAll()
+                                                                "/ws/**", // WebSocket endpoint
+                                                                "/ws-native/**", // Native WebSocket endpoint
+                                                                "/api/files/**",
+                                                                "/api/courses/**")
+                                                .permitAll()
 
                                                 // All other endpoints require authentication
                                                 .anyRequest().authenticated())
+
+                                // Custom Exception handling (sanitized error message to prevent info leakage)
+                                .exceptionHandling(exception -> exception
+                                                .authenticationEntryPoint((request, response, authException) -> {
+                                                        response.setStatus(
+                                                                        jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                                                        response.setContentType("application/json");
+                                                        response.getWriter().write(
+                                                                        "{\"status\": 401, \"error\": \"Unauthorized\", \"message\": \"Authentication required\"}");
+                                                }))
 
                                 // Add JWT filter
                                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -73,31 +104,5 @@ public class SecurityConfig {
                 return http.build();
         }
 
-        // CORS configuration
-        @Bean
-        public CorsConfigurationSource corsConfigurationSource() {
-                CorsConfiguration configuration = new CorsConfiguration();
-
-                // Split comma-separated origins from properties
-                List<String> origins = Arrays.asList(allowedOrigins.split(","));
-                configuration.setAllowedOriginPatterns(origins);
-
-                // Allow HTTP methods
-                configuration.setAllowedMethods(List.of(
-                                "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-
-                // Allow all headers
-                configuration.setAllowedHeaders(List.of("*"));
-
-                // Allow cookies / credentials
-                configuration.setAllowCredentials(true);
-
-                // Max age preflight
-                configuration.setMaxAge(3600L);
-
-                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-                source.registerCorsConfiguration("/**", configuration);
-
-                return source;
-        }
+        // CORS configuration defined in CorsConfig.java
 }

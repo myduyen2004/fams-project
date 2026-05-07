@@ -1,30 +1,42 @@
 package com.fams.backend.controller;
 
+import com.fams.backend.dto.SpecializationImportDTO;
+import com.fams.backend.dto.request.BulkCourseAssignmentRequest;
+import com.fams.backend.dto.request.ReorderCoursesRequest;
 import com.fams.backend.dto.request.SpecializationRequest;
+import com.fams.backend.dto.response.CourseResponse;
 import com.fams.backend.dto.response.SpecializationResponse;
 import com.fams.backend.entity.Specialization;
 import com.fams.backend.service.SpecializationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @RestController
-@RequestMapping("/api/specializations")
+@RequestMapping("/api/v1/specializations")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@Tag(name = "Specialization", description = "API cho quản lý Chuyên ngành")
 public class SpecializationController {
 
     private final SpecializationService specializationService;
 
     @GetMapping("/by-major/{majorId}")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS') or hasRole('STUDENT') or hasRole('LECTURER')")
     public ResponseEntity<Page<SpecializationResponse>> getSpecializationsByMajor(
             @PathVariable Long majorId,
             @RequestParam(required = false) String keyword,
@@ -43,19 +55,28 @@ public class SpecializationController {
         return ResponseEntity.ok(specializationService.getSpecializationsByMajor(majorId, keyword, status, pageable));
     }
 
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS') or hasRole('STUDENT') or hasRole('LECTURER')")
+    public ResponseEntity<SpecializationResponse> getSpecialization(@PathVariable Long id) {
+        return ResponseEntity.ok(specializationService.getSpecialization(id));
+    }
+
     @PutMapping("/{id}/status")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
     public ResponseEntity<SpecializationResponse> updateStatus(@PathVariable Long id,
             @RequestParam Specialization.SpecializationStatus status) {
         return ResponseEntity.ok(specializationService.updateStatus(id, status));
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
     public ResponseEntity<SpecializationResponse> createSpecialization(
             @RequestBody SpecializationRequest request) {
         return ResponseEntity.ok(specializationService.createSpecialization(request));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
     public ResponseEntity<SpecializationResponse> updateSpecialization(
             @PathVariable Long id,
             @RequestBody SpecializationRequest request) {
@@ -63,19 +84,102 @@ public class SpecializationController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
     public ResponseEntity<Void> deleteSpecialization(@PathVariable Long id) {
         specializationService.deleteSpecialization(id);
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/import/{majorId}")
-    public ResponseEntity<List<Specialization>> importSpecializations(
+    // ========== Import Specializations ==========
+
+    @PostMapping("/import/preview/{majorId}")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
+    public ResponseEntity<List<SpecializationImportDTO>> previewImportSpecializations(
             @PathVariable Long majorId,
             @RequestParam("file") MultipartFile file) {
         try {
-            return ResponseEntity.ok(specializationService.importSpecializations(majorId, file));
+            return ResponseEntity.ok(specializationService.previewImportSpecializations(majorId, file));
         } catch (IOException e) {
             return ResponseEntity.badRequest().build();
         }
+    }
+
+    @PostMapping("/import/save/{majorId}")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
+    public ResponseEntity<Map<String, Object>> saveImportedSpecializations(
+            @PathVariable Long majorId,
+            @RequestBody List<SpecializationImportDTO> dtos) {
+        return ResponseEntity.ok(specializationService.saveImportedSpecializations(majorId, dtos));
+    }
+
+    @PostMapping("/import/preview-bulk")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
+    public ResponseEntity<List<SpecializationImportDTO>> previewImportSpecializationsBulk(
+            @RequestParam("file") MultipartFile file) {
+        try {
+            return ResponseEntity.ok(specializationService.previewImportSpecializationsBulk(file));
+        } catch (IOException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/import/save-bulk")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
+    public ResponseEntity<Map<String, Object>> saveImportedSpecializationsBulk(
+            @RequestBody List<SpecializationImportDTO> dtos) {
+        return ResponseEntity.ok(specializationService.saveImportedSpecializationsBulk(dtos));
+    }
+
+    @GetMapping("/import/template")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
+    public ResponseEntity<Resource> downloadImportTemplate() throws IOException {
+        byte[] data = specializationService.exportSpecializationTemplate();
+        if (data == null) {
+            return ResponseEntity.noContent().build();
+        }
+        ByteArrayResource resource = new ByteArrayResource(data);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=specialization_import_template.xlsx")
+                .contentType(
+                        MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .contentLength(data.length)
+                .body(resource);
+    }
+
+    // ========== Course Management ==========
+
+    @GetMapping("/{id}/courses")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS') or hasRole('STUDENT') or hasRole('LECTURER')")
+    public ResponseEntity<List<CourseResponse>> getCourses(@PathVariable Long id) {
+        return ResponseEntity.ok(specializationService.getCourses(id));
+    }
+
+    @PostMapping("/{id}/courses/{courseId}")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
+    public ResponseEntity<CourseResponse> addCourse(@PathVariable Long id, @PathVariable Long courseId,
+            @RequestParam(required = false, defaultValue = "1") Integer semester) {
+        return ResponseEntity.ok(specializationService.addCourse(id, courseId, semester));
+    }
+
+    @PostMapping("/{id}/courses/bulk")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
+    public ResponseEntity<List<CourseResponse>> addCoursesBulk(@PathVariable Long id,
+            @RequestBody BulkCourseAssignmentRequest request) {
+        return ResponseEntity.ok(specializationService.addCoursesBulk(id, request));
+    }
+
+    @DeleteMapping("/{id}/courses/{courseId}")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
+    public ResponseEntity<Void> removeCourse(@PathVariable Long id, @PathVariable Long courseId) {
+        specializationService.removeCourse(id, courseId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/courses/reorder")
+    @PreAuthorize("hasAnyAuthority('ROLE_ACADEMIC_STAFF', 'MANAGE_MAJORS')")
+    public ResponseEntity<Void> reorderCourses(@PathVariable Long id, @RequestBody ReorderCoursesRequest request) {
+        specializationService.reorderCourses(id, request);
+        return ResponseEntity.ok().build();
     }
 }

@@ -44,6 +44,8 @@ public class ImportJob {
     @Builder.Default
     private Integer failedCount = 0;
 
+    private String statusMessage;
+
     @Column(columnDefinition = "TEXT")
     private String errorMessage;
 

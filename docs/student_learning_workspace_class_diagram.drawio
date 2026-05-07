@@ -1,0 +1,193 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36">
+  <diagram name="Student Learning Workspace" id="d1">
+    <mxGraphModel dx="7205" dy="2810" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="2000" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="C1" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#dae8fc;strokeColor=#6c8ebf;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;RestController&amp;gt;&amp;gt;&#xa;TimetableController" vertex="1">
+          <mxGeometry height="350" width="560" x="40" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="C1_0" parent="C1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- generationService : TimetableGenerationService&#xa;- timetableSlotRepository : TimetableSlotRepository&#xa;- studentAttendanceRepository : StudentAttendanceRepository&#xa;- assignmentRepository : AssignmentRepository&#xa;- assignmentSubmissionRepository : AssignmentSubmissionRepository&#xa;- excelExportService : ExcelExportService&#xa;- userRepository : UserRepository&#xa;- semesterRepository : SemesterRepository&#xa;- timetableSlotService : TimetableSlotService&#xa;- attendanceConfigService : AttendanceConfigService" vertex="1">
+          <mxGeometry height="200" width="560" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="C1_line" parent="C1" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="560" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="C1_1" parent="C1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ getStudentTimetable(studentId, date) : WeeklyTimetableDTO&#xa;+ getSemesterSlotsForStudent(studentId, semesterCode) : List&#xa;+ exportStudentTimetable(studentId, semesterCode) : void&#xa;+ getTimetableByClass(className) : List&amp;lt;TimetableSlotDTO&amp;gt;" vertex="1">
+          <mxGeometry height="110" width="560" y="238" as="geometry" />
+        </mxCell>
+        <mxCell id="C2" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#dae8fc;strokeColor=#6c8ebf;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;RestController&amp;gt;&amp;gt;&#xa;StudentAssignmentController" vertex="1">
+          <mxGeometry height="220" width="480" x="720" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="C2_0" parent="C2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- assignmentSubmissionService : AssignmentSubmissionService&#xa;- userRepository : UserRepository&#xa;- enrollmentRepository : EnrollmentRepository" vertex="1">
+          <mxGeometry height="78" width="480" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="C2_line" parent="C2" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="480" y="108" as="geometry" />
+        </mxCell>
+        <mxCell id="C2_1" parent="C2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ getMyAssignments() : List&amp;lt;AssignmentSubmissionResponse&amp;gt;&#xa;+ getEnrolledClasses() : List&amp;lt;String&amp;gt;&#xa;+ submitAssignment(SubmitAssignmentRequest) : AssignmentSubmissionResponse&#xa;+ getMySubmission(assignmentId) : AssignmentSubmissionResponse" vertex="1">
+          <mxGeometry height="104" width="480" y="116" as="geometry" />
+        </mxCell>
+        <mxCell id="SI1" parent="1" style="swimlane;fontStyle=3;align=center;startSize=30;html=1;collapsible=0;fillColor=#e1d5e7;strokeColor=#9673a6;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&#xa;TimetableSlotService" vertex="1">
+          <mxGeometry height="150" width="460" x="90" y="470" as="geometry" />
+        </mxCell>
+        <mxCell id="SI1_line" parent="SI1" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="460" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="SI1_1" parent="SI1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ updateSlot(Long, UpdateSlotRequest) : TimetableSlotDTO&#xa;+ getAvailability(LocalDate, String) : AvailabilityResponse&#xa;+ getLecturerTeachingDates(Long, String) : List&amp;lt;LocalDate&amp;gt;&#xa;+ searchAssignments(...) : Page&amp;lt;TimetableSlotDTO&amp;gt;" vertex="1">
+          <mxGeometry height="110" width="460" y="38" as="geometry" />
+        </mxCell>
+        <mxCell id="SI2" parent="1" style="swimlane;fontStyle=3;align=center;startSize=30;html=1;collapsible=0;fillColor=#e1d5e7;strokeColor=#9673a6;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&#xa;AssignmentSubmissionService" vertex="1">
+          <mxGeometry height="350" width="480" x="720" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="SI2_line" parent="SI2" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="480" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="SI2_1" parent="SI2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ createAssignment(CreateAssignmentRequest, Long) : AssignmentResponse&#xa;+ closeAssignment(Long, Long) : void&#xa;+ getAssignmentsByClass(String) : List&amp;lt;AssignmentResponse&amp;gt;&#xa;+ getAssignmentSubmissions(Long) : List&amp;lt;AssignmentSubmissionResponse&amp;gt;&#xa;+ submitAssignment(SubmitAssignmentRequest, Long) : AssignmentSubmissionResponse&#xa;+ getStudentAssignments(Long) : List&amp;lt;AssignmentSubmissionResponse&amp;gt;&#xa;+ getMySubmission(Long, Long) : AssignmentSubmissionResponse&#xa;+ updateDueDate(Long, Long, LocalDateTime) : AssignmentResponse&#xa;+ getAllStudentSubmissionStatus(Long) : List&#xa;+ updateLecturerComment(Long, Long, String) : AssignmentSubmissionResponse&#xa;+ deleteAssignment(Long, Long) : void&#xa;+ updateAssignment(...) : AssignmentResponse&#xa;+ sendDueDateReminderNotifications(Assignment) : void&#xa;+ downloadAllSubmissionsAsZip(Long, Long) : byte[]" vertex="1">
+          <mxGeometry height="310" width="480" y="38" as="geometry" />
+        </mxCell>
+        <mxCell id="R1" parent="1" style="swimlane;fontStyle=3;align=center;startSize=30;html=1;collapsible=0;fillColor=#d0e8f2;strokeColor=#5b9bd5;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&#xa;TimetableSlotRepository" vertex="1">
+          <mxGeometry height="190" width="440" x="-420" y="470" as="geometry" />
+        </mxCell>
+        <mxCell id="R1_line" parent="R1" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="440" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="R1_1" parent="R1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ findByStudentIdAndDateBetween(...) : List&amp;lt;TimetableSlot&amp;gt;&#xa;+ findBySemesterCode(String) : List&amp;lt;TimetableSlot&amp;gt;&#xa;+ findByClassName(String) : List&amp;lt;TimetableSlot&amp;gt;&#xa;+ findByLecturerIdAndDateBetween(...) : List&amp;lt;TimetableSlot&amp;gt;&#xa;+ countBySemesterCode(String) : long&#xa;+ findEarliestCreatedAtBySemesterCode(String) : LocalDateTime" vertex="1">
+          <mxGeometry height="150" width="440" y="38" as="geometry" />
+        </mxCell>
+        <mxCell id="R2" parent="1" style="swimlane;fontStyle=3;align=center;startSize=30;html=1;collapsible=0;fillColor=#d0e8f2;strokeColor=#5b9bd5;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&#xa;AssignmentRepository" vertex="1">
+          <mxGeometry height="130" width="420" x="-50" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="R2_line" parent="R2" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="420" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="R2_1" parent="R2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ findByClassSection_ClassNameOrderByCreatedAtDesc(String) : List&#xa;+ findByTimetableSlotIdIn(List) : List&amp;lt;Assignment&amp;gt;&#xa;+ findDueForReminder(LocalDateTime, LocalDateTime) : List" vertex="1">
+          <mxGeometry height="90" width="420" y="38" as="geometry" />
+        </mxCell>
+        <mxCell id="R3" parent="1" style="swimlane;fontStyle=3;align=center;startSize=30;html=1;collapsible=0;fillColor=#d0e8f2;strokeColor=#5b9bd5;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&#xa;AssignmentSubmissionRepository" vertex="1">
+          <mxGeometry height="150" width="440" x="1320" y="590" as="geometry" />
+        </mxCell>
+        <mxCell id="R3_line" parent="R3" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="440" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="R3_1" parent="R3" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ findByAssignment_IdAndStudent_Id(Long, Long) : Optional&#xa;+ findByAssignment_Id(Long) : List&amp;lt;AssignmentSubmission&amp;gt;&#xa;+ findByStudent_Id(Long) : List&amp;lt;AssignmentSubmission&amp;gt;&#xa;+ countByAssignment_Id(Long) : long&#xa;+ deleteAllByAssignment(Assignment) : void" vertex="1">
+          <mxGeometry height="110" width="440" y="38" as="geometry" />
+        </mxCell>
+        <mxCell id="E1" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#f8cecc;strokeColor=#b85450;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&#xa;TimetableSlot" vertex="1">
+          <mxGeometry height="310" width="290" x="-390" y="740" as="geometry" />
+        </mxCell>
+        <mxCell id="E1_0" parent="E1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- id : Long&#xa;- classSection : ClassSection&#xa;- room : Room&#xa;- slotType : SlotType&#xa;- date : LocalDate&#xa;- dayOfWeek : Integer&#xa;- slotNumber : Integer&#xa;- status : TimetableSlotStatus&#xa;- note : String&#xa;- createdAt : LocalDateTime&#xa;- updatedAt : LocalDateTime" vertex="1">
+          <mxGeometry height="270" width="290" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="E2" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#f8cecc;strokeColor=#b85450;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&#xa;Assignment" vertex="1">
+          <mxGeometry height="370" width="310" x="500" y="710" as="geometry" />
+        </mxCell>
+        <mxCell id="E2_0" parent="E2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- id : Long&#xa;- title : String&#xa;- description : String&#xa;- classSection : ClassSection&#xa;- createdBy : User&#xa;- timetableSlot : TimetableSlot&#xa;- dueDate : LocalDateTime&#xa;- status : AssignmentStatus&#xa;- referenceUrl : String&#xa;- referenceName : String&#xa;- reminderSent : Boolean&#xa;- submissions : List&#xa;- createdAt : LocalDateTime&#xa;- updatedAt : LocalDateTime" vertex="1">
+          <mxGeometry height="330" width="310" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="E3" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#f8cecc;strokeColor=#b85450;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&#xa;AssignmentSubmission" vertex="1">
+          <mxGeometry height="370" width="310" x="890" y="710" as="geometry" />
+        </mxCell>
+        <mxCell id="E3_0" parent="E3" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- id : Long&#xa;- assignment : Assignment&#xa;- student : User&#xa;- enrollment : Enrollment&#xa;- fileUrl : String&#xa;- fileName : String&#xa;- note : String&#xa;- lecturerComment : String&#xa;- status : SubmissionStatus&#xa;- submittedAt : LocalDateTime&#xa;- createdAt : LocalDateTime&#xa;- updatedAt : LocalDateTime" vertex="1">
+          <mxGeometry height="330" width="310" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="D1" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&#xa;TimetableDTO (inner classes)" vertex="1">
+          <mxGeometry height="230" width="300" x="-420" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="D1_1" parent="D1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="TimetableSlotDTO&#xa;WeeklyTimetableDTO&#xa;DayDTO&#xa;GenerateRequest&#xa;GenerateResponse&#xa;JobStatusResponse&#xa;UpdateSlotRequest&#xa;AvailabilityResponse" vertex="1">
+          <mxGeometry height="190" width="300" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="D2" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&#xa;SubmitAssignmentRequest" vertex="1">
+          <mxGeometry height="130" width="280" x="1330" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="D2_1" parent="D2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- assignmentId : Long&#xa;- fileUrls : List&amp;lt;String&amp;gt;&#xa;- fileNames : List&amp;lt;String&amp;gt;&#xa;- note : String" vertex="1">
+          <mxGeometry height="90" width="280" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="D3" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&#xa;AssignmentSubmissionResponse" vertex="1">
+          <mxGeometry height="330" width="300" x="1320" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="D3_1" parent="D3" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- id : Long&#xa;- assignmentId : Long&#xa;- assignmentTitle : String&#xa;- className : String&#xa;- courseCode : String&#xa;- courseName : String&#xa;- studentCode : String&#xa;- studentName : String&#xa;- fileUrls : List&amp;lt;String&amp;gt;&#xa;- fileNames : List&amp;lt;String&amp;gt;&#xa;- note : String&#xa;- lecturerComment : String&#xa;- status : SubmissionStatus&#xa;- submittedAt : LocalDateTime&#xa;- assignmentDueDate : LocalDateTime&#xa;- referenceUrl : String&#xa;- referenceName : String&#xa;- timetableSlotId : Long" vertex="1">
+          <mxGeometry height="290" width="300" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EN1" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#e1d5e7;strokeColor=#9673a6;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;enumeration&amp;gt;&amp;gt;&#xa;TimetableSlotStatus" vertex="1">
+          <mxGeometry height="130" width="220" x="-700" y="840" as="geometry" />
+        </mxCell>
+        <mxCell id="EN1_1" parent="EN1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="SCHEDULED&#xa;CANCELLED&#xa;RESCHEDULED&#xa;COMPLETED" vertex="1">
+          <mxGeometry height="90" width="220" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EN2" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#e1d5e7;strokeColor=#9673a6;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;enumeration&amp;gt;&amp;gt;&#xa;AssignmentStatus" vertex="1">
+          <mxGeometry height="90" width="200" x="200" y="960" as="geometry" />
+        </mxCell>
+        <mxCell id="EN2_1" parent="EN2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="OPEN&#xa;CLOSED" vertex="1">
+          <mxGeometry height="50" width="200" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EN3" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#e1d5e7;strokeColor=#9673a6;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;enumeration&amp;gt;&amp;gt;&#xa;SubmissionStatus" vertex="1">
+          <mxGeometry height="110" width="200" x="1310" y="840" as="geometry" />
+        </mxCell>
+        <mxCell id="EN3_1" parent="EN3" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="SUBMITTED&#xa;NOT_SUBMITTED&#xa;OVERDUE" vertex="1">
+          <mxGeometry height="70" width="200" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EX1" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#f5f5f5;strokeColor=#666666;rounded=1;shadow=1;fontSize=15;fontColor=#333333;" value="&amp;lt;&amp;lt;Service&amp;gt;&amp;gt;&#xa;ExcelExportService" vertex="1">
+          <mxGeometry height="100" width="360" x="-420" y="290" as="geometry" />
+        </mxCell>
+        <mxCell id="EX1_line" parent="EX1" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="360" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EX1_1" parent="EX1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ exportStudentScheduleToExcel(...) : void&#xa;+ exportLecturerScheduleToExcel(...) : void" vertex="1">
+          <mxGeometry height="52" width="360" y="38" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge1" edge="1" parent="1" source="C1" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;" target="SI1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge2" edge="1" parent="1" source="C2" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;" target="SI2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge3" edge="1" parent="1" source="C1" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;" target="R1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge4" edge="1" parent="1" source="C1" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;" target="EX1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge5" edge="1" parent="1" source="C1" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;dashed=1;fontSize=15;" target="D1" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge6" edge="1" parent="1" source="C2" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;dashed=1;fontSize=15;" target="D2" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge7" edge="1" parent="1" source="C2" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;dashed=1;fontSize=15;" target="D3" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge8" edge="1" parent="1" source="R1" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;" target="E1" value="1        *">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge9" edge="1" parent="1" source="R2" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;" target="E2" value="1        *">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge10" edge="1" parent="1" source="R3" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;" target="E3" value="1        *">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge11" edge="1" parent="1" source="E1" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;" target="EN1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge12" edge="1" parent="1" source="E2_0" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;exitX=-0.003;exitY=0.803;exitDx=0;exitDy=0;exitPerimeter=0;" target="EN2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge13" edge="1" parent="1" source="E3" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;" target="EN3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge14" edge="1" parent="1" source="E2" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;" target="E1" value="*        1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge15" edge="1" parent="1" source="E3" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;" target="E2" value="*        1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge16" edge="1" parent="1" source="SI2" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;" target="R2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge17" edge="1" parent="1" source="SI2" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;" target="R3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

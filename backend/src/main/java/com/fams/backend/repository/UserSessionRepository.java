@@ -40,6 +40,12 @@ public interface UserSessionRepository extends JpaRepository<UserSession, Long> 
     Optional<UserSession> findTopByUserIdOrderByLoginTimeDesc(Long userId);
 
     /**
+     * Bulk fetch the latest login time for a list of users
+     */
+    @Query("SELECT us.user.id, MAX(us.loginTime) FROM UserSession us WHERE us.user.id IN :userIds GROUP BY us.user.id")
+    List<Object[]> findLatestLoginTimesByUserIds(@Param("userIds") List<Long> userIds);
+
+    /**
      * Delete old inactive sessions
      */
     @Query("DELETE FROM UserSession us WHERE us.lastActivityTime < :threshold")

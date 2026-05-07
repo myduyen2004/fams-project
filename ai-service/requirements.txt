@@ -30,6 +30,7 @@ redis==5.0.1                   # Redis driver (cache)
 # Basic Data Processing
 numpy==1.26.3                  # Thư viện số học cơ bản
 pandas==2.1.4                  # Xử lý data dạng bảng
+openpyxl==3.1.2                # Hỗ trợ đọc/ghi file Excel (.xlsx)
 scikit-learn==1.4.0            # Machine Learning cơ bản
 scipy==1.11.4                  # Scientific computing
 
@@ -38,6 +39,8 @@ pydantic==2.5.3                # Validate data
 python-dotenv==1.0.0           # Đọc .env file
 marshmallow==3.20.1            # Serialize/Deserialize data
 requests==2.31.0               # HTTP requests
+pypdf==5.4.0
+python-docx==1.1.2
 
 # Security
 python-jose[cryptography]==3.3.0  # JWT tokens
@@ -73,7 +76,7 @@ mediapipe==0.10.9
 
 # ONNX Runtime - Chạy AI models
 # GIẢI THÍCH: Chạy models đã train sẵn, không cần TensorFlow/PyTorch
-onnxruntime==1.16.3
+onnxruntime
 
 # ========================================
 # SECTION 3: FULL AI SETUP (Optional)

@@ -9,14 +9,17 @@ import com.fams.backend.repository.AccessLogRepository;
 import com.fams.backend.repository.UserRepository;
 import com.fams.backend.repository.UserSessionRepository;
 import com.fams.backend.security.jwt.JwtUtil;
+import com.fams.backend.repository.UserPermissionRepository;
+import com.fams.backend.service.impl.AlertService;
 import com.fams.backend.service.impl.AuthService;
 import com.fams.backend.service.impl.DashboardBroadcastService;
+import com.fams.backend.service.impl.SystemLogService;
+import org.springframework.data.redis.core.ValueOperations;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -60,9 +63,20 @@ class LoginTest {
     private StringRedisTemplate redisTemplate;
 
     @Mock
+    private ValueOperations<String, String> valueOperations;
+
+    @Mock
     private HttpServletRequest httpServletRequest;
 
-    @InjectMocks
+    @Mock
+    private SystemLogService systemLogService;
+
+    @Mock
+    private UserPermissionRepository userPermissionRepository;
+
+    @Mock
+    private AlertService alertService;
+
     private AuthService authService;
 
     private LoginRequest loginRequest;
@@ -70,6 +84,24 @@ class LoginTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        lenient().when(valueOperations.increment(anyString())).thenReturn(1L);
+        
+        authService = new AuthService(
+            userRepository,
+            passwordEncoder,
+            jwtUtil,
+            userSessionRepository,
+            accessLogRepository,
+            geoLocationService,
+            dashboardBroadcastService,
+            emailService,
+            redisTemplate,
+            systemLogService,
+            userPermissionRepository,
+            alertService
+        );
+
         loginRequest = new LoginRequest();
         testUser = new User();
         testUser.setId(1L);
@@ -83,6 +115,9 @@ class LoginTest {
     void whenLoginWithEmptyUsername_thenThrowBadRequestException() {
         loginRequest.setUsername("");
         loginRequest.setPassword("password123");
+        when(httpServletRequest.getHeader("X-Forwarded-For")).thenReturn("127.0.0.1");
+        GeoLocationService.LocationData mockLocation = mock(GeoLocationService.LocationData.class);
+        when(geoLocationService.getLocationFromIP(anyString())).thenReturn(mockLocation);
 
         BadRequestException exception = assertThrows(BadRequestException.class,
                 () -> authService.login(loginRequest, httpServletRequest));
@@ -94,6 +129,9 @@ class LoginTest {
     void whenLoginWithEmptyPassword_thenThrowBadRequestException() {
         loginRequest.setUsername("admin");
         loginRequest.setPassword("");
+        when(httpServletRequest.getHeader("X-Forwarded-For")).thenReturn("127.0.0.1");
+        GeoLocationService.LocationData mockLocation = mock(GeoLocationService.LocationData.class);
+        when(geoLocationService.getLocationFromIP(anyString())).thenReturn(mockLocation);
 
         BadRequestException exception = assertThrows(BadRequestException.class,
                 () -> authService.login(loginRequest, httpServletRequest));
@@ -106,11 +144,12 @@ class LoginTest {
         loginRequest.setUsername("admin");
         loginRequest.setPassword("password123");
 
-        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(testUser));
+        when(userRepository.findByUsernameWithProfiles("admin")).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("password123", "encodedPassword")).thenReturn(true);
         when(jwtUtil.generateToken("admin")).thenReturn("mock-jwt-token");
 
-        when(httpServletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+        when(httpServletRequest.getHeader("X-Forwarded-For")).thenReturn("127.0.0.1");
+        when(httpServletRequest.getHeader("User-Agent")).thenReturn("Test-Agent");
         GeoLocationService.LocationData mockLocation = mock(GeoLocationService.LocationData.class);
         when(mockLocation.getProvince()).thenReturn("Hanoi");
         when(mockLocation.getCity()).thenReturn("Hanoi");
@@ -128,8 +167,11 @@ class LoginTest {
         loginRequest.setUsername("admin");
         loginRequest.setPassword("wrongPassword");
 
-        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(testUser));
+        when(userRepository.findByUsernameWithProfiles("admin")).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("wrongPassword", "encodedPassword")).thenReturn(false);
+        when(httpServletRequest.getHeader("X-Forwarded-For")).thenReturn("127.0.0.1");
+        GeoLocationService.LocationData mockLocation = mock(GeoLocationService.LocationData.class);
+        when(geoLocationService.getLocationFromIP(anyString())).thenReturn(mockLocation);
 
         UnauthorizedException exception = assertThrows(UnauthorizedException.class,
                 () -> authService.login(loginRequest, httpServletRequest));
@@ -143,7 +185,10 @@ class LoginTest {
         loginRequest.setPassword("password123");
         testUser.setStatus(User.UserStatus.INACTIVE);
 
-        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(testUser));
+        when(userRepository.findByUsernameWithProfiles("admin")).thenReturn(Optional.of(testUser));
+        when(httpServletRequest.getHeader("X-Forwarded-For")).thenReturn("127.0.0.1");
+        GeoLocationService.LocationData mockLocation = mock(GeoLocationService.LocationData.class);
+        when(geoLocationService.getLocationFromIP(anyString())).thenReturn(mockLocation);
 
         UnauthorizedException exception = assertThrows(UnauthorizedException.class,
                 () -> authService.login(loginRequest, httpServletRequest));
@@ -157,7 +202,10 @@ class LoginTest {
         loginRequest.setPassword("password123");
         testUser.setStatus(User.UserStatus.LOCKED);
 
-        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(testUser));
+        when(userRepository.findByUsernameWithProfiles("admin")).thenReturn(Optional.of(testUser));
+        when(httpServletRequest.getHeader("X-Forwarded-For")).thenReturn("127.0.0.1");
+        GeoLocationService.LocationData mockLocation = mock(GeoLocationService.LocationData.class);
+        when(geoLocationService.getLocationFromIP(anyString())).thenReturn(mockLocation);
 
         UnauthorizedException exception = assertThrows(UnauthorizedException.class,
                 () -> authService.login(loginRequest, httpServletRequest));

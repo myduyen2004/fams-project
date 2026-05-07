@@ -64,7 +64,14 @@ export const LecturerTableRow: React.FC<LecturerTableRowProps> = React.memo(({
         <span className="font-mono text-sm text-gray-700 dark:text-gray-300">{lecturer.code}</span>
       </td>
       <td className="px-4 py-4">
-        <span className="text-sm text-gray-600 dark:text-gray-400">{lecturer.department || 'Chưa cập nhật'}</span>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            {lecturer.major || <span className="text-gray-400 italic text-xs">Chưa cập nhật</span>}
+          </span>
+          {lecturer.specialization && (
+            <span className="text-xs text-gray-400">{lecturer.specialization}</span>
+          )}
+        </div>
       </td>
       <td className="px-4 py-4">
         {getStatusBadge(lecturer.status)}
@@ -106,3 +113,4 @@ export const LecturerTableRow: React.FC<LecturerTableRowProps> = React.memo(({
 });
 
 LecturerTableRow.displayName = 'LecturerTableRow';
+

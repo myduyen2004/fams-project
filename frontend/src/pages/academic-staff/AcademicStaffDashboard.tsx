@@ -1,30 +1,93 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
-import { Users, GraduationCap, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { academicStaffService } from '../../services/api/academicStaffService';
 import { AcademicStaffDashboardResponse } from '../../types/dashboard';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
+
+// New Components
+import { AnalyticalCards } from '../../components/academic-staff/dashboard/AnalyticalCards';
+import { AttendanceFrequencyChart, DailyAttendanceDonut } from '../../components/academic-staff/dashboard/DashboardCharts';
+import { PendingRequests, RunningRooms, SystemActivityLog } from '../../components/academic-staff/dashboard/DashboardLists';
 
 export const AcademicStaffDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState<AcademicStaffDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [weeklyLoading, setWeeklyLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        const dashboardData = await academicStaffService.getDashboardData();
-        setData(dashboardData);
-      } catch (error) {
-        console.error('Failed to fetch dashboard data:', error);
-        toast.error('Không thể tải dữ liệu dashboard');
-      } finally {
+  const [selectedWeekStart, setSelectedWeekStart] = useState<string>(() => {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Monday start
+    const monday = new Date(d.setDate(diff));
+    return monday.toISOString().split('T')[0];
+  });
+
+  // Initial dashboard load (all data)
+  const fetchDashboardData = useCallback(async (startDate: string) => {
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.warn('Dashboard data fetch timed out');
         setLoading(false);
+        toast.error('Kết nối máy chủ chậm, đang hiển thị dữ liệu tạm thời');
       }
-    };
+    }, 15000);
 
-    fetchDashboardData();
+    try {
+      setLoading(true);
+      const dashboardData = await academicStaffService.getDashboardData(startDate);
+      setData(dashboardData);
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+      toast.error('Không thể tải dữ liệu dashboard');
+    } finally {
+      clearTimeout(timeoutId);
+      setLoading(false);
+    }
   }, []);
+
+  // Weekly-only data reload (lightweight endpoint, only updates the chart)
+  const fetchWeeklyData = useCallback(async (startDate: string) => {
+    try {
+      setWeeklyLoading(true);
+      const weeklyData = await academicStaffService.getWeeklyAttendance(startDate);
+      setData(prev => prev ? { ...prev, weeklyAttendance: weeklyData } : prev);
+    } catch (error) {
+      console.error('Failed to fetch weekly data:', error);
+      toast.error('Không thể tải dữ liệu tuần');
+    } finally {
+      setWeeklyLoading(false);
+    }
+  }, []);
+
+  // Initial load only once
+  useEffect(() => {
+    fetchDashboardData(selectedWeekStart);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When week changes (after initial load), only reload weekly chart
+  const isInitialMount = React.useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    fetchWeeklyData(selectedWeekStart);
+  }, [selectedWeekStart, fetchWeeklyData]);
+
+  const handlePrevWeek = () => {
+    const d = new Date(selectedWeekStart);
+    d.setDate(d.getDate() - 7);
+    setSelectedWeekStart(d.toISOString().split('T')[0]);
+  };
+
+  const handleNextWeek = () => {
+    const d = new Date(selectedWeekStart);
+    d.setDate(d.getDate() + 7);
+    setSelectedWeekStart(d.toISOString().split('T')[0]);
+  };
 
   if (loading) {
     return (
@@ -37,210 +100,108 @@ export const AcademicStaffDashboard: React.FC = () => {
     );
   }
 
-  if (!data) {
-    return (
-      <AcademicStaffLayout pageTitle="Dashboard">
-        <div className="flex flex-col items-center justify-center h-full">
-          <p className="text-gray-500 dark:text-gray-400">Không có dữ liệu hiển thị</p>
-        </div>
-      </AcademicStaffLayout>
-    );
-  }
-
-  const stats = [
-    {
-      label: 'Sinh viên',
-      value: (Number(data.stats?.totalStudents) || 0).toLocaleString(),
-      icon: <Users className="w-5 h-5" />,
-      color: 'bg-orange-100 text-orange-600',
-      description: 'Xem danh sách sinh viên'
-    },
-    {
-      label: 'Giảng viên',
-      value: (Number(data.stats?.totalLecturers) || 0).toLocaleString(),
-      icon: <GraduationCap className="w-5 h-5" />,
-      color: 'bg-blue-100 text-blue-600',
-      description: 'Xem danh sách giảng viên'
-    }
-  ];
-
   return (
     <AcademicStaffLayout pageTitle="Dashboard">
+
+
       <div className="space-y-6">
-        {/* Top Section Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left: Top 100 Students (65%) */}
-          <div className="lg:col-span-8">
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800">
-              <div className="p-6 border-b border-gray-100 dark:border-zinc-800 flex justify-between items-center">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Top 100 sinh viên</h2>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-400">Sắp xếp theo: Toàn trường</span>
-                    <button className="text-xs text-gray-400">▼</button>
+        {/* Row 1: Unified Monitoring Row (Horizontal Alignment as requested) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          {/* Analytical Cards (5/12) */}
+          <div className="lg:col-span-5 h-full">
+            <AnalyticalCards stats={data?.stats} />
+          </div>
+
+          {/* News (3/12) */}
+          <div className="lg:col-span-3 h-full">
+            <div
+              className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-zinc-800 h-full cursor-pointer hover:shadow-md transition-all duration-300 group/news flex flex-col"
+              onClick={() => navigate('/news')}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Tin tức mới nhất
+                </h3>
+                {data?.unreadNotificationsCount !== undefined && data.unreadNotificationsCount > 0 && (
+                  <span className="px-2 h-5 bg-orange-100 text-orange-600 text-[10px] flex items-center justify-center rounded-full font-bold">
+                    {data.unreadNotificationsCount} mới
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-4 flex-grow">
+                {data?.news && data.news.length > 0 ? (
+                  data.news.map((item) => (
+                    <div key={item.id} className="relative group/item flex gap-3">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800">
+                        <img
+                          src={item.thumbnailImage || 'https://res.cloudinary.com/dhp7p8c8t/image/upload/v1712411514/news-placeholder_tqjz6z.png'}
+                          alt={item.title}
+                          className="w-full h-full object-cover group-hover/item:scale-110 transition-transform duration-500"
+                        />
+                      </div>
+                      <div className="flex-grow min-w-0">
+                        <h5 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1 group-hover/item:text-orange-600 transition-colors">
+                          {item.title}
+                        </h5>
+                        <p className="text-[11px] text-gray-500 mt-1">
+                          {item.publishedAt ? new Date(item.publishedAt).toLocaleDateString('vi-VN') : 'Vừa xong'}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-12 text-center rounded-xl border border-dashed border-gray-200 dark:border-zinc-800 h-full flex flex-col justify-center bg-zinc-50/50 dark:bg-zinc-800/10">
+                    <p className="text-xs text-gray-500 font-medium">Chưa có tin tức mới</p>
                   </div>
-                  <button className="text-xs text-fpt-orange hover:underline font-medium flex items-center gap-1">
-                    Xem tất cả {"\u00bb\u00bb\u00bb"}
-                  </button>
-                </div>
+                )}
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-zinc-800">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        STT
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Họ và tên
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Email
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Khóa
-                      </th>
 
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        GPA
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-zinc-900 divide-y divide-gray-200 dark:divide-zinc-800">
-                    {(data?.topStudents ?? []).slice(0, 6).map((student, idx) => (
-                      <tr key={student?.rank ?? idx} className="hover:bg-gray-50 dark:hover:bg-zinc-800">
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                          {student?.rank ?? idx + 1}
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fpt-orange to-orange-600 flex items-center justify-center text-white text-xs font-semibold">
-                              {student?.name?.charAt(0) ?? 'S'}
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                {student?.name ?? 'Sinh viên'}
-                              </p>
-                              <p className="text-[10px] text-gray-500">{student?.className ?? 'N/A'}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                          {student?.email ?? 'N/A'}
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                          {student?.course ?? 'N/A'}
-                        </td>
-
-                        <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
-                          {student?.gpa?.toFixed(1) ?? '0.0'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <button
+                className="w-full mt-4 pt-4 border-t border-gray-100 dark:border-zinc-800 text-xs font-bold text-gray-400 hover:text-orange-600 transition-colors uppercase tracking-wider"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate('/news');
+                }}
+              >
+                Xem tất cả tin tức
+              </button>
             </div>
           </div>
 
-          {/* Right: Stats & Notifications (35%) */}
-          <div className="lg:col-span-4 space-y-6">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {stats.map((stat, index) => (
-                <div key={index} className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm p-4 border border-gray-100 dark:border-zinc-800">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-[10px] font-medium text-gray-500 uppercase">{stat?.label ?? 'N/A'}</span>
-                    <div className={`p-1.5 rounded-lg ${stat?.color ?? 'bg-gray-100'}`}>
-                      {stat?.icon}
-                    </div>
-                  </div>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">{stat?.value ?? '0'}</p>
-                  <p className="text-[9px] text-gray-400 hover:text-fpt-orange cursor-pointer transition-colors mt-1">{stat?.description ?? ''}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Notifications List */}
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800">
-              <div className="p-6 border-b border-gray-100 dark:border-zinc-800 flex justify-between items-center">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Thông báo</h2>
-                <button className="text-xs text-fpt-orange hover:underline font-medium">
-                  Xem tất cả {"\u00bb\u00bb\u00bb"}
-                </button>
-              </div>
-              <div className="divide-y divide-gray-100 dark:divide-zinc-800 max-h-[300px] overflow-auto">
-                {(data?.notifications ?? []).map((notif, index) => (
-                  <div key={index} className="p-5 hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer">
-                    <p className="text-xs text-gray-900 dark:text-white font-medium mb-1">
-                      {notif?.title ?? 'Thông báo mới'}
-                    </p>
-                    <p className="text-[10px] text-gray-400">{notif?.timestamp ?? 'Vừa xong'}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+          {/* Running Rooms (4/12) */}
+          <div className="lg:col-span-4 h-full">
+            <RunningRooms rooms={data?.runningRooms} total={data?.totalRunningRooms} />
           </div>
         </div>
 
-        {/* Bottom Section: Attendance Chart */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          {/* Attendance Chart */}
-          <div className="md:col-span-12">
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Tỉ lệ điểm danh sinh viên</h2>
-              </div>
-              <div className="flex flex-col md:flex-row items-center justify-center py-8 gap-12">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 rounded-full bg-[#22c55e]"></div>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Điểm danh có mặt</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 rounded-full bg-[#ef4444]"></div>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Điểm danh vắng mặt</span>
-                  </div>
-                </div>
+        {/* Row 2: Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          <div className="lg:col-span-7 h-full">
+            <AttendanceFrequencyChart
+              data={data?.weeklyAttendance}
+              loading={weeklyLoading}
+              weekStart={selectedWeekStart}
+              onPrevWeek={handlePrevWeek}
+              onNextWeek={handleNextWeek}
+            />
+          </div>
+          <div className="lg:col-span-5 h-full">
+            <DailyAttendanceDonut stats={data?.attendanceStats} />
+          </div>
+        </div>
 
-                <div className="relative w-64 h-64">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="40" fill="none" stroke="#fee2e2" strokeWidth="12" />
-                    {/* Green - Present */}
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="40"
-                      fill="none"
-                      stroke="#22c55e"
-                      strokeWidth="12"
-                      strokeDasharray={`${((data?.attendanceStats?.present ?? 0) / (Math.max(1, (data?.attendanceStats?.present ?? 0) + (data?.attendanceStats?.absent ?? 0)))) * 251.33} 251.33`}
-                      strokeDashoffset="0"
-                      strokeLinecap="round"
-                    />
-                    {/* Red - Absent */}
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="40"
-                      fill="none"
-                      stroke="#ef4444"
-                      strokeWidth="12"
-                      strokeDasharray={`${((data?.attendanceStats?.absent ?? 0) / (Math.max(1, (data?.attendanceStats?.present ?? 0) + (data?.attendanceStats?.absent ?? 0)))) * 251.33} 251.33`}
-                      strokeDashoffset={`-${((data?.attendanceStats?.present ?? 0) / (Math.max(1, (data?.attendanceStats?.present ?? 0) + (data?.attendanceStats?.absent ?? 0)))) * 251.33}`}
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <p className="text-xs font-medium text-gray-500 uppercase">Thời gian</p>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">{data?.attendanceStats?.date ?? 'N/A'}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+        {/* Row 3: Pending Requests & System Log */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          <div className="lg:col-span-5">
+            <PendingRequests stats={data?.stats} />
+          </div>
+          <div className="lg:col-span-7">
+            <SystemActivityLog />
           </div>
         </div>
       </div>
     </AcademicStaffLayout>
   );
 };
+

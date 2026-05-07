@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { mapService, type ProvinceOnlineData } from '../../../services/api/mapService';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { useWebSocket } from '../../../hooks/useWebSocket';
 
 // Fix Leaflet default icon issue
@@ -37,7 +37,6 @@ export const VietnamMap: React.FC = () => {
     fetchOnlineUsers();
   }, []);
 
-  // Real-time updates via WebSockets
   const handleMapUpdate = useCallback((data: any) => {
     console.log('WS: Received map update', data);
     if (data.provinces) setOnlineData(data.provinces);
@@ -46,27 +45,27 @@ export const VietnamMap: React.FC = () => {
 
   useWebSocket('/topic/map', handleMapUpdate);
 
-  // Create custom icon for markers
   const createCustomIcon = (count: number) => {
     return L.divIcon({
       className: 'custom-marker',
       html: `
-        <div class="relative">
-          <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center shadow-lg border-2 border-white">
-            <span class="text-white text-xs font-bold">${count}</span>
+        <div class="relative group">
+          <div class="w-10 h-10 bg-gradient-to-tr from-fpt-orange to-orange-400 rounded-2xl flex items-center justify-center shadow-xl border-2 border-white dark:border-zinc-900 transform transition-all duration-300 group-hover:scale-125 group-hover:rotate-6">
+            <span class="text-white text-[10px] font-black tabular-nums">${count}</span>
           </div>
-          <div class="absolute -top-1 -right-1 w-3 h-3 bg-red-400 rounded-full animate-ping"></div>
+          <div class="absolute -top-1.5 -right-1.5 w-4 h-4 bg-orange-400/50 rounded-full animate-ping"></div>
+          <div class="absolute -top-1.5 -right-1.5 w-4 h-4 bg-orange-500 rounded-full border-2 border-white dark:border-zinc-900"></div>
         </div>
       `,
-      iconSize: [32, 32],
-      iconAnchor: [16, 16],
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
     });
   };
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-zinc-800">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="bg-white dark:bg-zinc-900 rounded-[24px] p-6 shadow-sm border border-gray-100 dark:border-zinc-800">
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 tracking-tight">
           Bản đồ người dùng Online
         </h3>
         <div className="flex items-center justify-center h-96">
@@ -77,99 +76,107 @@ export const VietnamMap: React.FC = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-zinc-800">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+    <div className="bg-white dark:bg-zinc-900 rounded-[24px] shadow-sm border border-gray-100 dark:border-zinc-800 flex flex-col h-full overflow-hidden">
+      <div className="px-6 py-5 border-b border-gray-50 dark:border-zinc-800 flex items-center justify-between bg-white/50 dark:bg-zinc-900/50 backdrop-blur-xl sticky top-0 z-10">
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight">
           Bản đồ người dùng Online
         </h3>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-          <span className="text-sm text-gray-600 dark:text-gray-400">
-            {totalOnline} người đang online
+        <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/20">
+          <div className="w-2 h-2 bg-fpt-orange rounded-full animate-pulse shadow-[0_0_8px_rgba(243,112,33,0.5)]"></div>
+          <span className="text-[10px] font-black text-fpt-orange uppercase tracking-widest tabular-nums">
+            {totalOnline} online
           </span>
         </div>
       </div>
 
-      {/* Leaflet Map */}
-      <div className="h-96 rounded-lg overflow-hidden border border-gray-200 dark:border-zinc-800">
-        <MapContainer
-          center={[16.0, 107.0]} // Center of Vietnam
-          zoom={6}
-          style={{ height: '100%', width: '100%' }}
-          className="z-0"
-        >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          />
-
-          {/* Render markers for provinces with online users */}
-          {onlineData.map((province, index) => (
-            <React.Fragment key={index}>
-              {/* Circle to highlight the area */}
-              <Circle
-                center={[province.latitude, province.longitude]}
-                radius={province.onlineCount * 10000} // Radius based on online count
-                pathOptions={{
-                  color: '#ef4444',
-                  fillColor: '#ef4444',
-                  fillOpacity: 0.2,
-                }}
+      <div className="flex-1 p-6 flex flex-col gap-6">
+          {/* Leaflet Map */}
+          <div className="relative h-96 rounded-[20px] overflow-hidden border border-gray-100 dark:border-zinc-800 shadow-inner">
+            <MapContainer
+              center={[16.0, 107.0]} // Center of Vietnam
+              zoom={6}
+              style={{ height: '100%', width: '100%' }}
+              className="z-0"
+              zoomControl={false}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               />
 
-              {/* Marker with count */}
-              <Marker
-                position={[province.latitude, province.longitude]}
-                icon={createCustomIcon(province.onlineCount)}
-              >
-                <Popup>
-                  <div className="p-2">
-                    <h4 className="font-semibold text-gray-900 mb-2">
-                      {province.provinceName}
-                    </h4>
-                    <p className="text-sm text-gray-600 mb-2">
-                      <span className="font-medium">{province.onlineCount}</span> người đang online
-                    </p>
-                    {province.usernames.length > 0 && (
-                      <div className="text-xs text-gray-500">
-                        <strong>Người dùng:</strong>
-                        <ul className="mt-1 space-y-1">
-                          {province.usernames.map((username, idx) => (
-                            <li key={idx} className="truncate">• {username}</li>
-                          ))}
-                        </ul>
+              {onlineData.map((province, index) => (
+                <React.Fragment key={index}>
+                  <Circle
+                    center={[province.latitude, province.longitude]}
+                    radius={province.onlineCount * 12000} 
+                    pathOptions={{
+                      color: '#F37021',
+                      fillColor: '#F37021',
+                      fillOpacity: 0.15,
+                      weight: 1
+                    }}
+                  />
+
+                  <Marker
+                    position={[province.latitude, province.longitude]}
+                    icon={createCustomIcon(province.onlineCount)}
+                  >
+                    <Popup className="custom-popup">
+                      <div className="p-1">
+                        <h4 className="font-bold text-gray-900 mb-1.5 border-b border-gray-100 pb-1.5">
+                          {province.provinceName}
+                        </h4>
+                        <p className="text-xs text-gray-600 mb-2 font-medium">
+                          <span className="text-fpt-orange font-bold tabular-nums">{province.onlineCount}</span> người đang online
+                        </p>
+                        {province.usernames.length > 0 && (
+                          <div className="bg-gray-50 rounded-lg p-2 max-h-32 overflow-y-auto custom-scrollbar">
+                            <ul className="space-y-1">
+                              {province.usernames.map((username, idx) => (
+                                <li key={idx} className="text-[10px] text-gray-500 flex items-center gap-1.5 truncate font-medium uppercase tracking-tight">
+                                   <div className="w-1 h-1 rounded-full bg-gray-300"></div>
+                                   {username}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </Popup>
-              </Marker>
-            </React.Fragment>
-          ))}
-        </MapContainer>
-      </div>
-
-      {/* Legend */}
-      <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-2">
-        {onlineData.slice(0, 6).map((province, index) => (
-          <div key={index} className="flex items-center justify-between text-xs bg-gray-50 dark:bg-zinc-800 rounded-lg px-3 py-2">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-              <span className="text-gray-700 dark:text-gray-300 truncate">
-                {province.provinceName}
-              </span>
-            </div>
-            <span className="text-gray-600 dark:text-gray-400 font-medium">
-              {province.onlineCount}
-            </span>
+                    </Popup>
+                  </Marker>
+                </React.Fragment>
+              ))}
+            </MapContainer>
+            
+            {/* Custom Overlay for map aesthetic */}
+            <div className="absolute inset-0 pointer-events-none ring-1 ring-inset ring-black/5 rounded-[20px]"></div>
           </div>
-        ))}
-      </div>
 
-      {onlineData.length === 0 && (
-        <div className="mt-4 text-center text-gray-500 dark:text-gray-400 text-sm">
-          Hiện chưa có người dùng nào online
-        </div>
-      )}
+          {/* Legend */}
+          <div className="grid grid-cols-2 gap-3">
+            {onlineData.length === 0 ? (
+                <div className="col-span-2 text-center text-[11px] font-medium text-gray-400 italic py-2">
+                  Hiện chưa có người dùng nào online
+                </div>
+            ) : (
+                onlineData.slice(0, 4).map((province, index) => (
+                  <div key={index} className="flex items-center justify-between text-[11px] bg-gray-50/80 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 border border-gray-100/50 dark:border-zinc-800 rounded-xl px-4 py-2.5 transition-all duration-300 shadow-sm hover:shadow-md group">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-fpt-orange rounded-full group-hover:scale-125 transition-transform"></div>
+                      <span className="text-gray-900 dark:text-gray-300 font-bold truncate">
+                        {province.provinceName}
+                      </span>
+                    </div>
+                    <span className="text-fpt-orange font-black tabular-nums">
+                      {province.onlineCount}
+                    </span>
+                  </div>
+                ))
+            )}
+          </div>
+      </div>
     </div>
   );
 };
+
+

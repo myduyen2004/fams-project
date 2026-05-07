@@ -74,6 +74,34 @@ public class StudentAttendance {
     @JoinColumn(name = "updated_by_id")
     private User updatedBy;
 
+    // === Face Recognition Retry Metadata ===
+    // Số lần thử nhận diện
+    @Column(name = "attempt_count")
+    @Builder.Default
+    private Integer attemptCount = 0;
+
+    // Lý do thất bại (nếu có)
+    @Column(name = "failure_reason", length = 500)
+    private String failureReason;
+
+    // Cần xác nhận thủ công bởi giảng viên
+    @Column(name = "requires_manual_verify")
+    @Builder.Default
+    private Boolean requiresManualVerify = false;
+
+    // Giảng viên đã xác nhận thủ công
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "manual_verified_by")
+    private User manualVerifiedBy;
+
+    // Thời gian xác nhận thủ công
+    @Column(name = "manual_verified_at")
+    private LocalDateTime manualVerifiedAt;
+
+    // URL ảnh khuôn mặt đã chụp khi điểm danh
+    @Column(name = "captured_face_url", length = 500)
+    private String capturedFaceUrl;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -84,7 +112,6 @@ public class StudentAttendance {
 
     public enum AttendanceStatus {
         PRESENT, // Có mặt
-        LATE, // Đi trễ
         ABSENT, // Vắng mặt
         EXCUSED // Vắng có phép
     }

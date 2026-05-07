@@ -1,3 +1,5 @@
+import { NewsItem } from './news';
+
 export interface DashboardStats {
     totalStudents: number;
     totalUsers: number;
@@ -13,6 +15,7 @@ export interface RecentAccess {
     accessTime: string;
     location: string;
     status: string;
+    avatar?: string;
 }
 
 export interface Alert {
@@ -22,22 +25,37 @@ export interface Alert {
     level: string;
     isResolved: boolean;
     timestamp: string;
+    type?: string;
 }
 
-export interface Notification {
+export interface AppNotification {
     id: number;
     title: string;
     description: string;
     isRead: boolean;
     timestamp: string;
+    type?: 'SYSTEM' | 'ALERT' | 'IMPORT' | 'CHAT' | 'SCHEDULE' | 'ACADEMIC' | 'SUBMISSION' | 'NEWS' | 'NEW_ASSIGNMENT';
+    targetUrl?: string;
+    senderName?: string;
+    senderFullName?: string;
+    senderAvatar?: string;
+    attachmentUrls?: string[];
 }
 
 export interface SystemLog {
     id: number;
     title: string;
     description: string;
-    type: string;
     timestamp: string;
+    type: 'info' | 'success' | 'warning' | 'error' | string;
+    source?: string;
+    performerName?: string;
+    performerAvatar?: string;
+    performerRole?: string;
+    ipAddress?: string;
+    userAgent?: string;
+    oldValue?: string;
+    newValue?: string;
 }
 
 export interface NotificationResponse {
@@ -51,6 +69,10 @@ export interface AcademicStaffDashboardResponse {
         totalStudents: number;
         totalLecturers: number;
         totalRequests: number;
+        totalScheduleRequests?: number;
+        totalAcademicRequests?: number;
+        studentStats: { name: string; value: number }[];
+        lecturerStats: { name: string; value: number }[];
     };
     topStudents: {
         rank: number;
@@ -68,14 +90,28 @@ export interface AcademicStaffDashboardResponse {
         date: string;
         status: string;
     }[];
-    notifications: NotificationResponse[];
+    news?: NewsItem[];
+    notifications: AppNotification[];
     attendanceStats: {
         present: number;
         absent: number;
         date: string;
     };
+    runningRooms: {
+        roomName: string;
+        lecturerName: string;
+        attendancePercentage: number;
+    }[];
+    totalRunningRooms: number;
     roomRequests: {
         room: string;
         date: string;
     }[];
+    unreadNotificationsCount?: number;
+    weeklyAttendance?: {
+        day: string;
+        date: string;
+        absencePercentage: number;
+    }[];
 }
+

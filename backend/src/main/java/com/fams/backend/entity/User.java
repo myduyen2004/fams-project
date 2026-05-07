@@ -13,15 +13,20 @@ import java.time.LocalDateTime;
         @Index(name = "idx_user_full_name", columnList = "fullName"),
         @Index(name = "idx_user_code", columnList = "code"),
         @Index(name = "idx_user_role", columnList = "role"),
-        @Index(name = "idx_user_status", columnList = "status")
+        @Index(name = "idx_user_status_role", columnList = "status, role")
 })
-@Data
+@Getter
+@Setter
+@ToString(exclude = { "studentProfile", "lecturerProfile", "accessLogs", "userSessions", "aiChatSessions",
+        "attendanceSessions", "studentAttendances" })
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class User {
 
     @Id
+    @EqualsAndHashCode.Include
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -68,7 +73,7 @@ public class User {
     private FaceDataStatus faceDataStatus;
 
     // link avatar (URL)
-    @Column(length = 255)
+    @Column(length = 1000)
     private String avatar;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
@@ -98,6 +103,19 @@ public class User {
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private java.util.List<StudentAttendance> studentAttendances = new java.util.ArrayList<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private java.util.List<FaceEncoding> faceEncodings = new java.util.ArrayList<>();
+
+    // Face registration retry limit
+    @Column(nullable = false, columnDefinition = "int default 0")
+    @Builder.Default
+    private Integer faceRegistrationAttempts = 0;
+
+    // Block face registration until this time (null = not blocked)
+    @Column
+    private LocalDateTime faceRegistrationBlockedUntil;
 
     @Column(nullable = false, columnDefinition = "boolean default false")
     @Builder.Default

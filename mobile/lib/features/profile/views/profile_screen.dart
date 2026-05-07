@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:qr_flutter/qr_flutter.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../../core/constants/app_colors.dart';
-import 'edit_profile_screen.dart';
+import 'personal_info_screen.dart';
+import '../../face_recognition/views/face_registration_guide_screen.dart';
+import '../../face_recognition/views/view_face_info_screen.dart';
+import 'display_mode_screen.dart';
+import '../../../../core/controllers/theme_controller.dart';
+import '../../notification/views/notification_list_screen.dart';
+import '../../notification/controllers/notification_controller.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -13,196 +20,305 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final AuthController authController = Get.find<AuthController>();
 
-    // Using Obx to listen to changes in currentUser
     return Obx(() {
-        final user = authController.currentUser.value;
-        const backgroundColor = Color(0xFFFFE8D6); // Pale orange/beige background
-        const cardColor = Colors.white;
+      final user = authController.currentUser.value;
+      const Color orangePrimary = Color(0xFFF26F21);
 
-        return Scaffold(
-          backgroundColor: backgroundColor,
-          body: SafeArea(
-            child: Stack(
-              children: [
-                // Fixed Layout - No Scrolling as requested ("cố định không trượt lên trượt xuống đc")
-                Center(
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
-                    decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius: BorderRadius.circular(40.0),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min, // Wrap content
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Stack(
+          children: [
+            // 1. Curved Background
+            ClipPath(
+              clipper: HeaderCurveClipper(),
+              child: Container(
+                height: 280.h,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: Theme.of(context).brightness == Brightness.dark 
+                      ? [const Color(0xFF1E1E1E), const Color(0xFF121212)]
+                      : [const Color(0xFFFEF3DE), Colors.white],
+                  ),
+                ),
+              ),
+            ),
+
+            CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                // 2. Top Icon Bar (Bell, History, etc.)
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(20.w, 50.h, 20.w, 10.h),
+                  sliver: SliverToBoxAdapter(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // ... content ...
-                        // 1. Avatar
-                        Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: const Color(0xFFFFB74D), // Orange border
-                              width: 3,
-                            ),
-                          ),
-                          child: ClipOval(
-                            child: SizedBox(
-                              width: 130, // 2 * radius 65
-                              height: 130,
-                              child: (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
-                                  ? Image.network(
-                                      authController.getOptimizedAvatarUrl(user.avatarUrl),
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return Image.asset(
-                                          'assets/images/logo.png',
-                                          fit: BoxFit.cover,
-                                        );
-                                      },
-                                      loadingBuilder: (context, child, loadingProgress) {
-                                        if (loadingProgress == null) return child;
-                                        return Center(
-                                          child: CircularProgressIndicator(
-                                            value: loadingProgress.expectedTotalBytes != null
-                                                ? loadingProgress.cumulativeBytesLoaded / 
-                                                  loadingProgress.expectedTotalBytes!
-                                                : null,
-                                              strokeWidth: 2,
-                                              color: Colors.orange,
-                                          ),
-                                        );
-                                      },
-                                    )
-                                  : Image.asset(
-                                      'assets/images/logo.png', 
-                                      fit: BoxFit.cover,
-                                    ),
-                            ),
+                        GestureDetector(
+                          onTap: () => Get.to(() => const NotificationListScreen()),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Icon(SolarIconsOutline.bell, color: Theme.of(context).colorScheme.onSurface, size: 26.sp),
+                              Obx(() {
+                                final notifController = Get.find<NotificationController>();
+                                return notifController.unreadCount.value > 0 ? Positioned(
+                                  right: 2,
+                                  top: 2,
+                                  child: Container(
+                                    height: 8.h,
+                                    width: 8.h,
+                                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                                  ),
+                                ) : const SizedBox.shrink();
+                              }),
+                            ],
                           ),
                         ),
-
-                        const SizedBox(height: 20),
-
-                        // 2. Name
-                        Text(
-                          user?.fullName ?? 'Người dùng',
-                          style: GoogleFonts.roboto(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w500, // Medium/Regular looks cleaner
-                            color: Colors.black87,
-                            height: 1.2,
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        // 3. ID Capsule
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFE0B2), // Light orange fill
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            'ID: ${user?.username ?? "N/A"}',
-                            style: GoogleFonts.roboto(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-                        Divider(color: Colors.grey[400], thickness: 1, indent: 20, endIndent: 20),
-                        const SizedBox(height: 20),
-
-                        // 4. QR Code
-                        QrImageView(
-                          data: user?.username ?? 'FAMS_USER_ID',
-                          version: QrVersions.auto,
-                          size: 180.0,
-                          gapless: false,
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // 5. Details (Major & Email)
-                        if (user != null) ...[
-                          _buildInfoRow(
-                            icon: Icons.school_outlined, // Outlined looks cleaner
-                            text: user.isLecturer 
-                                ? (user.department ?? 'Khoa/Bộ môn') 
-                                : 'Chuyên ngành: ${user.major ?? "Kỹ thuật phần mềm"}',
-                            iconColor: const Color(0xFFFF6B00),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildInfoRow(
-                            icon: Icons.email_outlined,
-                            text: 'Email: ${user.email}',
-                            iconColor: const Color(0xFFFF6B00),
-                          ),
-                        ],
+                        const SizedBox.shrink(), // Keeps Bell on the left
                       ],
                     ),
                   ),
                 ),
-                
-                 // Edit Button
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5)
-                      ]
+
+                // 3. Centered Profile Header
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10.h),
+                    child: Column(
+                      children: [
+                        _buildMainAvatar(context, authController, user?.avatarUrl),
+                        SizedBox(height: 16.h),
+                        Text(
+                          user?.fullName ?? "Người dùng",
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 24.sp,
+                            fontWeight: FontWeight.w800,
+                            color: Theme.of(context).colorScheme.onSurface,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        SizedBox(height: 4.h),
+                        Text(
+                          "${user?.email ?? 'youremail@domain.com'} | ${user?.phone ?? '+01 234 567 89'}",
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                        ),
+                      ],
                     ),
-                    child: IconButton(
-                      icon: const Icon(Icons.edit, color: Color(0xFFFF6B00)),
-                      onPressed: () => Get.to(() => const EditProfileScreen()),
-                    ),
+                  ),
+                ),
+
+                // 4. Menu Groups
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 100.h),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      // Group 1: Personal Information & Security
+                      _buildGroupedMenuCard(context, [
+                        _buildMenuListItem(
+                          context,
+                          onTap: () => Get.to(() => const PersonalInfoScreen()),
+                          icon: SolarIconsOutline.userId,
+                          title: "Thông tin cá nhân",
+                          trailing: Icon(SolarIconsOutline.altArrowRight, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2), size: 20.sp),
+                        ),
+                        if (user != null && user.role.toUpperCase() == 'STUDENT')
+                          _buildMenuListItem(
+                            context,
+                            onTap: () => user.hasFaceRegistered == true 
+                                ? Get.to(() => const ViewFaceInfoScreen()) 
+                                : Get.to(() => const FaceRegistrationGuideScreen()),
+                            icon: SolarIconsOutline.shieldCheck,
+                            title: "Xác thực khuôn mặt",
+                            trailing: user.hasFaceRegistered == true 
+                                ? Text("ĐÃ XÁC THỰC", style: GoogleFonts.plusJakartaSans(color: Colors.green, fontWeight: FontWeight.w800, fontSize: 12.sp))
+                                : Icon(SolarIconsOutline.altArrowRight, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2), size: 20.sp),
+                          ),
+                        _buildMenuListItem(
+                          context,
+                          onTap: () {
+                            authController.toggleNotifications(!authController.isNotificationsEnabled.value);
+                          },
+                          icon: SolarIconsOutline.bell,
+                          title: "Thông báo",
+                          trailing: Transform.scale(
+                            scale: 0.8,
+                            child: Obx(() => Switch(
+                              value: authController.isNotificationsEnabled.value,
+                              onChanged: (value) => authController.toggleNotifications(value),
+                              activeColor: Colors.white,
+                              activeTrackColor: orangePrimary,
+                              inactiveTrackColor: Colors.grey.shade300,
+                              inactiveThumbColor: Colors.white,
+                            )),
+                          ),
+                        ),
+                      ]),
+
+                      SizedBox(height: 16.h),
+
+                      // Group 2: Display Settings
+                      _buildGroupedMenuCard(context, [
+                        _buildMenuListItem(
+                          context,
+                          onTap: () => Get.to(() => const DisplayModeScreen()),
+                          icon: SolarIconsOutline.widget,
+                          title: "Chế độ hiển thị",
+                          trailing: Obx(() => Text(ThemeController.to.isDarkMode ? "Tối" : "Sáng", style: GoogleFonts.plusJakartaSans(color: orangePrimary, fontWeight: FontWeight.w800, fontSize: 13.sp))),
+                        ),
+                      ]),
+
+                      SizedBox(height: 16.h),
+
+                      // Group 4: Logout
+                      _buildGroupedMenuCard(context, [
+                        _buildMenuListItem(
+                          context,
+                          onTap: () => authController.logout(),
+                          icon: SolarIconsOutline.logout,
+                          title: "Đăng xuất tài khoản",
+                          isDestructive: true,
+                          trailing: Icon(SolarIconsOutline.altArrowRight, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2), size: 20.sp),
+                        ),
+                      ]),
+                    ]),
                   ),
                 ),
               ],
             ),
-          ),
-        );
+          ],
+        ),
+      );
     });
   }
 
-  Widget _buildInfoRow({required IconData icon, required String text, required Color iconColor}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, color: iconColor, size: 20),
-        const SizedBox(width: 10),
-        Flexible(
-          child: Text(
-            text,
-            style: GoogleFonts.roboto(
-              fontSize: 15,
-              color: Colors.black87,
-              fontWeight: FontWeight.w400,
+  Widget _buildMainAvatar(BuildContext context, AuthController authController, String? avatarUrl) {
+    return Center(
+      child: Stack(
+        children: [
+          Container(
+            padding: EdgeInsets.all(4.r),
+            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+            child: Container(
+              width: 120.r,
+              height: 120.r,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : const Color(0xFFFEF3DE),
+              ),
+              child: ClipOval(
+                child: avatarUrl != null && avatarUrl.isNotEmpty
+                    ? Image.network(avatarUrl, fit: BoxFit.cover)
+                    : Icon(SolarIconsBold.user, size: 60.sp, color: AppColors.primaryOrange.withOpacity(0.2)),
+              ),
             ),
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
           ),
-        ),
-      ],
+          Positioned(
+            bottom: 0,
+            right: 5.w,
+            child: GestureDetector(
+              onTap: () => Get.to(() => const PersonalInfoScreen()),
+              child: Container(
+                padding: EdgeInsets.all(8.r),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: Icon(SolarIconsOutline.pen, color: const Color(0xFF1E2A3A), size: 18.sp),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
+
+  Widget _buildGroupedMenuCard(BuildContext context, List<Widget> items) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(24.r),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark 
+            ? Colors.transparent 
+            : Colors.grey.shade100.withOpacity(0.5)
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.02), 
+            blurRadius: 20, 
+            offset: const Offset(0, 8)
+          ),
+        ],
+      ),
+      child: Column(
+        children: items,
+      ),
+    );
+  }
+
+  Widget _buildMenuListItem(
+    BuildContext context, {
+    required VoidCallback onTap,
+    required IconData icon,
+    required String title,
+    required Widget trailing,
+    bool isDestructive = false,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24.r),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 18.h),
+        child: Row(
+          children: [
+            Icon(icon, color: isDestructive ? Colors.red : Theme.of(context).colorScheme.onSurface, size: 24.sp),
+            SizedBox(width: 16.w),
+            Expanded(
+              child: Text(
+                title,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 15.sp,
+                  fontWeight: FontWeight.w700,
+                  color: isDestructive ? Colors.red : Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ),
+            trailing,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class HeaderCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    Path path = Path();
+    path.lineTo(0, size.height * 0.7);
+    
+    var firstControlPoint = Offset(size.width * 0.25, size.height * 0.6);
+    var firstEndPoint = Offset(size.width * 0.5, size.height * 0.7);
+    path.quadraticBezierTo(firstControlPoint.dx, firstControlPoint.dy, firstEndPoint.dx, firstEndPoint.dy);
+    
+    var secondControlPoint = Offset(size.width * 0.75, size.height * 0.82);
+    var secondEndPoint = Offset(size.width, size.height * 0.75);
+    path.quadraticBezierTo(secondControlPoint.dx, secondControlPoint.dy, secondEndPoint.dx, secondEndPoint.dy);
+    
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

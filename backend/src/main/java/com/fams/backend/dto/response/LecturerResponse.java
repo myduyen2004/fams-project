@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 @Data
 @Builder
@@ -32,11 +33,17 @@ public class LecturerResponse implements Serializable {
     private User.FaceDataStatus faceDataStatus;
     private String avatar;
     private Boolean isPasswordChanged;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updatedAt;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime lastLogin;
 
     // LecturerProfile fields
     private String department;
+    private String major;
+    private String specialization;
     private String expertise;
     private String bio;
     private LocalDate startDate;
@@ -60,8 +67,11 @@ public class LecturerResponse implements Serializable {
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt());
 
+
         if (profile != null) {
             builder.department(profile.getDepartment())
+                    .major(profile.getMajor() != null ? profile.getMajor().getName() : null)
+                    .specialization(profile.getSpecialization() != null ? profile.getSpecialization().getName() : null)
                     .expertise(profile.getExpertise())
                     .bio(profile.getBio());
         }

@@ -1,0 +1,208 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36">
+  <diagram name="Academic Request Management" id="d1">
+    <mxGraphModel dx="3647" dy="1649" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="2000" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="A_1" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#dae8fc;strokeColor=#6c8ebf;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;RestController&amp;gt;&amp;gt;&#xa;AcademicRequestController" vertex="1">
+          <mxGeometry height="324" width="500" x="40" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="A_1_0" parent="A_1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;html=1;fontSize=13;" value="- academicReqService : AcademicRequestService&#xa;- userRepository : UserRepository" vertex="1">
+          <mxGeometry height="52" width="500" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="A_1_line" parent="A_1" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="500" y="82" as="geometry" />
+        </mxCell>
+        <mxCell id="A_1_1" parent="A_1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="+ createRequest(CreateAcademicRequestDTO, file) : AcademicRequestResponse" vertex="1">
+          <mxGeometry height="26" width="500" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="A_1_2" parent="A_1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="+ getRequestTypes() : List&amp;lt;Map&amp;lt;String, Object&amp;gt;&amp;gt;" vertex="1">
+          <mxGeometry height="26" width="500" y="116" as="geometry" />
+        </mxCell>
+        <mxCell id="A_1_3" parent="A_1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="+ checkDeadline(AcademicRequestType, classSectionId) : Map" vertex="1">
+          <mxGeometry height="26" width="500" y="142" as="geometry" />
+        </mxCell>
+        <mxCell id="A_1_4" parent="A_1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="+ getMyRequests(...) : Page&amp;lt;AcademicRequestResponse&amp;gt;" vertex="1">
+          <mxGeometry height="26" width="500" y="168" as="geometry" />
+        </mxCell>
+        <mxCell id="A_1_5" parent="A_1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="+ cancelMyRequest(id) : AcademicRequestResponse" vertex="1">
+          <mxGeometry height="26" width="500" y="194" as="geometry" />
+        </mxCell>
+        <mxCell id="A_1_6" parent="A_1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="+ getRequests(...) : Page&amp;lt;AcademicRequestResponse&amp;gt;" vertex="1">
+          <mxGeometry height="26" width="500" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="A_1_7" parent="A_1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="+ getStats() : Map&amp;lt;String, Long&amp;gt;" vertex="1">
+          <mxGeometry height="26" width="500" y="246" as="geometry" />
+        </mxCell>
+        <mxCell id="A_1_8" parent="A_1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="+ getRequest(id) : AcademicRequestResponse" vertex="1">
+          <mxGeometry height="26" width="500" y="272" as="geometry" />
+        </mxCell>
+        <mxCell id="A_1_9" parent="A_1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="+ updateStatus(id, body) : AcademicRequestResponse" vertex="1">
+          <mxGeometry height="26" width="500" y="298" as="geometry" />
+        </mxCell>
+        <mxCell id="A_S" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#d5e8d4;strokeColor=#82b366;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Service&amp;gt;&amp;gt;&#xa;AcademicRequestServiceImpl" vertex="1">
+          <mxGeometry height="580" width="500" x="-280" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="A_S_0" parent="A_S" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="- academicReqRepo : AcademicRequestRepository&#xa;- userRepo : UserRepository&#xa;- semesterRepo : SemesterRepository&#xa;- courseRepo : CourseRepository&#xa;- classSectionRepo : ClassSectionRepository&#xa;- enrollmentRepo : EnrollmentRepository&#xa;- timetableSlotRepo : TimetableSlotRepository&#xa;- majorRepo : MajorRepository&#xa;- specializationRepo : SpecializationRepository&#xa;- subSpecRepo : SubSpecializationRepository&#xa;- studentProfileRepo : StudentProfileRepository&#xa;- uploadService : UploadService&#xa;- notificationService : NotificationService" vertex="1">
+          <mxGeometry height="180" width="500" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="A_S_line" parent="A_S" style="line;strokeWidth=1;fillColor=none;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="500" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="A_S_2" parent="A_S" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="+ createRequest(...) : AcademicRequestResponse&#xa;+ getRequestsByStudent(...) : Page&amp;lt;AcademicRequestResponse&amp;gt;&#xa;+ getRequests(...) : Page&amp;lt;AcademicRequestResponse&amp;gt;&#xa;+ getRequestById(id) : AcademicRequestResponse&#xa;+ updateRequestStatus(...) : AcademicRequestResponse&#xa;+ cancelRequest(id, studentId) : AcademicRequestResponse&#xa;+ getRequestStats() : Map&amp;lt;String, Long&amp;gt;&#xa;+ getRequestTypes(...) : List&amp;lt;Map&amp;lt;String, Object&amp;gt;&amp;gt;&#xa;+ checkDeadline(...) : Map&amp;lt;String, Object&amp;gt;&#xa;- processClassTransfer(AcademicRequest) : void&#xa;- processMajorChange(AcademicRequest) : void&#xa;- processSpecializationChange(AcademicRequest) : void&#xa;- calculateDeadline(...) : Map&amp;lt;String, LocalDate&amp;gt;&#xa;- validateRequestFields(...) : void&#xa;- mapToResponse(AcademicRequest) : AcademicRequestResponse&#xa;- validateTransferPossibility(...) : void" vertex="1">
+          <mxGeometry height="360" width="500" y="218" as="geometry" />
+        </mxCell>
+        <mxCell id="A_R" parent="1" style="swimlane;fontStyle=3;align=center;startSize=30;html=1;collapsible=0;fillColor=#d0e8f2;strokeColor=#5b9bd5;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&#xa;AcademicRequestRepository" vertex="1">
+          <mxGeometry height="168" width="500" x="360" y="646" as="geometry" />
+        </mxCell>
+        <mxCell id="A_R_line" parent="A_R" style="line;strokeWidth=1;fillColor=none;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="500" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="A_R_1" parent="A_R" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="+ findByStudentId(Long) : List&amp;lt;AcademicRequest&amp;gt;&#xa;+ findByStudentWithFilters(...) : Page&amp;lt;AcademicRequest&amp;gt;&#xa;+ findWithFilters(...) : Page&amp;lt;AcademicRequest&amp;gt;&#xa;+ countByStatus(RequestStatus) : long&#xa;+ existsPendingRequest(...) : boolean&#xa;" vertex="1">
+          <mxGeometry height="130" width="500" y="38" as="geometry" />
+        </mxCell>
+        <mxCell id="A_E" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#f8cecc;strokeColor=#b85450;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&#xa;AcademicRequest" vertex="1">
+          <mxGeometry height="410" width="380" x="420" y="920" as="geometry" />
+        </mxCell>
+        <mxCell id="A_E_1" parent="A_E" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="- id : Long&#xa;- student : User&#xa;- requestType : AcademicRequestType&#xa;- requestTitle : String&#xa;- semester : Semester&#xa;- course : Course&#xa;- classSection : ClassSection&#xa;- toClassName : String&#xa;- toMajor : String&#xa;- toSpecialization : String&#xa;- toSubSpecialization : String&#xa;- reason : String&#xa;- note : String&#xa;- fileUrl : String&#xa;- status : RequestStatus&#xa;- startDate : LocalDate&#xa;- dueDate : LocalDate&#xa;- approver : User&#xa;- approvedAt : LocalDateTime&#xa;- approverNote : String&#xa;- createdAt : LocalDateTime&#xa;- updatedAt : LocalDateTime" vertex="1">
+          <mxGeometry height="352" width="380" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="A_D1" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#e1d5e7;strokeColor=#9673a6;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&#xa;CreateAcademicRequestDTO" vertex="1">
+          <mxGeometry height="324" width="300" x="650" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="A_D1_1" parent="A_D1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="- requestType : AcademicRequestType&#xa;- requestTitle : String&#xa;- semesterId : Long&#xa;- courseId : Long&#xa;- classSectionId : String&#xa;- toClassName : String&#xa;- toMajor : String&#xa;- toSpecialization : String&#xa;- toSubSpecialization : String&#xa;- reason : String&#xa;- note : String" vertex="1">
+          <mxGeometry height="286" width="300" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="A_D2" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&#xa;AcademicRequestResponse" vertex="1">
+          <mxGeometry height="730" width="320" x="-710" y="-140" as="geometry" />
+        </mxCell>
+        <mxCell id="A_D2_1" parent="A_D2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="- id : Long&#xa;- studentId : Long&#xa;- studentCode : String&#xa;- studentName : String&#xa;- studentEmail : String&#xa;- studentAvatar : String&#xa;- studentMajor : String&#xa;- studentSpecialization : String&#xa;- studentSubSpecialization : String&#xa;- requestType : String&#xa;- requestTypeLabel : String&#xa;- requestTitle : String&#xa;- semesterId : Long&#xa;- semesterCode : String&#xa;- semesterName : String&#xa;- courseId : Long&#xa;- courseCode : String&#xa;- courseName : String&#xa;- classSectionId : String&#xa;- className : String&#xa;- toClassName : String&#xa;- toMajor : String&#xa;- toSpecialization : String&#xa;- toSubSpecialization : String&#xa;- reason : String&#xa;- note : String&#xa;- fileUrl : String&#xa;- status : String&#xa;- statusLabel : String&#xa;- startDate : LocalDate&#xa;- dueDate : LocalDate&#xa;- isWithinDeadline : Boolean&#xa;- approverId : Long&#xa;- approverName : String&#xa;- approvedAt : LocalDateTime&#xa;- approverNote : String&#xa;- isTransferPossible : Boolean&#xa;- transferError : String&#xa;- isApprovable : Boolean&#xa;- validationMessage : String&#xa;- createdAt : LocalDateTime&#xa;- updatedAt : LocalDateTime" vertex="1">
+          <mxGeometry height="700" width="320" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="S_1" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#dae8fc;strokeColor=#6c8ebf;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;RestController&amp;gt;&amp;gt;&#xa;ScheduleRequestController" vertex="1">
+          <mxGeometry height="194" width="500" x="1000" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="S_1_0" parent="S_1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="- scheduleRequestService : ScheduleRequestService&#xa;- userRepository : UserRepository" vertex="1">
+          <mxGeometry height="52" width="500" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="S_1_line" parent="S_1" style="line;strokeWidth=1;fillColor=none;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="500" y="82" as="geometry" />
+        </mxCell>
+        <mxCell id="S_1_1" parent="S_1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="+ getRequests(...) : Page&amp;lt;ScheduleRequestResponse&amp;gt;&#xa;+ getStats() : Map&amp;lt;String, Long&amp;gt;&#xa;+ getRequest(id) : ScheduleRequestResponse&#xa;+ updateStatus(id, body) : ScheduleRequestResponse&#xa;+ exportRequests(...) : byte[]" vertex="1">
+          <mxGeometry height="110" width="500" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="S_S" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#d5e8d4;strokeColor=#82b366;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Service&amp;gt;&amp;gt;&#xa;ScheduleRequestServiceImpl" vertex="1">
+          <mxGeometry height="370" width="500" x="1000" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="S_S_0" parent="S_S" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="- scheduleReqRepo : ScheduleRequestRepository&#xa;- userRepo : UserRepository&#xa;- notificationService : UserNotificationService&#xa;- timetableSlotRepo : TimetableSlotRepository&#xa;- roomRepo : RoomRepository&#xa;- slotTypeRepo : SlotTypeRepository&#xa;- enrollmentRepo : EnrollmentRepository" vertex="1">
+          <mxGeometry height="130" width="500" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="S_S_line" parent="S_S" style="line;strokeWidth=1;fillColor=none;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="500" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="S_S_1" parent="S_S" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="+ createRequest(...) : ScheduleRequestResponse&#xa;+ getRequests(...) : Page&amp;lt;ScheduleRequestResponse&amp;gt;&#xa;+ updateRequestStatus(...) : ScheduleRequestResponse&#xa;+ exportRequests(...) : byte[]&#xa;+ revokeRequest(id, lecturerId) : void&#xa;+ getRequestStats() : Map&amp;lt;String, Long&amp;gt;&#xa;+ getRequestById(id) : ScheduleRequestResponse&#xa;+ getRequestsByRequester(...) : Page&amp;lt;ScheduleRequestResponse&amp;gt;&#xa;+ getSlotsForClass(...) : List&amp;lt;ClassSlotResponse&amp;gt;&#xa;- handleApprovedRequest(ScheduleRequest) : void&#xa;- mapToResponse(ScheduleRequest) : ScheduleRequestResponse" vertex="1">
+          <mxGeometry height="192" width="500" y="168" as="geometry" />
+        </mxCell>
+        <mxCell id="S_R" parent="1" style="swimlane;fontStyle=3;align=center;startSize=30;html=1;collapsible=0;fillColor=#d0e8f2;strokeColor=#5b9bd5;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&#xa;ScheduleRequestRepository" vertex="1">
+          <mxGeometry height="168" width="500" x="1620" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="S_R_line" parent="S_R" style="line;strokeWidth=1;fillColor=none;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="500" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="S_R_1" parent="S_R" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="+ countByStatus(RequestStatus) : long&#xa;+ findByRequesterId(...) : Page&amp;lt;ScheduleRequest&amp;gt;&#xa;+ existsByRequestedRoomIdAndDateAndSlotAndStatus(...) : boolean&#xa;+ findBusyRoomIdsByDateAndSlotAndStatuses(...) : List&amp;lt;Long&amp;gt;&#xa;+ findByIdWithSlots(Long) : Optional&amp;lt;ScheduleRequest&amp;gt;&#xa;+ existsPendingRequestForDateAndSlot(...) : boolean" vertex="1">
+          <mxGeometry height="130" width="500" y="38" as="geometry" />
+        </mxCell>
+        <mxCell id="S_E" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#f8cecc;strokeColor=#b85450;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&#xa;ScheduleRequest" vertex="1">
+          <mxGeometry height="320" width="380" x="1000" y="790" as="geometry" />
+        </mxCell>
+        <mxCell id="S_E_1" parent="S_E" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="- id : Long&#xa;- requester : User&#xa;- classSection : ClassSection&#xa;- originalSlot : TimetableSlot&#xa;- requestedSlot : TimetableSlot&#xa;- requestedRoom : Room&#xa;- type : RequestType&#xa;- requestedDate : LocalDate&#xa;- requestedSlotNumber : Integer&#xa;- reason : String&#xa;- file : String&#xa;- status : RequestStatus&#xa;- approver : User&#xa;- approvedAt : LocalDateTime&#xa;- approverNote : String&#xa;- createdAt : LocalDateTime&#xa;- updatedAt : LocalDateTime" vertex="1">
+          <mxGeometry height="280" width="380" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="S_D1" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#e1d5e7;strokeColor=#9673a6;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&#xa;CreateScheduleRequest" vertex="1">
+          <mxGeometry height="116" width="300" x="1560" y="385" as="geometry" />
+        </mxCell>
+        <mxCell id="S_D1_1" parent="S_D1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="- timetableSlotId : Long" vertex="1">
+          <mxGeometry height="26" width="300" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="S_D1_2" parent="S_D1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="- reason : String" vertex="1">
+          <mxGeometry height="26" width="300" y="56" as="geometry" />
+        </mxCell>
+        <mxCell id="S_D1_3" parent="S_D1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="- requestedDate : LocalDate" vertex="1">
+          <mxGeometry height="26" width="300" y="82" as="geometry" />
+        </mxCell>
+        <mxCell id="S_D2" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&#xa;ScheduleRequestResponse" vertex="1">
+          <mxGeometry height="510" width="320" x="1880" y="-160" as="geometry" />
+        </mxCell>
+        <mxCell id="S_D2_1" parent="S_D2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="- id : Long&#xa;- requesterId : Long&#xa;- requesterName : String&#xa;- requesterCode : String&#xa;- requesterAvatar : String&#xa;- requesterRole : String&#xa;- requesterEmail : String&#xa;- requesterMajor : String&#xa;- className : String&#xa;- type : String&#xa;- typeLabel : String&#xa;- reason : String&#xa;- status : String&#xa;- statusLabel : String&#xa;- approverName : String&#xa;- createdAt : LocalDateTime&#xa;- approvedAt : LocalDateTime&#xa;- approverNote : String&#xa;- originalSlotId : Long&#xa;- originalSlotNumber : Integer&#xa;- originalSlotInfo : String&#xa;- requestedSlotId : Long&#xa;- requestedSlotNumber : Integer&#xa;- requestedSlotInfo : String&#xa;- requestedRoomName : String&#xa;- requestedDate : LocalDate&#xa;- originalDate : LocalDate&#xa;- originalRoomName : String&#xa;- file : String" vertex="1">
+          <mxGeometry height="468" width="320" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="E1" edge="1" parent="1" source="A_1" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;" target="A_S">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E2" edge="1" parent="1" source="A_S" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;" target="A_R">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E3" edge="1" parent="1" source="A_R" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;" target="A_E" value="1        *">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E4" edge="1" parent="1" source="S_1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;" target="S_S">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E5" edge="1" parent="1" source="S_S" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;" target="S_R">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E6" edge="1" parent="1" source="S_R" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;entryX=1;entryY=0;entryDx=0;entryDy=0;" target="S_E" value="1        *">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Enum_A1" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#e1d5e7;strokeColor=#9673a6;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;enumeration&amp;gt;&amp;gt;&#xa;AcademicRequestType" vertex="1">
+          <mxGeometry height="240" width="220" x="50" y="1120" as="geometry" />
+        </mxCell>
+        <mxCell id="Enum_A1_1" parent="Enum_A1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="PAUSE_SEMESTER&#xa;RETAKE_COURSE&#xa;CHANGE_CLASS&#xa;OVERLOAD_STUDY&#xa;ABSENT_REQUEST&#xa;GRADE_APPEAL&#xa;CHANGE_MAJOR&#xa;CHANGE_SPECIALIZATION&#xa;OTHERS" vertex="1">
+          <mxGeometry height="200" width="220" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Enum_A2" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#e1d5e7;strokeColor=#9673a6;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;enumeration&amp;gt;&amp;gt;&#xa;RequestStatus" vertex="1">
+          <mxGeometry height="130" width="180" x="880" y="1160" as="geometry" />
+        </mxCell>
+        <mxCell id="Enum_A2_1" parent="Enum_A2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="PENDING&#xa;APPROVED&#xa;REJECTED&#xa;CANCELLED" vertex="1">
+          <mxGeometry height="90" width="180" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Enum_S1" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#e1d5e7;strokeColor=#9673a6;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;enumeration&amp;gt;&amp;gt;&#xa;ScheduleRequestType" vertex="1">
+          <mxGeometry height="130" width="200" x="1520" y="780" as="geometry" />
+        </mxCell>
+        <mxCell id="Enum_S1_1" parent="Enum_S1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="RESCHEDULE&#xa;CANCEL&#xa;SWAP&#xa;ROOM_CHANGE" vertex="1">
+          <mxGeometry height="90" width="200" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Enum_S2" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#e1d5e7;strokeColor=#9673a6;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;enumeration&amp;gt;&amp;gt;&#xa;ScheduleRequestStatus" vertex="1">
+          <mxGeometry height="130" width="200" x="1520" y="970" as="geometry" />
+        </mxCell>
+        <mxCell id="Enum_S2_1" parent="Enum_S2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=13;" value="PENDING&#xa;APPROVED&#xa;REJECTED&#xa;REVOKED" vertex="1">
+          <mxGeometry height="90" width="200" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="D1" edge="1" parent="1" source="A_1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;dashed=1;" target="A_D1" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="D2" edge="1" parent="1" source="A_1" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;dashed=1;" target="A_D2" value="&amp;lt;&amp;lt;create&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="D3" edge="1" parent="1" source="S_1" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;dashed=1;" target="S_D1" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="D4" edge="1" parent="1" source="S_1" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;dashed=1;" target="S_D2" value="&amp;lt;&amp;lt;create&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="N1" edge="1" parent="1" source="A_E" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;" target="Enum_A1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="N2" edge="1" parent="1" source="A_E" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;" target="Enum_A2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="N3" edge="1" parent="1" source="S_E" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;" target="Enum_S1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="N4" edge="1" parent="1" source="S_E" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;" target="Enum_S2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

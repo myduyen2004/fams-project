@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Power, PowerOff } from 'lucide-react';
 
 interface SelectionActionBarProps {
     selectedCount: number;
@@ -10,6 +10,8 @@ interface SelectionActionBarProps {
     canDelete?: boolean;
     isDeleting?: boolean;
     itemLabel?: string;
+    activateLabel?: string;
+    deactivateLabel?: string;
 }
 
 /**
@@ -23,33 +25,51 @@ export const SelectionActionBar: React.FC<SelectionActionBarProps> = ({
     onStatusChange,
     canDelete = true,
     isDeleting = false,
-    itemLabel = 'mục'
+    itemLabel = 'mục',
+    activateLabel = 'Mở hoạt động',
+    deactivateLabel = 'Ngừng hoạt động'
 }) => {
     if (selectedCount === 0) return null;
 
     if (showDeactivate) {
         // Red bar - items are ACTIVE, show deactivate option
         return (
-            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-lg flex items-center justify-between animate-in fade-in slide-in-from-top-2">
-                <span className="text-sm font-medium text-red-600">
-                    Đã chọn {selectedCount} {itemLabel}
-                </span>
-                <div className="flex items-center gap-2">
+            <div className="mb-6 p-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-2xl flex items-center justify-between animate-in fade-in slide-in-from-top-2 shadow-sm">
+                <div className="flex items-center gap-3 ml-2">
+                    <span className="text-sm font-bold text-red-600">
+                        Đã chọn {selectedCount} {itemLabel}
+                    </span>
+                </div>
+                <div className="flex items-center gap-3">
                     {selectedCount === 1 && onUpdate && (
                         <button
+                            type="button"
                             onClick={onUpdate}
-                            className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                            className="h-[44px] px-6 text-sm bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 flex items-center gap-2 active:scale-95"
                         >
-                            <Pencil className="h-4 w-4" />
+                            <Pencil size={16} />
                             Cập nhật
                         </button>
                     )}
                     <button
+                        type="button"
                         onClick={() => onStatusChange('INACTIVE')}
-                        className="px-4 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                        className="h-[44px] px-6 text-sm bg-amber-500 text-white rounded-2xl font-bold hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20 flex items-center gap-2 active:scale-95"
                     >
-                        Ngừng đào tạo
+                        <PowerOff size={16} />
+                        {deactivateLabel}
                     </button>
+                    {canDelete && onDelete && (
+                        <button
+                            type="button"
+                            onClick={onDelete}
+                            disabled={isDeleting}
+                            className="h-[44px] px-6 text-sm bg-red-600 text-white rounded-2xl font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 flex items-center gap-2 disabled:opacity-50 active:scale-95"
+                        >
+                            <Trash2 size={16} />
+                            {isDeleting ? 'Đang xóa...' : 'Xóa'}
+                        </button>
+                    )}
                 </div>
             </div>
         );
@@ -57,33 +77,39 @@ export const SelectionActionBar: React.FC<SelectionActionBarProps> = ({
 
     // Green bar - items are INACTIVE, show activate and delete options
     return (
-        <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/20 rounded-lg flex items-center justify-between animate-in fade-in slide-in-from-top-2">
-            <span className="text-sm font-medium text-green-600">
-                Đã chọn {selectedCount} {itemLabel}
-            </span>
-            <div className="flex items-center gap-2">
+        <div className="mb-6 p-3 bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/20 rounded-2xl flex items-center justify-between animate-in fade-in slide-in-from-top-2 shadow-sm">
+            <div className="flex items-center gap-3 ml-2">
+                <span className="text-sm font-bold text-green-600">
+                    Đã chọn {selectedCount} {itemLabel}
+                </span>
+            </div>
+            <div className="flex items-center gap-3">
                 {selectedCount === 1 && onUpdate && (
                     <button
+                        type="button"
                         onClick={onUpdate}
-                        className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                        className="h-[44px] px-6 text-sm bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 flex items-center gap-2 active:scale-95"
                     >
-                        <Pencil className="h-4 w-4" />
+                        <Pencil size={16} />
                         Cập nhật
                     </button>
                 )}
                 <button
+                        type="button"
                     onClick={() => onStatusChange('ACTIVE')}
-                    className="px-4 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                    className="h-[44px] px-6 text-sm bg-green-600 text-white rounded-2xl font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-600/20 flex items-center gap-2 active:scale-95"
                 >
-                    Mở lại
+                    <Power size={16} />
+                    {activateLabel}
                 </button>
                 {canDelete && onDelete && (
                     <button
+                        type="button"
                         onClick={onDelete}
                         disabled={isDeleting}
-                        className="px-4 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+                        className="h-[44px] px-6 text-sm bg-red-600 text-white rounded-2xl font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 flex items-center gap-2 disabled:opacity-50 active:scale-95"
                     >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 size={16} />
                         {isDeleting ? 'Đang xóa...' : 'Xóa'}
                     </button>
                 )}
@@ -93,3 +119,5 @@ export const SelectionActionBar: React.FC<SelectionActionBarProps> = ({
 };
 
 export default SelectionActionBar;
+
+

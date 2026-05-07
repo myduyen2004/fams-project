@@ -2,33 +2,50 @@ spring:
   application:
     name: FAMS Backend Staging
   
+  # Flyway for staging (mirrors production with baseline)
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    ignore-missing-migrations: true
+    locations: classpath:db/migration
+    ignore-migration-patterns: "*:missing"
+
   datasource:
     url: ${NEON_STAGING_DB_URL}
     username: ${NEON_STAGING_DB_USER}
     password: ${NEON_STAGING_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 100
+      minimum-idle: 20
+      connection-timeout: 30000
     
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 100
+          order_inserts: true
+          order_updates: true
 
   data:
     redis:
-      host: redis
+      host: ${SPRING_DATA_REDIS_HOST:redis}
       port: 6379
 
-  # Flyway disabled for dev (use ddl-auto: update)
-  flyway:
-    enabled: true
-    baseline-on-migrate: true
-    baseline-version: 0
-    locations: classpath:db/migration
-    validate-on-migrate: false
-    repair-on-migrate: true
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/fams_notifications?authSource=admin}
+
+management:
+  health:
+    redis:
+      enabled: false # Avoid startup crash if Redis is unreachable
+
 
 server:
   port: 8080
@@ -36,9 +53,10 @@ server:
 app:
   environment: staging
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://staging.fams-edu.online,https://fams-staging.vercel.app}
+    allowed-origins: ${ALLOWED_ORIGINS:https://staging.fams-edu.online,https://fams-staging.vercel.app,https://*.vercel.app,https://*.ngrok-free.app,https://*.ngrok-free.dev}
   
 logging:
   level:
     root: INFO
     com.fams.backend: INFO
+    org.hibernate.SQL: INFO
