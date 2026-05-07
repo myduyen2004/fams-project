@@ -23,4 +23,11 @@ public interface LecturerProfileRepository extends JpaRepository<LecturerProfile
             "FROM LecturerProfile lp " +
             "GROUP BY lp.department")
     List<GroupedStatDTO> countByDepartment();
+
+    @Query("SELECT new com.fams.backend.dto.response.GroupedStatDTO(" +
+            "COALESCE(m.name, 'Chưa xác định'), COUNT(lp)) " +
+            "FROM LecturerProfile lp " +
+            "LEFT JOIN lp.major m " +
+            "GROUP BY m.name")
+    List<GroupedStatDTO> countByMajor();
 }

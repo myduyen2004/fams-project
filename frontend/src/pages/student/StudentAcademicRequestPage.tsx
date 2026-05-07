@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { FileText, Plus, CheckCircle, AlertCircle, Upload, X, Loader2, Info, Trash2, AlertTriangle, ExternalLink } from 'lucide-react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { FileText, Plus, CheckCircle, AlertCircle, Upload, X, Loader2, Info, Trash2, AlertTriangle, ExternalLink, ChevronDown, Check } from 'lucide-react';
 import { StudentLayout } from '../../layouts/StudentLayout';
 import { Pagination } from '../../components/common/Pagination';
 import { academicRequestService, AcademicRequest, AcademicRequestType, CreateAcademicRequestPayload } from '../../services/api/academicRequestService';
@@ -16,9 +16,90 @@ import { useWebSocket } from '../../hooks/useWebSocket';
 
 import { Course } from '../../types/course';
 import toast from "@utils/toast";
-import { CustomSelect } from '../../components/common/CustomSelect';
 
 const PAGE_SIZE = 10;
+
+// --- Internal RequestSelect Component ---
+interface RequestSelectOption {
+    value: string;
+    label: string;
+    disabled?: boolean;
+}
+
+interface RequestSelectProps {
+    value: string;
+    onChange: (value: string) => void;
+    options: RequestSelectOption[];
+    placeholder?: string;
+    disabled?: boolean;
+    className?: string;
+}
+
+const RequestSelect: React.FC<RequestSelectProps> = ({
+    value,
+    onChange,
+    options,
+    placeholder = 'Chọn...',
+    disabled = false,
+    className = ''
+}) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const selectedOption = options.find(opt => opt.value === value);
+
+    return (
+        <div className={`relative ${className}`} ref={containerRef}>
+            <button
+                type="button"
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+                className={`flex items-center justify-between w-full h-[52px] px-4 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl transition-all ${disabled ? 'opacity-50 cursor-not-allowed text-gray-400' : 'hover:border-fpt-orange/40 focus:border-fpt-orange shadow-sm'
+                    } ${isOpen ? 'border-fpt-orange ring-4 ring-fpt-orange/10' : ''}`}
+            >
+                <span className={`text-sm font-bold truncate ${selectedOption ? 'text-zinc-900 dark:text-white' : 'text-zinc-400'}`}>
+                    {selectedOption ? selectedOption.label : placeholder}
+                </span>
+                <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform ${isOpen ? 'rotate-180 text-fpt-orange' : ''}`} />
+            </button>
+
+            {isOpen && !disabled && (
+                <div className="absolute z-[600] w-full mt-2 py-2 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl shadow-xl max-h-60 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in duration-200">
+                    {options.map((opt) => (
+                        <button
+                            key={opt.value}
+                            type="button"
+                            disabled={opt.disabled}
+                            onClick={() => {
+                                onChange(opt.value);
+                                setIsOpen(false);
+                            }}
+                            className={`flex items-center justify-between w-full px-4 py-3 text-left transition-colors ${opt.disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-zinc-800/50'} ${value === opt.value ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange' : 'text-zinc-700 dark:text-zinc-300'
+                                }`}
+                        >
+                            <span className="text-sm font-bold truncate pr-2">{opt.label}</span>
+                            {value === opt.value && <Check className="w-4 h-4 stroke-[3] shrink-0" />}
+                        </button>
+                    ))}
+                    {options.length === 0 && (
+                        <div className="px-4 py-8 text-center">
+                            <p className="text-sm text-zinc-400 font-medium italic">Không có dữ liệu</p>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
 
 // Request type fields mapping
 const REQUEST_TYPE_FIELDS: Record<string, string[]> = {
@@ -619,7 +700,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                         <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-500 uppercase tracking-[0.2em] ml-1">
                             Loại yêu cầu
                         </label>
-                        <CustomSelect
+                        <RequestSelect
                             value={typeFilter}
                             onChange={(value) => {
                                 setTypeFilter(value);
@@ -637,7 +718,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                         <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-500 uppercase tracking-[0.2em] ml-1">
                             Trạng thái đơn
                         </label>
-                        <CustomSelect
+                        <RequestSelect
                             value={statusFilter}
                             onChange={(value) => {
                                 setStatusFilter(value);
@@ -897,7 +978,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                     Học kỳ <span className="text-red-500">*</span>
                                                 </label>
-                                                <CustomSelect
+                                                <RequestSelect
                                                     value={formData.semesterId?.toString() || ''}
                                                     onChange={(value) => handleFieldChange('semesterId', value ? Number(value) : null)}
                                                     options={[
@@ -972,7 +1053,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                 {selectedType.value === 'CHANGE_CLASS' ? 'Lớp học phần hiện tại' : 'Lớp học phần muốn phúc khảo'} <span className="text-red-500">*</span>
                                             </label>
-                                            <CustomSelect
+                                            <RequestSelect
                                                 value={formData.classSectionId || ''}
                                                 onChange={(value) => handleFieldChange('classSectionId', value)}
                                                 options={[
@@ -1042,7 +1123,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                                 </div>
                                             ) : (
                                                 <div>
-                                                    <CustomSelect
+                                                    <RequestSelect
                                                         value={formData.toClassName || ''}
                                                         onChange={(value) => handleFieldChange('toClassName', value)}
                                                         disabled={!formData.classSectionId}
@@ -1115,7 +1196,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                     Ngành muốn chuyển <span className="text-red-500">*</span>
                                                 </label>
-                                                <CustomSelect
+                                                <RequestSelect
                                                     value={formData.toMajor || ''}
                                                     onChange={(value) => handleFieldChange('toMajor', value)}
                                                     disabled={fetchingMajors}
@@ -1129,7 +1210,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                     Chuyên ngành muốn chuyển <span className="text-red-500">*</span>
                                                 </label>
-                                                <CustomSelect
+                                                <RequestSelect
                                                     value={formData.toSpecialization || ''}
                                                     onChange={(value) => handleFieldChange('toSpecialization', value)}
                                                     disabled={!formData.toMajor || fetchingMajors}
@@ -1148,7 +1229,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                             <label className="block text-[10px] font-medium text-zinc-400 uppercase tracking-widest ml-1">
                                                 Chuyên ngành hẹp muốn chọn <span className="text-rose-500">*</span>
                                             </label>
-                                            <CustomSelect
+                                            <RequestSelect
                                                 value={formData.toSubSpecialization || ''}
                                                 onChange={(value) => handleFieldChange('toSubSpecialization', value)}
                                                 options={[

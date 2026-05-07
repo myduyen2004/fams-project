@@ -703,19 +703,17 @@ export const LecturerAssignmentPage: React.FC = () => {
                                 <table className="w-full border-collapse">
                                     <thead>
                                         <tr className="bg-fpt-orange text-white">
-                                            <th className="px-4 py-5 w-10 rounded-tl-2xl">
+                                            <th className="px-6 py-5 w-10 rounded-tl-2xl">
                                                 <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAll}
                                                     className="w-4 h-4 rounded border-white/50 text-fpt-orange focus:ring-fpt-orange accent-white" />
                                             </th>
-                                            <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Lớp</th>
-                                            <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Ngày Slot</th>
-                                            <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Slot</th>
-                                            <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Phòng</th>
-                                            <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Bài tập</th>
-                                            <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Hạn nộp</th>
-                                            <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
-                                            <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Bài nộp</th>
-                                            <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap rounded-tr-2xl">Thao tác</th>
+                                            <th className="px-6 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Lớp</th>
+                                            <th className="px-6 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Ngày Slot</th>
+                                            <th className="px-6 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Slot</th>
+                                            <th className="px-6 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Phòng</th>
+                                            <th className="px-6 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Bài tập</th>
+                                            <th className="px-6 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                                            <th className="px-6 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap rounded-tr-2xl">Bài nộp</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
