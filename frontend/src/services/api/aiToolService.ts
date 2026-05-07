@@ -83,13 +83,15 @@ export const aiToolService = {
     return response.data;
   },
 
-  getKnowledgeSource: async (): Promise<KnowledgeSourcePayload> => {
-    const response = await apiClient.get<KnowledgeSourcePayload>(`${BASE_PATH}/knowledge-source`);
+  getKnowledgeSource: async (role: string = 'STUDENT'): Promise<KnowledgeSourcePayload> => {
+    const response = await apiClient.get<KnowledgeSourcePayload>(`${BASE_PATH}/knowledge-source`, {
+      params: { role }
+    });
     return response.data;
   },
 
-  updateKnowledgeSource: async (content: string): Promise<KnowledgeSourcePayload> => {
-    const response = await apiClient.put<KnowledgeSourcePayload>(`${BASE_PATH}/knowledge-source`, { content });
+  updateKnowledgeSource: async (content: string, role: string = 'STUDENT'): Promise<KnowledgeSourcePayload> => {
+    const response = await apiClient.put<KnowledgeSourcePayload>(`${BASE_PATH}/knowledge-source`, { content, role });
     return response.data;
   },
 };
