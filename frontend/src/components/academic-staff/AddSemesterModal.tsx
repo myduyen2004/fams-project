@@ -16,7 +16,13 @@ interface ModalDatePickerProps {
 const ModalDatePicker: React.FC<ModalDatePickerProps> = ({ label, value, onChange, disabled = false, placeholder = 'Chọn ngày...' }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
-    const [viewDate, setViewDate] = useState(value ? new Date(value) : new Date());
+    const [viewDate, setViewDate] = useState(() => {
+        if (value) {
+            const [y, m, d] = value.split('-').map(Number);
+            return new Date(y, m - 1, d);
+        }
+        return new Date();
+    });
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, height: 0 });
 
     const updateCoords = () => {
@@ -59,8 +65,10 @@ const ModalDatePicker: React.FC<ModalDatePickerProps> = ({ label, value, onChang
     const firstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
 
     const handleDateSelect = (day: number) => {
-        const selectedDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
-        onChange(selectedDate.toISOString().split('T')[0]);
+        const yyyy = viewDate.getFullYear();
+        const mm = String(viewDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(day).padStart(2, '0');
+        onChange(`${yyyy}-${mm}-${dd}`);
         setIsOpen(false);
     };
 
@@ -77,9 +85,11 @@ const ModalDatePicker: React.FC<ModalDatePickerProps> = ({ label, value, onChang
         }
 
         for (let d = 1; d <= totalDays; d++) {
-            const isSelected = value && new Date(value).getDate() === d && 
-                               new Date(value).getMonth() === viewDate.getMonth() && 
-                               new Date(value).getFullYear() === viewDate.getFullYear();
+            let isSelected = false;
+            if (value) {
+                const [y, m, dayVal] = value.split('-').map(Number);
+                isSelected = dayVal === d && (m - 1) === viewDate.getMonth() && y === viewDate.getFullYear();
+            }
             days.push(
                 <button
                     key={d}
@@ -108,7 +118,7 @@ const ModalDatePicker: React.FC<ModalDatePickerProps> = ({ label, value, onChang
                 `}
             >
                 <span className={value ? 'font-bold' : 'text-gray-400'}>
-                    {value ? new Date(value).toLocaleDateString('vi-VN') : placeholder}
+                    {value ? value.split('-').reverse().join('/') : placeholder}
                 </span>
                 <CalendarIcon size={16} className="text-gray-400" />
             </button>
@@ -213,13 +223,16 @@ export const AddSemesterModal: React.FC<AddSemesterModalProps> = ({
     today.setHours(0, 0, 0, 0);
     const [startYear, startMonth, startDay] = formData.startDate.split('-').map(Number);
     const startDate = new Date(startYear, startMonth - 1, startDay);
+    
+    const [endYear, endMonth, endDay] = formData.endDate.split('-').map(Number);
+    const endDate = new Date(endYear, endMonth - 1, endDay);
 
     if (startDate <= today) {
       setError('Ngày bắt đầu học kỳ phải sau ngày hôm nay');
       return;
     }
 
-    if (new Date(formData.startDate) >= new Date(formData.endDate)) {
+    if (startDate >= endDate) {
       setError('Ngày kết thúc phải sau ngày bắt đầu');
       return;
     }

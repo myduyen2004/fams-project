@@ -476,12 +476,16 @@ export const LecturerGradeManagementPage: React.FC = () => {
                                     <h2 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
                                         {gradeOverview.className}
                                     </h2>
-                                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${gradeOverview.status === 'IN_PROGRESS'
+                                    {/* <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${gradeOverview.status === 'ONGOING'
                                         ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                        : 'bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-gray-400'
+                                        : gradeOverview.status === 'UPCOMING'
+                                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                                            : 'bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-gray-400'
                                         }`}>
-                                        {gradeOverview.status === 'IN_PROGRESS' ? 'Đang học' : gradeOverview.status}
-                                    </span>
+                                        {gradeOverview.status === 'ONGOING' ? 'Đang diễn ra' :
+                                            gradeOverview.status === 'UPCOMING' ? 'Sắp diễn ra' :
+                                                gradeOverview.status === 'FINISHED' ? 'Đã kết thúc' : gradeOverview.status}
+                                    </span> */}
                                     {/* Submission Status Badge */}
                                     {gradeOverview.gradesSubmitted && (
                                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 flex items-center gap-1">

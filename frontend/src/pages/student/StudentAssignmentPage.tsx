@@ -351,12 +351,13 @@ export const StudentAssignmentPage: React.FC = () => {
                                 <table className="w-full border-collapse">
                                     <thead>
                                         <tr className="bg-fpt-orange">
-                                            <th className="px-4 py-5 text-white text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap rounded-tl-2xl">Bài tập</th>
-                                            <th className="px-4 py-5 text-white text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Lớp học</th>
-                                            <th className="px-4 py-5 text-white text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Hạn nộp</th>
-                                            <th className="px-4 py-5 text-white text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
-                                            <th className="px-4 py-5 text-white text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">File bài nộp</th>
-                                            <th className="px-4 py-5 text-white text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap rounded-tr-2xl">Thao tác</th>
+                                            <th className="px-6 py-5 text-white text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap rounded-tl-2xl">Bài tập</th>
+                                            <th className="px-6 py-5 text-white text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Lớp học</th>
+                                            <th className="px-6 py-5 text-white text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Hạn nộp</th>
+                                            <th className="px-6 py-5 text-white text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                                            <th className="px-6 py-5 text-white text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">File bài nộp</th>
+                                            <th className="px-6 py-5 text-white text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Nhận xét</th>
+                                            <th className="px-6 py-5 text-white text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap rounded-tr-2xl">Thao tác</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
@@ -383,6 +384,11 @@ export const StudentAssignmentPage: React.FC = () => {
                                                 </td>
                                                 <td className="px-6 py-5 text-center">
                                                     {getStatusBadge(assignment.status)}
+                                                    {assignment.status === 'SUBMITTED' && assignment.submittedAt && (
+                                                        <p className="text-[10px] text-gray-500 dark:text-zinc-400 mt-1 font-medium">
+                                                            {formatDateTime(assignment.submittedAt)}
+                                                        </p>
+                                                    )}
                                                 </td>
 
                                                 <td className="px-6 py-5">
@@ -405,6 +411,11 @@ export const StudentAssignmentPage: React.FC = () => {
                                                     ) : (
                                                         <span className="text-gray-300 dark:text-zinc-600 font-medium">—</span>
                                                     )}
+                                                </td>
+                                                <td className="px-6 py-5">
+                                                    <div className="text-xs text-gray-600 dark:text-zinc-400 max-w-[200px] line-clamp-2" title={assignment.lecturerComment}>
+                                                        {assignment.lecturerComment || <span className="text-gray-300 dark:text-zinc-600 italic">—</span>}
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-5 text-center">
                                                     <div className="flex items-center justify-center gap-2">

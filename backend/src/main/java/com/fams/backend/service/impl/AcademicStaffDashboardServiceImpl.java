@@ -267,7 +267,7 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
                                 .totalScheduleRequests(scheduleCount)
                                 .totalAcademicRequests(academicCount)
                                 .studentStats(studentProfileRepository.countByMajor())
-                                .lecturerStats(lecturerProfileRepository.countByDepartment())
+                                .lecturerStats(lecturerProfileRepository.countByMajor())
                                 .build();
         }
 

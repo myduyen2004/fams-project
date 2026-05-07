@@ -1079,7 +1079,7 @@ export const SchedulePage: React.FC = () => {
               {generating && (
                 <button
                   onClick={handleCancel}
-                  className="flex h-[52px] px-6 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm font-bold hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all text-gray-600"
+                  className="flex h-[52px] items-center justify-center px-6 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm font-bold hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all text-gray-600"
                 >
                   Hủy
                 </button>
