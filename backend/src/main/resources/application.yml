@@ -196,7 +196,7 @@ cloudinary:
 # ---------------- App Custom Configuration ----------------
 app:
   cors:
-    allowed-origins: ${ALLOWED_ORIGINS:https://www.fams-edu.online,http://localhost:5173,http://localhost:3000,http://localhost:8080,http://127.0.0.1:5173,https://*.vercel.app,https://*.ngrok-free.app,https://*.ngrok-free.dev}
+    allowed-origins: ${ALLOWED_ORIGINS:https://fams-edu.online,https://www.fams-edu.online,http://localhost:5173,http://localhost:3000,http://localhost:8080,http://127.0.0.1:5173,https://*.vercel.app,https://*.ngrok-free.app,https://*.ngrok-free.dev}
   base-url: ${APP_BASE_URL:http://localhost:8080}
   firebase:
     config-path: ${FIREBASE_CONFIG_PATH:}

@@ -66,6 +66,10 @@ public class SecurityConfig {
                                                 .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR)
                                                 .permitAll()
 
+                                                // Allow CORS preflight requests (OPTIONS) without authentication
+                                                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**")
+                                                .permitAll()
+
                                                 // Public endpoints
                                                 .requestMatchers(
                                                                 "/auth/**", // auth (login/register)

@@ -353,6 +353,15 @@ export const RoomManagement: React.FC = () => {
         return result;
     }, [rooms, searchTerm, selectedBuilding, selectedFloor, selectedRoomType, selectedStatus, inUseRoomIds]);
 
+    const allRoomsOnCurrentFloor = useMemo(() => {
+        if (selectedBuilding === 'ALL') return [];
+        return rooms.filter(r => r.building === selectedBuilding && r.floor === selectedFloor);
+    }, [rooms, selectedBuilding, selectedFloor]);
+
+    const allPositionedRoomsOnFloor = useMemo(() => {
+        return allRoomsOnCurrentFloor.filter(r => r.gridRow != null && r.gridCol != null);
+    }, [allRoomsOnCurrentFloor]);
+
     // Rooms positioned on grid (only relevant for map view of specific building/floor)
     const positionedRooms = useMemo(() => {
         if (selectedBuilding === 'ALL') return [];
@@ -402,27 +411,99 @@ export const RoomManagement: React.FC = () => {
     const handleDragStart = (e: React.DragEvent, room: Room) => {
         setDraggedRoom(room);
         e.dataTransfer.effectAllowed = 'move';
+        // Required for some browsers to initiate drag
+        e.dataTransfer.setData('text/plain', room.id.toString());
+        
+        // Add a class to body to indicate dragging for global styles if needed
+        document.body.classList.add('is-dragging');
+    };
+
+    const handleDragEnd = () => {
+        setDraggedRoom(null);
+        document.body.classList.remove('is-dragging');
     };
 
     const handleDragOver = (e: React.DragEvent, row?: number, col?: number) => {
         e.preventDefault();
-        // Check if cell is locked (column, row, or specific cell)
-        if (row !== undefined && col !== undefined && isCellLocked(row, col)) {
+        
+        if (row === undefined || col === undefined || !draggedRoom || !currentBuildingConfig) {
+            e.dataTransfer.dropEffect = 'move';
+            return;
+        }
+
+        // Check if cell is locked
+        if (isCellLocked(row, col)) {
             e.dataTransfer.dropEffect = 'none';
             return;
         }
-        e.dataTransfer.dropEffect = 'move';
+
+        // Determine span for collision check
+        const colSpan = (draggedRoom.gridColSpan != null) ? draggedRoom.gridColSpan : (currentBuildingConfig.defaultRoomColSpan || 1);
+        const rowSpan = (draggedRoom.gridRowSpan != null) ? draggedRoom.gridRowSpan : (currentBuildingConfig.defaultRoomRowSpan || 1);
+
+        // Check bounds
+        if (col + colSpan > gridCols || row + rowSpan > gridRows) {
+            e.dataTransfer.dropEffect = 'none';
+            return;
+        }
+
+        // Check for collisions in the potential span
+        let hasCollision = false;
+        for (let r = row; r < row + rowSpan; r++) {
+            for (let c = col; c < col + colSpan; c++) {
+                if (isCellLocked(r, c) || isOccupiedByElement(r, c)) {
+                    hasCollision = true;
+                    break;
+                }
+                
+                const collidedRoom = allPositionedRoomsOnFloor.find(other => {
+                    if (other.id === draggedRoom.id) return false;
+                    const oRS = other.gridRowSpan || 1;
+                    const oCS = other.gridColSpan || 1;
+                    return other.gridRow != null && other.gridCol != null &&
+                        r >= other.gridRow && r < other.gridRow + oRS &&
+                        c >= other.gridCol && c < other.gridCol + oCS;
+                });
+                
+                if (collidedRoom) {
+                    hasCollision = true;
+                    break;
+                }
+            }
+            if (hasCollision) break;
+        }
+
+        e.dataTransfer.dropEffect = hasCollision ? 'none' : 'move';
     };
 
     const handleDrop = async (e: React.DragEvent, row: number, col: number) => {
         e.preventDefault();
         if (!draggedRoom || !currentBuildingConfig) return;
 
-        // Determine span - prefer building default if current is 1 or missing
-        const colSpan = (draggedRoom.gridColSpan && draggedRoom.gridColSpan > 1)
+        // Helper to format room for API request
+        const prepareRoomRequest = (r: Room, updates: Partial<Room>) => {
+            return {
+                code: r.code,
+                name: r.name,
+                description: r.description,
+                capacity: r.capacity,
+                building: r.building,
+                floor: r.floor,
+                type: r.type,
+                status: r.status,
+                gridRow: r.gridRow,
+                gridCol: r.gridCol,
+                gridRowSpan: r.gridRowSpan,
+                gridColSpan: r.gridColSpan,
+                ...updates
+            };
+        };
+
+        // Determine span
+        const colSpan = (draggedRoom.gridColSpan != null)
             ? draggedRoom.gridColSpan
             : (currentBuildingConfig.defaultRoomColSpan || 1);
-        const rowSpan = (draggedRoom.gridRowSpan && draggedRoom.gridRowSpan > 1)
+        const rowSpan = (draggedRoom.gridRowSpan != null)
             ? draggedRoom.gridRowSpan
             : (currentBuildingConfig.defaultRoomRowSpan || 1);
 
@@ -446,7 +527,7 @@ export const RoomManagement: React.FC = () => {
         for (let r = row; r < row + rowSpan; r++) {
             for (let c = col; c < col + colSpan; c++) {
                 // Room collision
-                const collidedRoom = positionedRooms.find(other => {
+                const collidedRoom = allPositionedRoomsOnFloor.find(other => {
                     if (other.id === draggedRoom.id) return false;
                     const oRS = other.gridRowSpan || 1;
                     const oCS = other.gridColSpan || 1;
@@ -470,37 +551,71 @@ export const RoomManagement: React.FC = () => {
 
         try {
             setSaving(true);
-            await roomService.updateRoom(draggedRoom.id, {
-                ...draggedRoom,
+            
+            const roomData = prepareRoomRequest(draggedRoom, {
                 gridRow: row,
                 gridCol: col,
-                gridRowSpan: rowSpan, // Ensure spans are saved
+                gridRowSpan: rowSpan,
                 gridColSpan: colSpan
             });
+            
+            // Optimistic update
+            setRooms(prev => prev.map(r => 
+                r.id === draggedRoom.id 
+                ? { ...r, gridRow: row, gridCol: col, gridRowSpan: rowSpan, gridColSpan: colSpan } 
+                : r
+            ));
+            
+            await roomService.updateRoom(draggedRoom.id, roomData);
             toast.success(`Đã di chuyển ${draggedRoom.name}`);
-            fetchRooms();
+            // Re-fetch to ensure sync with server (handled in finally for reliability)
         } catch (error) {
+            console.error('Failed to move room:', error);
             toast.error('Không thể cập nhật vị trí phòng');
+            // Rollback optimistic update
+            fetchRooms();
         } finally {
             setSaving(false);
             setDraggedRoom(null);
+            fetchRooms(); // Final sync
         }
     };
 
     const handleRemoveFromGrid = async (room: Room) => {
         try {
             setSaving(true);
-            await roomService.updateRoom(room.id, {
-                ...room,
+            
+            // Optimistic update
+            setRooms(prev => prev.map(r => 
+                r.id === room.id 
+                ? { ...r, gridRow: null, gridCol: null } 
+                : r
+            ));
+
+            const roomData = {
+                code: room.code,
+                name: room.name,
+                description: room.description,
+                capacity: room.capacity,
+                building: room.building,
+                floor: room.floor,
+                type: room.type,
+                status: room.status,
                 gridRow: null,
-                gridCol: null
-            });
+                gridCol: null,
+                gridRowSpan: room.gridRowSpan || 1,
+                gridColSpan: room.gridColSpan || 1
+            };
+
+            await roomService.updateRoom(room.id, roomData);
             toast.success(`Đã gỡ ${room.name} khỏi sơ đồ`);
-            fetchRooms();
         } catch (error) {
+            console.error('Failed to remove room from grid:', error);
             toast.error('Không thể gỡ phòng');
+            fetchRooms(); // Rollback
         } finally {
             setSaving(false);
+            fetchRooms(); // Final sync
         }
     };
 
@@ -519,7 +634,7 @@ export const RoomManagement: React.FC = () => {
 
     // Check if a cell is occupied by a room (including span)
     const isOccupiedByRoom = (row: number, col: number) => {
-        return positionedRooms.some(r => {
+        return allPositionedRoomsOnFloor.some(r => {
             const roomRowSpan = r.gridRowSpan || 1;
             const roomColSpan = r.gridColSpan || 1;
             return r.gridRow != null && r.gridCol != null &&
@@ -820,6 +935,8 @@ export const RoomManagement: React.FC = () => {
                                                     gridRow: `${row + 1} / span ${element.gridRowSpan}`,
                                                     gridColumn: `${col + 1} / span ${element.gridColSpan}`
                                                 }}
+                                                onDragOver={(e) => isEditMode ? handleDragOver(e, row, col) : undefined}
+                                                onDrop={isEditMode ? (e) => handleDrop(e, row, col) : undefined}
                                             >
                                                 {element.type === 'LOBBY' ? (
                                                     <img src={element.image || "/assets/images/fpt-university-logo.png"} alt={element.name} className="w-full h-full object-cover" />
@@ -845,6 +962,9 @@ export const RoomManagement: React.FC = () => {
                                                 key={`room-${room.id}`}
                                                 draggable={isEditMode}
                                                 onDragStart={isEditMode ? (e) => handleDragStart(e, room) : undefined}
+                                                onDragEnd={isEditMode ? handleDragEnd : undefined}
+                                                onDragOver={isEditMode ? (e) => handleDragOver(e, row, col) : undefined}
+                                                onDrop={isEditMode ? (e) => handleDrop(e, row, col) : undefined}
                                                 onClick={() => setSelectedRoom(room)}
                                                 onDoubleClick={() => handleRoomDoubleClick(room)}
                                                 className={`rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all border relative group
@@ -870,10 +990,15 @@ export const RoomManagement: React.FC = () => {
                                                 </span>
                                                 {isEditMode && (
                                                     <button
-                                                        onClick={(e) => { e.stopPropagation(); handleRemoveFromGrid(room); }}
-                                                        className="mt-0.5 text-[9px] text-red-500 hover:underline"
+                                                        draggable={false}
+                                                        onMouseDown={(e) => e.stopPropagation()}
+                                                        onClick={(e) => { 
+                                                            e.stopPropagation(); 
+                                                            handleRemoveFromGrid(room); 
+                                                        }}
+                                                        className="mt-0.5 text-[9px] text-red-500 hover:text-red-700 hover:scale-110 transition-all font-bold px-1 py-0.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
                                                     >
-                                                        Gỡ
+                                                        Gỡ khỏi sơ đồ
                                                     </button>
                                                 )}
                                                 {isInUse && !isEditMode && (
@@ -927,6 +1052,7 @@ export const RoomManagement: React.FC = () => {
                                         key={room.id}
                                         draggable={isEditMode && selectedBuilding !== 'ALL'}
                                         onDragStart={isEditMode && selectedBuilding !== 'ALL' ? (e) => handleDragStart(e, room) : undefined}
+                                        onDragEnd={isEditMode && selectedBuilding !== 'ALL' ? handleDragEnd : undefined}
                                         className={`p-3 rounded-xl border transition-all cursor-pointer group hover:shadow-md
                                             ${selectedRoom?.id === room.id ? 'ring-2 ring-fpt-orange' : ''}
                                             ${room.type === 'COMPUTER_LAB' ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30' :
