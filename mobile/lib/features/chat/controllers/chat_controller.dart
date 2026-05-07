@@ -145,11 +145,13 @@ class ChatController extends GetxController {
   // ── WebSocket ──
 
   void _initWebSocket() async {
+    debugPrint('🔌 [Chat] Initializing WebSocket connection...');
     try {
       await _wsService.connect(
         onError: (err) =>
-            debugPrint('[Chat] WebSocket connection failed: $err'),
+            debugPrint('❌ [Chat] WebSocket connection failed: $err'),
         onConnected: () {
+          debugPrint('✅ [Chat] WebSocket connected, subscribing to ${groups.length} groups');
           // Subscribe to all groups
           for (final group in groups) {
             _wsService.subscribeToGroup(
@@ -167,11 +169,12 @@ class ChatController extends GetxController {
         },
       );
     } catch (e) {
-      debugPrint('[Chat] WebSocket connection failed: $e');
+      debugPrint('❌ [Chat] WebSocket initialization error: $e');
     }
   }
 
   void _handleNewMessage(Map<String, dynamic> data, int groupId) {
+    debugPrint('📩 [Chat] Received new message via WS for group $groupId');
     var msg = ChatMessage.fromJson(data);
     // Recalculate isOwn locally
     msg = _setOwnFlag(msg);
@@ -438,19 +441,17 @@ class ChatController extends GetxController {
     _triggerMarkAsRead(group.id);
 
     if (!_wsService.isConnected) {
-      try {
-        await _wsService.connect(
-          onConnected: () {
-            if (selectedGroup.value?.id == group.id) {
-              _subscribeToTyping(group.id);
-            }
-          },
-          onError: (err) => debugPrint('Retry connect error: $err'),
-        );
-      } catch (e) {
-        debugPrint('Could not connect to WebSocket: $e');
-      }
+      debugPrint('🔌 [Chat] WS not connected on group select, attempting reconnect...');
+      _initWebSocket();
     } else {
+      debugPrint('🔗 [Chat] Ensuring subscription for group ${group.id}');
+      _wsService.subscribeToGroup(
+        group.id,
+        onMessage: (data) => _handleNewMessage(data, group.id),
+        onReadReceipt: (data) => _handleReadReceipt(data, group.id),
+        onDelete: (data) => _handleDelete(data, group.id),
+        onReaction: (data) => _handleReaction(data, group.id),
+      );
       _subscribeToTyping(group.id);
     }
 
@@ -679,13 +680,13 @@ class ChatController extends GetxController {
 
   // ── Typing ──
 
-  void sendTypingIndicator() {
+  void sendTypingIndicator(bool isTyping) {
     final group = selectedGroup.value;
     if (group != null && _currentUserName.isNotEmpty) {
       _wsService.sendTyping(
         group.id,
         username: _currentUserName,
-        isTyping: true,
+        isTyping: isTyping,
       );
     }
   }
