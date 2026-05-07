@@ -48,7 +48,7 @@ class WebSocketService extends GetxService {
         onConnect: (StompFrame frame) {
           _isConnected = true;
           _reconnectTimer?.cancel();
-          debugPrint('[WS] Connected');
+          debugPrint('🚀 [WS] Connected successfully as ${frame.headers['user-name'] ?? 'user'}');
 
           // Re-subscribe to all topics
           final topics = Map<String, void Function(Map<String, dynamic>)>.from(
@@ -59,31 +59,28 @@ class WebSocketService extends GetxService {
             _doSubscribe(destination, callback);
           });
 
-          if (!_connectionCompleter!.isCompleted) {
+          if (_connectionCompleter != null && !_connectionCompleter!.isCompleted) {
             _connectionCompleter!.complete();
           }
           onConnected?.call();
         },
         onDisconnect: (StompFrame frame) {
           _isConnected = false;
-          _connectionCompleter = null;
-          debugPrint('[WS] Disconnected');
+          debugPrint('🔴 [WS] Disconnected');
           _scheduleReconnect(onConnected: onConnected, onError: onError);
         },
         onStompError: (StompFrame frame) {
           _isConnected = false;
-          _connectionCompleter = null;
-          debugPrint('[WS] STOMP Error: ${frame.body}');
-          if (!_connectionCompleter!.isCompleted) {
+          debugPrint('❌ [WS] STOMP Error: ${frame.body}');
+          if (_connectionCompleter != null && !_connectionCompleter!.isCompleted) {
             _connectionCompleter!.completeError(frame.body ?? 'STOMP Error');
           }
           onError?.call(frame.body ?? 'STOMP Error');
         },
         onWebSocketError: (dynamic error) {
           _isConnected = false;
-          _connectionCompleter = null;
-          debugPrint('[WS] WebSocket Error: $error');
-          if (!_connectionCompleter!.isCompleted) {
+          debugPrint('⚠️ [WS] WebSocket Error: $error');
+          if (_connectionCompleter != null && !_connectionCompleter!.isCompleted) {
             _connectionCompleter!.completeError(error.toString());
           }
           _scheduleReconnect(onConnected: onConnected, onError: onError);

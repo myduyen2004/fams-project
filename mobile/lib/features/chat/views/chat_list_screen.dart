@@ -222,12 +222,10 @@ class _ChatListScreenState extends State<ChatListScreen>
 
   Widget _buildPremiumGroupTile(BuildContext context, ChatGroup group, ChatController controller) {
     return InkWell(
-      onTap: () async {
-        await controller.selectGroup(group);
-        await Get.to(() => const ChatDetailScreen(), transition: Transition.cupertino);
-        if (mounted) {
-          await controller.loadGroups();
-        }
+      onTap: () {
+        // Điều hướng ngay lập tức để UX mượt mà, không đợi load tin nhắn
+        controller.selectGroup(group);
+        Get.to(() => const ChatDetailScreen(), transition: Transition.cupertino);
       },
       child: Container(
         margin: EdgeInsets.only(bottom: 12.h),

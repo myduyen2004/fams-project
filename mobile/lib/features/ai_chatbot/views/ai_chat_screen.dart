@@ -168,6 +168,14 @@ class AiChatScreen extends StatelessWidget {
       Get.put(AiChatController());
     }
     final AiChatController controller = Get.find<AiChatController>();
+    
+    // Trigger reload if empty (e.g. after login)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (controller.sessions.isEmpty && !controller.isLoading.value) {
+        controller.loadSessions();
+      }
+    });
+
     final ScrollController scrollController = ScrollController();
 
     return Scaffold(
@@ -192,28 +200,36 @@ class AiChatScreen extends StatelessWidget {
                 controller.chatTitle,
                 style: GoogleFonts.plusJakartaSans(
                   color: Theme.of(context).colorScheme.onSurface,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 17.sp,
+                  letterSpacing: -0.5,
                 ),
               ),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 6.r,
-                    height: 6.r,
-                    decoration: const BoxDecoration(
-                      color: Colors.green,
+                    width: 7.r,
+                    height: 7.r,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981),
                       shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF10B981).withOpacity(0.4),
+                          blurRadius: 4,
+                          spreadRadius: 1,
+                        ),
+                      ],
                     ),
                   ),
-                  SizedBox(width: 4.w),
+                  SizedBox(width: 6.w),
                   Text(
-                    'Online',
+                    'Trực tuyến',
                     style: GoogleFonts.plusJakartaSans(
-                      color: Colors.green,
-                      fontSize: 10.sp,
-                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF10B981),
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
@@ -302,98 +318,164 @@ class AiChatScreen extends StatelessWidget {
   Widget _buildWelcomeScreen(BuildContext context, AiChatController controller) {
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(32),
+        physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 32.h),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.primaryOrange.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.auto_awesome,
-                color: AppColors.primaryOrange,
-                size: 48,
-              ),
+            // Hero Icon with pulsing glow effect
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 100.r,
+                  height: 100.r,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryOrange.withOpacity(0.08),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                Container(
+                  width: 70.r,
+                  height: 70.r,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppColors.orange400, AppColors.orange600],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primaryOrange.withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.auto_awesome_rounded,
+                    color: Colors.white,
+                    size: 32.r,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 32.h),
             Text(
-              'Chào mừng bạn!',
+              'FAMS AI Assistant',
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
+                fontSize: 26.sp,
+                fontWeight: FontWeight.w900,
                 color: Theme.of(context).colorScheme.onSurface,
+                letterSpacing: -1,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Tôi là trợ lý ảo FAMS. Tôi có thể giúp gì cho bạn hôm nay?',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.plusJakartaSans(fontSize: 14, color: Colors.grey[600]),
+            SizedBox(height: 12.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.w),
+              child: Text(
+                'Tôi có thể giúp bạn tra cứu lịch học, điểm số, hoặc giải đáp các thắc mắc về quy định học tập.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14.sp,
+                  color: Colors.grey[600],
+                  height: 1.6,
+                ),
+              ),
             ),
-            const SizedBox(height: 32),
-            Column(
-              children: controller.suggestedQuestions
-                  .map(
-                    (q) => Container(
-                      width: double.infinity,
-                      margin: EdgeInsets.only(bottom: 10.h),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(18.r),
-                          onTap: () => controller.sendMessage(q),
-                          child: Ink(
-                            padding: EdgeInsets.all(16.r),
+            SizedBox(height: 48.h),
+            
+            // Bento-style Grid for Suggestions
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Gợi ý cho bạn',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.grey[400],
+                  letterSpacing: 1,
+                  textStyle: const TextStyle(fontFeatures: [FontFeature.enable('smcp')]),
+                ),
+              ),
+            ),
+            SizedBox(height: 16.h),
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              mainAxisSpacing: 12.r,
+              crossAxisSpacing: 12.r,
+              childAspectRatio: 1.1,
+              children: controller.suggestedQuestions.map((q) {
+                return Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(24.r),
+                    onTap: () => controller.sendMessage(q),
+                    child: Ink(
+                      padding: EdgeInsets.all(16.r),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).cardColor,
+                        borderRadius: BorderRadius.circular(24.r),
+                        border: Border.all(
+                          color: AppColors.primaryOrange.withOpacity(0.08),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(8.r),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).cardColor,
-                              borderRadius: BorderRadius.circular(18.r),
-                              border: Border.all(
-                                color: AppColors.primaryOrange.withOpacity(0.16),
-                              ),
+                              color: AppColors.primaryOrange.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(12.r),
                             ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 34.r,
-                                  height: 34.r,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primaryOrange.withOpacity(0.08),
-                                    borderRadius: BorderRadius.circular(12.r),
-                                  ),
-                                  child: const Icon(
-                                    Icons.north_east_rounded,
-                                    color: AppColors.primaryOrange,
-                                    size: 18,
-                                  ),
-                                ),
-                                SizedBox(width: 12.w),
-                                Expanded(
-                                  child: Text(
-                                    q,
-                                    style: GoogleFonts.plusJakartaSans(
-                                      color: Theme.of(context).colorScheme.onSurface,
-                                      fontSize: 12.sp,
-                                      fontWeight: FontWeight.w600,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            child: Icon(
+                              _getIconForQuestion(q),
+                              color: AppColors.primaryOrange,
+                              size: 18.r,
                             ),
                           ),
-                        ),
+                          const Spacer(),
+                          Text(
+                            q,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Theme.of(context).colorScheme.onSurface,
+                              height: 1.3,
+                            ),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     ),
-                  )
-                  .toList(),
+                  ),
+                );
+              }).toList(),
             ),
           ],
         ),
       ),
     );
+  }
+
+  IconData _getIconForQuestion(String q) {
+    if (q.contains('Lịch')) return Icons.calendar_today_rounded;
+    if (q.contains('Điểm')) return Icons.analytics_rounded;
+    if (q.contains('ngành')) return Icons.school_rounded;
+    if (q.contains('Thông tin')) return Icons.info_outline_rounded;
+    return Icons.chat_bubble_outline_rounded;
   }
 
   Widget _buildThinkingProcess(BuildContext context, List<ThinkingStep> steps) {
@@ -465,60 +547,66 @@ class AiChatScreen extends StatelessWidget {
 
   Widget _buildMessageBubble(BuildContext context, AiChatMessage msg) {
     final bool isUser = msg.isUser;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
+      padding: EdgeInsets.only(bottom: 20.h),
       child: Row(
-        mainAxisAlignment: isUser
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isUser)
             Container(
-              margin: const EdgeInsets.only(right: 8, top: 4),
-              child: CircleAvatar(
-                radius: 16,
-                backgroundColor: AppColors.primaryOrange.withOpacity(0.1),
-                child: const Icon(
+              margin: EdgeInsets.only(right: 8.w, bottom: 2.h),
+              child: Container(
+                padding: EdgeInsets.all(8.r),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryOrange.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.primaryOrange.withOpacity(0.2)),
+                ),
+                child: Icon(
                   Icons.smart_toy_rounded,
-                  size: 18,
+                  size: 16.r,
                   color: AppColors.primaryOrange,
                 ),
               ),
             ),
           Flexible(
             child: Column(
-              crossAxisAlignment: isUser
-                  ? CrossAxisAlignment.end
-                  : CrossAxisAlignment.start,
+              crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(12.r),
+                  padding: EdgeInsets.all(16.r),
                   decoration: BoxDecoration(
-                    gradient: isUser 
+                    gradient: isUser
                         ? const LinearGradient(
-                            colors: [AppColors.primaryOrange, Color(0xFFFF8C42)],
+                            colors: [AppColors.orange500, AppColors.orange600],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
-                          ) 
+                          )
                         : null,
-                    color: isUser
-                        ? null
-                        : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2C2C2E) : Colors.white),
+                    color: isUser ? null : (isDark ? const Color(0xFF1C1C1E) : Colors.white),
                     borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(20.r),
-                      topRight: Radius.circular(20.r),
-                      bottomLeft: Radius.circular(isUser ? 20.r : 4.r),
-                      bottomRight: Radius.circular(isUser ? 4.r : 20.r),
+                      topLeft: Radius.circular(24.r),
+                      topRight: Radius.circular(24.r),
+                      bottomLeft: Radius.circular(isUser ? 24.r : 6.r),
+                      bottomRight: Radius.circular(isUser ? 6.r : 24.r),
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
-                        blurRadius: 8,
+                        color: isUser 
+                            ? AppColors.primaryOrange.withOpacity(0.2)
+                            : Colors.black.withOpacity(0.04),
+                        blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
                     ],
+                    border: isUser 
+                        ? null 
+                        : Border.all(
+                            color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.08),
+                          ),
                   ),
                   child: MarkdownBody(
                     data: msg.content,
@@ -528,49 +616,54 @@ class AiChatScreen extends StatelessWidget {
                     },
                     styleSheet: MarkdownStyleSheet(
                       p: GoogleFonts.plusJakartaSans(
-                        color: isUser ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
-                        fontSize: 12.sp,
-                        height: 1.5,
+                        color: isUser ? Colors.white : (isDark ? Colors.white.withOpacity(0.9) : Colors.black87),
+                        fontSize: 13.sp,
+                        height: 1.6,
+                        fontWeight: FontWeight.w500,
                       ),
                       h1: GoogleFonts.plusJakartaSans(
+                        fontSize: 20.sp,
+                        fontWeight: FontWeight.w900,
+                        color: isUser ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                        letterSpacing: -0.5,
+                      ),
+                      h2: GoogleFonts.plusJakartaSans(
                         fontSize: 18.sp,
                         fontWeight: FontWeight.w800,
                         color: isUser ? Colors.white : Theme.of(context).colorScheme.onSurface,
                       ),
-                      h2: GoogleFonts.plusJakartaSans(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w700,
-                        color: isUser ? Colors.white : Theme.of(context).colorScheme.onSurface,
-                      ),
                       strong: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.w700,
-                        color: isUser ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                        fontWeight: FontWeight.w800,
+                        color: isUser ? Colors.white : (isDark ? AppColors.orange300 : AppColors.orange600),
                       ),
                       listBullet: GoogleFonts.plusJakartaSans(
-                        color: isUser ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                        color: isUser ? Colors.white70 : AppColors.primaryOrange,
+                        fontSize: 13.sp,
+                      ),
+                      blockquote: GoogleFonts.plusJakartaSans(
+                        color: Colors.grey,
+                        fontStyle: FontStyle.italic,
+                      ),
+                      blockquoteDecoration: BoxDecoration(
+                        border: Border(left: BorderSide(color: AppColors.primaryOrange.withOpacity(0.5), width: 4)),
                       ),
                       tableBorder: TableBorder.all(
-                        color: isUser ? Colors.white70 : Colors.black26,
+                        color: isUser ? Colors.white24 : Colors.black12,
                         width: 0.5,
                       ),
-                      tableBody: GoogleFonts.plusJakartaSans(
-                        color: isUser ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
-                        fontSize: 10.sp,
-                      ),
-                      tableHead: GoogleFonts.plusJakartaSans(
-                        color: isUser ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      tableCellsPadding: EdgeInsets.all(6.r),
                     ),
                   ),
                 ),
+                SizedBox(height: 6.h),
                 Padding(
-                  padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
+                  padding: EdgeInsets.symmetric(horizontal: 8.w),
                   child: Text(
                     DateFormat('HH:mm').format(msg.createdAt),
-                    style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.grey),
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 10.sp,
+                      color: Colors.grey[400],
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -578,11 +671,18 @@ class AiChatScreen extends StatelessWidget {
           ),
           if (isUser)
             Container(
-              margin: const EdgeInsets.only(left: 8, top: 4),
-              child: const CircleAvatar(
-                radius: 16,
-                backgroundColor: AppColors.primaryOrange,
-                child: Icon(Icons.person, size: 18, color: Colors.white),
+              margin: EdgeInsets.only(left: 8.w, bottom: 2.h),
+              child: Container(
+                padding: EdgeInsets.all(2.r),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.primaryOrange.withOpacity(0.3), width: 1.5),
+                ),
+                child: CircleAvatar(
+                  radius: 14.r,
+                  backgroundColor: AppColors.primaryOrange,
+                  child: Icon(Icons.person_rounded, size: 16.r, color: Colors.white),
+                ),
               ),
             ),
         ],
@@ -595,93 +695,98 @@ class AiChatScreen extends StatelessWidget {
     AiChatController controller,
   ) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    return SafeArea(
-      top: false,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: EdgeInsets.fromLTRB(
-          16.w,
-          10.h,
-          16.w,
-          bottomInset > 0 ? 10.h : 18.h,
-        ),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(
-                Theme.of(context).brightness == Brightness.dark ? 0.22 : 0.06,
-              ),
-              blurRadius: 18,
-              offset: const Offset(0, -6),
-            ),
-          ],
-        ),
-        child: Container(
-          padding: EdgeInsets.fromLTRB(14.w, 10.h, 10.w, 10.h),
-          decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.grey[850]
-                : const Color(0xFFF9FAFB),
-            borderRadius: BorderRadius.circular(24.r),
-            border: Border.all(
-              color: AppColors.primaryOrange.withOpacity(0.10),
-            ),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        20.w,
+        12.h,
+        20.w,
+        bottomInset > 0 ? 12.h : (MediaQuery.of(context).padding.bottom + 12.h),
+      ),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        border: Border(
+          top: BorderSide(
+            color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.1),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: controller.textController,
-                  minLines: 1,
-                  maxLines: 4,
-                  textInputAction: TextInputAction.newline,
-                  style: GoogleFonts.plusJakartaSans(
-                    color: Theme.of(context).colorScheme.onSurface,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1C1C1E) : Colors.grey[100],
+                borderRadius: BorderRadius.circular(28.r),
+                border: Border.all(
+                  color: isDark ? Colors.white.withOpacity(0.05) : Colors.transparent,
+                ),
+              ),
+              child: TextField(
+                controller: controller.textController,
+                minLines: 1,
+                maxLines: 5,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (value) {
+                  if (value.trim().isNotEmpty) {
+                    controller.sendMessage(value.trim());
+                    controller.textController.clear();
+                  }
+                },
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14.sp,
+                  color: Theme.of(context).colorScheme.onSurface,
+                  height: 1.5,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Nhập tin nhắn...',
+                  hintStyle: GoogleFonts.plusJakartaSans(
                     fontSize: 14.sp,
-                    height: 1.45,
+                    color: Colors.grey[500],
                   ),
-                  decoration: InputDecoration(
-                    hintText: 'Hỏi FAMS AI điều bạn cần...',
-                    border: InputBorder.none,
-                    isCollapsed: true,
-                    hintStyle: GoogleFonts.plusJakartaSans(
-                      fontSize: 13.sp,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.grey[400]
-                          : Colors.grey[600],
-                    ),
-                  ),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(vertical: 8.h),
                 ),
               ),
-              SizedBox(width: 10.w),
-              Material(
-                color: AppColors.primaryOrange,
-                borderRadius: BorderRadius.circular(18.r),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(18.r),
-                  onTap: () {
-                    if (controller.textController.text.trim().isNotEmpty) {
-                      controller.sendMessage(controller.textController.text.trim());
-                      controller.textController.clear();
-                    }
-                  },
-                  child: Container(
-                    width: 44.r,
-                    height: 44.r,
-                    alignment: Alignment.center,
-                    child: Icon(
-                      Icons.send_rounded,
-                      color: Colors.white,
-                      size: 20.sp,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+          SizedBox(width: 12.w),
+          GestureDetector(
+            onTap: () {
+              if (controller.textController.text.trim().isNotEmpty) {
+                controller.sendMessage(controller.textController.text.trim());
+                controller.textController.clear();
+              }
+            },
+            child: Container(
+              width: 48.r,
+              height: 48.r,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.orange500, AppColors.orange600],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryOrange.withOpacity(0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.send_rounded,
+                color: Colors.white,
+                size: 20.r,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
