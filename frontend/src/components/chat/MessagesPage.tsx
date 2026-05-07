@@ -570,11 +570,28 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
       (message) => {
         const data = JSON.parse(message.body);
         const user = JSON.parse(localStorage.getItem("user") || "{}");
-        if (data.username === (user.fullName || user.username)) return;
+        const username = data.username;
+        if (username === (user.fullName || user.username)) return;
+
         if (data.isTyping) {
-          setTypingUsers((prev) => [...new Set([...prev, data.username])]);
+          setTypingUsers((prev) => [...new Set([...prev, username])]);
+          
+          // Clear after 3 seconds if no follow-up
+          const timeoutKey = `typing_timeout_${groupId}_${username}`;
+          if (timeoutSubsRef.current[timeoutKey]) {
+            clearTimeout(timeoutSubsRef.current[timeoutKey]);
+          }
+          timeoutSubsRef.current[timeoutKey] = setTimeout(() => {
+            setTypingUsers((prev) => prev.filter((u) => u !== username));
+            delete timeoutSubsRef.current[timeoutKey];
+          }, 3000);
         } else {
-          setTypingUsers((prev) => prev.filter((u) => u !== data.username));
+          setTypingUsers((prev) => prev.filter((u) => u !== username));
+          const timeoutKey = `typing_timeout_${groupId}_${username}`;
+          if (timeoutSubsRef.current[timeoutKey]) {
+            clearTimeout(timeoutSubsRef.current[timeoutKey]);
+            delete timeoutSubsRef.current[timeoutKey];
+          }
         }
       }
     );
@@ -1023,31 +1040,37 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
     }
   };
 
-  const handleTyping = useCallback(() => {
+  const handleTyping = useCallback((content: string) => {
     if (!stompClientRef.current?.connected || !selectedGroup) return;
     const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const isCurrentlyTyping = content.trim().length > 0;
+
     stompClientRef.current.publish({
       destination: `/app/chat.typing/${selectedGroup.id}`,
       body: JSON.stringify({
         username: user.fullName || user.username,
-        isTyping: true,
+        isTyping: isCurrentlyTyping,
       }),
     });
+
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
-    typingTimeoutRef.current = setTimeout(() => {
-      if (stompClientRef.current?.connected) {
-        stompClientRef.current.publish({
-          destination: `/app/chat.typing/${selectedGroup.id}`,
-          body: JSON.stringify({
-            username: user.fullName || user.username,
-            isTyping: false,
-          }),
-        });
-      }
-    }, 2000);
-  }, [selectedGroup?.id, selectedGroup]);
+
+    if (isCurrentlyTyping) {
+      typingTimeoutRef.current = setTimeout(() => {
+        if (stompClientRef.current?.connected) {
+          stompClientRef.current.publish({
+            destination: `/app/chat.typing/${selectedGroup.id}`,
+            body: JSON.stringify({
+              username: user.fullName || user.username,
+              isTyping: false,
+            }),
+          });
+        }
+      }, 2000);
+    }
+  }, [selectedGroup?.id]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -2307,8 +2330,9 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                   type="text"
                   value={newMessage}
                   onChange={(e) => {
-                    setNewMessage(e.target.value);
-                    handleTyping();
+                    const value = e.target.value;
+                    setNewMessage(value);
+                    handleTyping(value);
                   }}
                   onKeyPress={handleKeyPress}
                   placeholder="Nhập tin nhắn..."

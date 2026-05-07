@@ -882,7 +882,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     maxLines: null,
                     textInputAction: TextInputAction.newline,
                     onChanged: (v) {
-                      if (v.isNotEmpty) controller.sendTypingIndicator();
+                      controller.sendTypingIndicator(v.isNotEmpty);
                     },
                     style: TextStyle(fontSize: 15.sp, color: Theme.of(context).colorScheme.onSurface),
                     decoration: InputDecoration(

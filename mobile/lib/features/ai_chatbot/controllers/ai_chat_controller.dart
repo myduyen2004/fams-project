@@ -86,14 +86,22 @@ class AiChatController extends GetxController {
   }
 
   Future<void> selectSession(AiChatSession session) async {
+    debugPrint('AiChatController: selectSession called for ${session.id}');
     currentSession.value = session;
     try {
       isLoading.value = true;
       final msgs = await _chatService.getMessages(session.id);
       messages.assignAll(msgs.reversed.toList());
       thinkingSteps.clear();
+      debugPrint('AiChatController: Successfully loaded ${msgs.length} messages');
     } catch (e) {
       debugPrint('Error loading AI messages: $e');
+      Get.snackbar(
+        'Lỗi',
+        'Không thể tải lịch sử tin nhắn',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     } finally {
       isLoading.value = false;
     }
@@ -120,9 +128,18 @@ class AiChatController extends GetxController {
   }
 
   Future<void> sendMessage(String text) async {
-    if (text.trim().isEmpty || currentSession.value == null) return;
+    if (text.trim().isEmpty) return;
+
+    // Nếu chưa có session (do lỗi load trước đó), thử tạo mới
+    if (currentSession.value == null) {
+      debugPrint('AiChatController: currentSession is null, attempting to create one...');
+      await handleNewChat();
+      // Nếu vẫn null thì không thể gửi (có lỗi hệ thống)
+      if (currentSession.value == null) return;
+    }
 
     final sessionId = currentSession.value!.id;
+    debugPrint('AiChatController: Sending message to session $sessionId: $text');
 
     // Add user message locally
     final userMsg = AiChatMessage(
@@ -154,6 +171,7 @@ class AiChatController extends GetxController {
       );
       messages.insert(0, assistantMsg);
     } catch (e) {
+      debugPrint('AiChatController: Error sending message: $e');
       Get.snackbar(
         'Lỗi',
         'Không thể gửi tin nhắn: $e',
