@@ -154,8 +154,9 @@ export const SemestersPage: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    if (!dateString) return '';
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
   };
 
   return (
@@ -275,7 +276,7 @@ export const SemestersPage: React.FC = () => {
                           >
                             <Settings className="w-4 h-4" />
                           </button>
-                          {semester.status !== 'active' && (
+                          {semester.status === 'upcoming' && (
                             <button
                               onClick={() => handleEditClick(semester)}
                               className="p-2 text-fpt-orange hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-xl transition-all active:scale-90"

@@ -21,8 +21,8 @@ WHERE enrollment_id IN (
     JOIN courses c ON cs.course_id = c.id
     JOIN semesters s ON cs.semester_id = s.id
     WHERE c.code = 'MAD101' 
-      AND cs.class_name = 'SE18C01' 
-      AND (s.code = 'SP26' OR s.name = 'SPRING 2026')
+      AND cs.class_name LIKE '%SE18C01%' 
+      AND (s.code = 'SP26' OR s.name ILIKE '%SPRING 2026%')
 );
 
 -- 3. Xóa điểm thi của môn MAD101 trong kỳ SP26 (tất cả các lớp)
@@ -38,7 +38,7 @@ AND enrollment_id IN (
     FROM enrollments e 
     JOIN class_sections cs ON e.class_name = cs.class_name
     JOIN semesters s ON cs.semester_id = s.id
-    WHERE (s.code = 'SP26' OR s.name = 'SPRING 2026')
+    WHERE (s.code = 'SP26' OR s.name ILIKE '%SPRING 2026%')
 );
 
 -- 4. Xóa đoạn chat của lớp SE18C01
@@ -46,20 +46,34 @@ AND enrollment_id IN (
 DELETE FROM chat_message_reactions 
 WHERE message_id IN (
     SELECT id FROM chat_messages 
-    WHERE chat_group_id IN (SELECT id FROM chat_groups WHERE class_name = 'SE18C01')
+    WHERE chat_group_id IN (SELECT id FROM chat_groups WHERE class_name LIKE '%SE18C01%')
 );
 
 DELETE FROM chat_message_reads 
 WHERE message_id IN (
     SELECT id FROM chat_messages 
-    WHERE chat_group_id IN (SELECT id FROM chat_groups WHERE class_name = 'SE18C01')
+    WHERE chat_group_id IN (SELECT id FROM chat_groups WHERE class_name LIKE '%SE18C01%')
 );
 
 DELETE FROM chat_messages 
 WHERE chat_group_id IN (
     SELECT id FROM chat_groups 
-    WHERE class_name = 'SE18C01'
+    WHERE class_name LIKE '%SE18C01%'
 );
+
+-- 5. Mở lại trạng thái nộp điểm cho lớp SE18C01 môn MAD101
+UPDATE class_sections 
+SET grades_submitted = false,
+    grades_submitted_at = NULL,
+    grades_submitted_by = NULL,
+    grades_published = false,
+    grades_published_at = NULL,
+    grades_published_by = NULL,
+    resit_grades_published = false,
+    resit_grades_published_at = NULL,
+    resit_grades_published_by = NULL
+WHERE class_name LIKE '%SE18C01%'
+  AND course_id IN (SELECT id FROM courses WHERE code = 'MAD101');
 "@
 
 Write-Host "--- Starting Demo Data Cleanup ---" -ForegroundColor Cyan

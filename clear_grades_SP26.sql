@@ -8,7 +8,7 @@ WHERE enrollment_id IN (
     FROM enrollments e 
     JOIN class_sections cs ON e.class_name = cs.class_name
     JOIN semesters s ON cs.semester_id = s.id
-    WHERE s.name = 'SPRING 2026'
+    WHERE s.code = 'SP26' OR s.name ILIKE '%SPRING 2026%'
 );
 
 -- 2. Reset trạng thái nộp/công bố điểm của tất cả các lớp thuộc kỳ SPRING 2026
@@ -23,7 +23,7 @@ SET grades_submitted = false,
     resit_grades_published_at = NULL,
     resit_grades_published_by = NULL
 WHERE semester_id IN (
-    SELECT id FROM semesters WHERE name = 'SPRING 2026'
+    SELECT id FROM semesters WHERE code = 'SP26' OR name ILIKE '%SPRING 2026%'
 );
 
 COMMIT;

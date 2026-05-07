@@ -690,13 +690,13 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                         <table className="w-full border-collapse">
                             <thead>
                                 <tr className="bg-fpt-orange text-white">
-                                    <th className="px-4 py-5 text-left w-16 text-xs font-bold uppercase tracking-widest whitespace-nowrap rounded-tl-2xl">STT</th>
-                                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Học viên</th>
-                                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
-                                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">File đính kèm</th>
-                                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Bài làm / Ghi chú</th>
-                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Đạo văn</th>
-                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap rounded-tr-2xl">Nhận xét</th>
+                                    <th className="px-6 py-5 text-left w-16 text-xs font-bold uppercase tracking-widest whitespace-nowrap rounded-tl-2xl">STT</th>
+                                    <th className="px-6 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Học viên</th>
+                                    <th className="px-6 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                                    <th className="px-6 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">File đính kèm</th>
+                                    <th className="px-6 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Bài làm / Ghi chú</th>
+                                    <th className="px-6 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Đạo văn</th>
+                                    <th className="px-6 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap rounded-tr-2xl">Nhận xét</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
